@@ -1,8 +1,9 @@
 "use client";
 
-import { memo } from "react";
+import { memo, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { Modal } from "@/components/shared/Modal";
 import { useTime } from "@/context/TimeContext";
 import { useLocale } from "@/context/LocaleContext";
 import { useUnits } from "@/context/UnitsContext";
@@ -22,6 +23,7 @@ function BottomBarInner() {
   const { units, setUnits } = useUnits();
   const { isEventMode } = useEvent();
   const pathname = usePathname();
+  const [creditsOpen, setCreditsOpen] = useState(false);
 
   const isLive = mode === "LIVE";
   const isSim = mode === "SIM";
@@ -269,6 +271,21 @@ function BottomBarInner() {
         >
           {locale === "en" ? "FR" : "EN"}
         </button>
+        <button
+          onClick={() => setCreditsOpen(true)}
+          style={{
+            background: "none",
+            border: "none",
+            color: "var(--color-text-muted)",
+            cursor: "pointer",
+            fontSize: 10,
+            fontFamily: "inherit",
+            letterSpacing: "0.02em",
+            padding: 0,
+          }}
+        >
+          Credits
+        </button>
         <span style={{ color: "var(--color-text-muted)", letterSpacing: "0.02em" }}>
           iss.cdnspace.ca
         </span>
@@ -276,6 +293,54 @@ function BottomBarInner() {
           {process.env.NEXT_PUBLIC_BUILD_ID ?? ""}
         </span>
       </div>
+
+      {/* Credits Modal */}
+      <Modal title="Credits & Acknowledgements" isOpen={creditsOpen} onClose={() => setCreditsOpen(false)} maxWidth="600px">
+        <div style={{ fontSize: 12, lineHeight: 1.8, color: "var(--text-primary, #e8f0fe)" }}>
+          <p style={{ marginBottom: 16 }}>
+            <strong style={{ color: "var(--color-accent-cyan, #00e5ff)" }}>ISS Tracker</strong> is an open-source real-time dashboard for the International Space Station.
+          </p>
+
+          <h3 style={{ color: "var(--color-accent-cyan, #00e5ff)", fontSize: 11, letterSpacing: "0.1em", marginBottom: 8 }}>BUILT BY</h3>
+          <p style={{ marginBottom: 16 }}>
+            <a href="https://github.com/ChadOhman" target="_blank" rel="noopener noreferrer" style={{ color: "var(--color-accent-cyan, #00e5ff)", textDecoration: "none" }}>Chad Ohman</a>
+            {" "}— Edmonton, Alberta, Canada
+          </p>
+
+          <h3 style={{ color: "var(--color-accent-cyan, #00e5ff)", fontSize: 11, letterSpacing: "0.1em", marginBottom: 8 }}>DATA SOURCES</h3>
+          <ul style={{ paddingLeft: 20, marginBottom: 16 }}>
+            <li><strong>NASA Lightstreamer</strong> — live ISS telemetry (~175 channels) via <code style={{ fontSize: 10, color: "var(--color-accent-cyan, #00e5ff)" }}>push.lightstreamer.com</code></li>
+            <li><strong>CelesTrak / TLE.ivanstanojevic.me</strong> — ISS Two-Line Elements for orbital propagation</li>
+            <li><strong>NOAA Space Weather Prediction Center</strong> — Kp index, X-ray flux, proton flux</li>
+            <li><strong>The Space Devs</strong> — upcoming ISS events (dockings, EVAs, maneuvers)</li>
+            <li><strong>satellite.js</strong> — SGP4 orbital propagation</li>
+          </ul>
+
+          <h3 style={{ color: "var(--color-accent-cyan, #00e5ff)", fontSize: 11, letterSpacing: "0.1em", marginBottom: 8 }}>TECHNOLOGY</h3>
+          <ul style={{ paddingLeft: 20, marginBottom: 16 }}>
+            <li>Next.js 16, TypeScript, React 19</li>
+            <li>Leaflet (maps), Three.js (viz), Tailwind CSS 4</li>
+            <li>MySQL (telemetry archive), Server-Sent Events</li>
+          </ul>
+
+          <h3 style={{ color: "var(--color-accent-cyan, #00e5ff)", fontSize: 11, letterSpacing: "0.1em", marginBottom: 8 }}>COMPANION PROJECT</h3>
+          <p style={{ marginBottom: 16 }}>
+            <a href="https://artemis.cdnspace.ca" target="_blank" rel="noopener noreferrer" style={{ color: "var(--color-accent-cyan, #00e5ff)", textDecoration: "none" }}>Artemis II Tracker</a>
+            {" "}— real-time mission control dashboard for NASA&apos;s Artemis II lunar mission
+          </p>
+
+          <h3 style={{ color: "var(--color-accent-cyan, #00e5ff)", fontSize: 11, letterSpacing: "0.1em", marginBottom: 8 }}>SOURCE CODE</h3>
+          <p style={{ marginBottom: 16 }}>
+            <a href="https://github.com/ChadOhman/cdnspace-iss-tracker" target="_blank" rel="noopener noreferrer" style={{ color: "var(--color-accent-cyan, #00e5ff)", textDecoration: "none" }}>github.com/ChadOhman/cdnspace-iss-tracker</a>
+            {" "}— MIT License
+          </p>
+
+          <h3 style={{ color: "var(--color-accent-cyan, #00e5ff)", fontSize: 11, letterSpacing: "0.1em", marginBottom: 8 }}>LAND ACKNOWLEDGEMENT</h3>
+          <p style={{ fontSize: 11, color: "var(--color-text-muted, #94adc4)" }}>
+            This project was created on Treaty 6 territory, the traditional lands of the Cree, Dene, Blackfoot, Saulteaux, Nakota Sioux, and Métis peoples — Edmonton, Alberta, Canada.
+          </p>
+        </div>
+      </Modal>
     </div>
   );
 }
