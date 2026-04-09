@@ -497,11 +497,28 @@ export function deriveTelemetry(
   if (stationModeRaw & 64) stationModeFlags.push("ASCR");
   const stationMode = stationModeFlags.length > 0 ? stationModeFlags.join(", ") : "Standard";
 
+  // Nav source (USLAB000013): 0=None, 1=GPS 1, 2=GPS 2, 3=Russian, 4=Ku Band
+  const NAV_SOURCES: Record<string, string> = {
+    "0": "None", "1": "GPS 1", "2": "GPS 2", "3": "Russian", "4": "Ku Band",
+  };
+  // Control type (USLAB000016): 0=Attitude Hold, 1=Momentum Management
+  const CONTROL_TYPES: Record<string, string> = {
+    "0": "Attitude Hold", "1": "Momentum Mgmt",
+  };
+  // Reference frame (USLAB000017): 0=LVLH, 1=J2000, 2=XPOP
+  const REF_FRAMES: Record<string, string> = {
+    "0": "LVLH", "1": "J2000", "2": "XPOP",
+  };
+
+  const navSourceRaw = str("USLAB000013").trim();
+  const controlTypeRaw = str("USLAB000016").trim();
+  const refFrameRaw = str("USLAB000017").trim();
+
   const attitude = {
     gncMode,
-    navSource:    str("USLAB000013"),
-    controlType:  str("USLAB000016"),
-    refFrame:     str("USLAB000017"),
+    navSource:    NAV_SOURCES[navSourceRaw] ?? navSourceRaw,
+    controlType:  CONTROL_TYPES[controlTypeRaw] ?? controlTypeRaw,
+    refFrame:     REF_FRAMES[refFrameRaw] ?? refFrameRaw,
     stationMode,
     quaternion: {
       w: num("USLAB000018"),

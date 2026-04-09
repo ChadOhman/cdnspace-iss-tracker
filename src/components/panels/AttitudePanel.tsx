@@ -80,7 +80,18 @@ interface StatusRowProps {
   value: string;
 }
 
+const NOMINAL_GNC = new Set(["CMG Attitude Control", "Attitude Hold", "Standard", "LVLH", "GPS 1", "GPS 2", "Momentum Mgmt"]);
+const CAUTION_GNC = new Set(["Free Drift", "CMG Thruster Assist", "Reboost", "Proximity Ops", "External Ops", "Survival", "ASCR", "None"]);
+
 function StatusRow({ label, value }: StatusRowProps) {
+  const isNominal = NOMINAL_GNC.has(value);
+  const isCaution = CAUTION_GNC.has(value);
+  const valueColor = isNominal
+    ? "var(--color-accent-green)"
+    : isCaution
+      ? "var(--color-accent-orange)"
+      : "var(--color-text-primary)";
+
   return (
     <div
       style={{
@@ -92,7 +103,7 @@ function StatusRow({ label, value }: StatusRowProps) {
       }}
     >
       <span style={{ color: "var(--color-text-muted)", fontSize: 9 }}>{label}</span>
-      <span style={{ color: "var(--color-text-primary)", fontSize: 9, fontWeight: 600 }}>
+      <span style={{ color: valueColor, fontSize: 9, fontWeight: 600 }}>
         {value || "—"}
       </span>
     </div>
@@ -193,10 +204,10 @@ export default function AttitudePanel({ telemetry }: AttitudePanelProps) {
             >
               {t("attitude.gnc").toUpperCase()}
             </div>
-            <StatusRow label="MODE" value={telemetry.attitude.gncMode} />
-            <StatusRow label="NAV SRC" value={telemetry.attitude.navSource} />
-            <StatusRow label="REF" value={telemetry.attitude.refFrame} />
-            <StatusRow label="STN MODE" value={telemetry.attitude.stationMode} />
+            <StatusRow label="GNC MODE" value={telemetry.attitude.gncMode} />
+            <StatusRow label="NAV SOURCE" value={telemetry.attitude.navSource} />
+            <StatusRow label="REF FRAME" value={telemetry.attitude.refFrame} />
+            <StatusRow label="STATION MODE" value={telemetry.attitude.stationMode} />
 
             <div style={{ marginTop: 8 }}>
               <AngleRow
