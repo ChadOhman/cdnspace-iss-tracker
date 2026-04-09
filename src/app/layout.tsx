@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import { JetBrains_Mono } from "next/font/google";
 import { LocaleProvider } from "@/context/LocaleContext";
+import { TimeProvider } from "@/context/TimeContext";
+import { EventProvider } from "@/context/EventContext";
 import "./globals.css";
 
 const jetbrainsMono = JetBrains_Mono({
@@ -49,7 +51,7 @@ export default function RootLayout({
         >
           Skip to main content
         </a>
-        <LocaleProvider><main id="main">{children}</main></LocaleProvider>
+        <LocaleProvider><TimeProvider><EventProvider><main id="main">{children}</main></EventProvider></TimeProvider></LocaleProvider>
       </body>
     </html>
   );
