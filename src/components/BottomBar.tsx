@@ -3,7 +3,7 @@
 import { memo, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Modal } from "@/components/shared/Modal";
+import Modal from "@/components/shared/Modal";
 import { useTime } from "@/context/TimeContext";
 import { useLocale } from "@/context/LocaleContext";
 import { useUnits } from "@/context/UnitsContext";
