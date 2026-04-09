@@ -1,0 +1,300 @@
+"use client";
+
+import PanelFrame from "@/components/shared/PanelFrame";
+import type { ISSTelemetry } from "@/lib/types";
+import { useLocale } from "@/context/LocaleContext";
+
+interface AttitudePanelProps {
+  telemetry: ISSTelemetry | null;
+}
+
+interface CmgCardProps {
+  index: number;
+  on: boolean;
+  spinRate: number;
+  spinMotorTemp: number;
+  vibration: number;
+}
+
+function CmgCard({ index, on, spinRate, spinMotorTemp, vibration }: CmgCardProps) {
+  return (
+    <div
+      style={{
+        background: "var(--color-bg-secondary)",
+        border: `1px solid ${on ? "var(--color-accent-green)" : "var(--color-border-subtle)"}`,
+        borderRadius: 4,
+        padding: "5px 6px",
+        opacity: on ? 1 : 0.45,
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: 3,
+        }}
+      >
+        <span style={{ color: "var(--color-text-muted)", fontSize: 8 }}>CMG {index + 1}</span>
+        <span
+          style={{
+            fontSize: 8,
+            fontWeight: 700,
+            color: on ? "var(--color-accent-green)" : "var(--color-text-muted)",
+          }}
+        >
+          {on ? "ON" : "OFF"}
+        </span>
+      </div>
+      <div
+        style={{
+          color: on ? "var(--color-accent-green)" : "var(--color-text-muted)",
+          fontSize: 14,
+          fontWeight: 700,
+          fontVariantNumeric: "tabular-nums",
+          marginBottom: 2,
+        }}
+      >
+        {spinRate.toFixed(0)}
+        <span style={{ fontSize: 8, color: "var(--color-text-muted)", marginLeft: 2 }}>RPM</span>
+      </div>
+      <div style={{ display: "flex", justifyContent: "space-between" }}>
+        <span style={{ color: "var(--color-text-muted)", fontSize: 8 }}>
+          {spinMotorTemp.toFixed(1)}°C
+        </span>
+        <span style={{ color: "var(--color-text-muted)", fontSize: 8 }}>
+          {vibration.toFixed(3)}g
+        </span>
+      </div>
+    </div>
+  );
+}
+
+interface StatusRowProps {
+  label: string;
+  value: string;
+}
+
+function StatusRow({ label, value }: StatusRowProps) {
+  return (
+    <div
+      style={{
+        display: "flex",
+        justifyContent: "space-between",
+        marginBottom: 3,
+        padding: "2px 0",
+        borderBottom: "1px solid var(--color-border-subtle)",
+      }}
+    >
+      <span style={{ color: "var(--color-text-muted)", fontSize: 9 }}>{label}</span>
+      <span style={{ color: "var(--color-text-primary)", fontSize: 9, fontWeight: 600 }}>
+        {value || "—"}
+      </span>
+    </div>
+  );
+}
+
+interface AngleRowProps {
+  label: string;
+  value: number;
+  rateErr: number;
+  unit?: string;
+}
+
+function AngleRow({ label, value, rateErr }: AngleRowProps) {
+  return (
+    <div style={{ marginBottom: 5 }}>
+      <div style={{ color: "var(--color-text-muted)", fontSize: 8, marginBottom: 1 }}>{label}</div>
+      <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
+        <span
+          style={{
+            color: "var(--color-accent-orange)",
+            fontSize: 14,
+            fontWeight: 700,
+            fontVariantNumeric: "tabular-nums",
+          }}
+        >
+          {value.toFixed(2)}°
+        </span>
+        <span style={{ color: "var(--color-text-muted)", fontSize: 8, fontVariantNumeric: "tabular-nums" }}>
+          Δ {rateErr.toFixed(4)}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+export default function AttitudePanel({ telemetry }: AttitudePanelProps) {
+  const { t } = useLocale();
+
+  return (
+    <PanelFrame
+      title={t("panels.attitudeControl").toUpperCase()}
+      icon="🔄"
+      accentColor="var(--color-accent-orange)"
+    >
+      {!telemetry ? (
+        <div
+          style={{
+            color: "var(--color-text-muted)",
+            fontSize: 10,
+            textAlign: "center",
+            padding: "12px 0",
+          }}
+        >
+          {t("crew.awaitingTelemetry")}
+        </div>
+      ) : (
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+          {/* CMG Status */}
+          <div>
+            <div
+              style={{
+                color: "var(--color-accent-orange)",
+                fontSize: 9,
+                fontWeight: 700,
+                marginBottom: 6,
+                letterSpacing: "0.06em",
+              }}
+            >
+              {t("attitude.cmgStatus").toUpperCase()}
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 4 }}>
+              {telemetry.cmgs.map((cmg, i) => (
+                <CmgCard
+                  key={i}
+                  index={i}
+                  on={cmg.on}
+                  spinRate={cmg.spinRate}
+                  spinMotorTemp={cmg.spinMotorTemp}
+                  vibration={cmg.vibration}
+                />
+              ))}
+            </div>
+          </div>
+
+          {/* Attitude data */}
+          <div>
+            <div
+              style={{
+                color: "var(--color-accent-orange)",
+                fontSize: 9,
+                fontWeight: 700,
+                marginBottom: 6,
+                letterSpacing: "0.06em",
+              }}
+            >
+              {t("attitude.gnc").toUpperCase()}
+            </div>
+            <StatusRow label="MODE" value={telemetry.attitude.gncMode} />
+            <StatusRow label="NAV SRC" value={telemetry.attitude.navSource} />
+            <StatusRow label="REF" value={telemetry.attitude.refFrame} />
+            <StatusRow label="STN MODE" value={telemetry.attitude.stationMode} />
+
+            <div style={{ marginTop: 8 }}>
+              <AngleRow
+                label={t("attitude.roll").toUpperCase()}
+                value={telemetry.attitude.roll}
+                rateErr={telemetry.attitude.rollRateErr}
+              />
+              <AngleRow
+                label={t("attitude.pitch").toUpperCase()}
+                value={telemetry.attitude.pitch}
+                rateErr={telemetry.attitude.pitchRateErr}
+              />
+              <AngleRow
+                label={t("attitude.yaw").toUpperCase()}
+                value={telemetry.attitude.yaw}
+                rateErr={telemetry.attitude.yawRateErr}
+              />
+            </div>
+
+            <div
+              style={{
+                marginTop: 6,
+                paddingTop: 6,
+                borderTop: "1px solid var(--color-border-subtle)",
+              }}
+            >
+              <div style={{ color: "var(--color-text-muted)", fontSize: 8, marginBottom: 3 }}>
+                {t("attitude.momentum").toUpperCase()}
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <div
+                  style={{
+                    flex: 1,
+                    height: 4,
+                    borderRadius: 2,
+                    background: "var(--color-border-subtle)",
+                    overflow: "hidden",
+                  }}
+                >
+                  <div
+                    style={{
+                      height: "100%",
+                      width: `${Math.min(100, telemetry.attitude.momentumSaturation)}%`,
+                      background:
+                        telemetry.attitude.momentumSaturation > 80
+                          ? "var(--color-accent-red)"
+                          : telemetry.attitude.momentumSaturation > 50
+                          ? "var(--color-accent-orange)"
+                          : "var(--color-accent-green)",
+                      transition: "width 0.5s ease",
+                      borderRadius: 2,
+                    }}
+                  />
+                </div>
+                <span
+                  style={{
+                    color: "var(--color-text-secondary)",
+                    fontSize: 9,
+                    fontVariantNumeric: "tabular-nums",
+                  }}
+                >
+                  {telemetry.attitude.momentumSaturation.toFixed(1)}%
+                </span>
+              </div>
+            </div>
+
+            <div
+              style={{
+                marginTop: 6,
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr 1fr",
+                gap: 4,
+              }}
+            >
+              {[
+                { label: "τ-R", value: telemetry.attitude.cmdTorqueRoll },
+                { label: "τ-P", value: telemetry.attitude.cmdTorquePitch },
+                { label: "τ-Y", value: telemetry.attitude.cmdTorqueYaw },
+              ].map(({ label, value }) => (
+                <div
+                  key={label}
+                  style={{
+                    background: "var(--color-bg-secondary)",
+                    border: "1px solid var(--color-border-subtle)",
+                    borderRadius: 4,
+                    padding: "3px 5px",
+                    textAlign: "center",
+                  }}
+                >
+                  <div style={{ color: "var(--color-text-muted)", fontSize: 8 }}>{label}</div>
+                  <div
+                    style={{
+                      color: "var(--color-text-secondary)",
+                      fontSize: 9,
+                      fontVariantNumeric: "tabular-nums",
+                    }}
+                  >
+                    {value.toFixed(1)}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+    </PanelFrame>
+  );
+}
