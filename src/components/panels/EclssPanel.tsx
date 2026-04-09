@@ -129,7 +129,10 @@ const ECLSS_DECODE: Record<string, Record<string, string>> = {
 const NOMINAL_STATES = new Set(["Process", "Normal", "On"]);
 
 function StatusRow({ label, value }: { label: string; value: string }) {
-  const decoded = ECLSS_DECODE[label]?.[value.trim()] ?? value;
+  const trimmed = value.trim();
+  const lookup = ECLSS_DECODE[label]?.[trimmed];
+  // If the value is a number we can't decode, show it as "Code N"
+  const decoded = lookup ?? (trimmed && !isNaN(Number(trimmed)) ? `Code ${trimmed}` : trimmed);
   const isNominal = NOMINAL_STATES.has(decoded);
   const isStandby = decoded === "Standby" || decoded === "Idle";
   return (
@@ -271,8 +274,12 @@ export default function EclssPanel({ telemetry }: EclssPanelProps) {
                 color="var(--color-accent-yellow)"
               />
             </div>
-            <StatusRow label="UPA" value={telemetry.eclss.upaStatus} />
-            <StatusRow label="WPA" value={telemetry.eclss.wpaStatus} />
+            <div style={{ cursor: "help" }} title="Urine Processor Assembly — converts urine into distilled water">
+              <StatusRow label="UPA" value={telemetry.eclss.upaStatus} />
+            </div>
+            <div style={{ cursor: "help" }} title="Water Processor Assembly — purifies water into potable drinking water">
+              <StatusRow label="WPA" value={telemetry.eclss.wpaStatus} />
+            </div>
           </div>
 
           {/* O2 Generation column */}
