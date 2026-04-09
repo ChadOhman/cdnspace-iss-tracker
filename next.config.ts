@@ -10,6 +10,7 @@ function getGitHash(): string {
 }
 
 const nextConfig: NextConfig = {
+  output: "standalone",
   generateBuildId: async () => {
     return getGitHash();
   },
