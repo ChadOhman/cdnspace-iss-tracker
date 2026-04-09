@@ -87,8 +87,19 @@ interface CcaaStatusProps {
   status: string;
 }
 
+const CCAA_STATUS_MAP: Record<string, { label: string; color: string }> = {
+  "0": { label: "Reset", color: "var(--color-accent-orange)" },
+  "1": { label: "Drain", color: "var(--color-accent-orange)" },
+  "2": { label: "Dryout", color: "var(--color-accent-orange)" },
+  "3": { label: "EIB Off", color: "var(--color-text-muted)" },
+  "4": { label: "Off", color: "var(--color-text-muted)" },
+  "5": { label: "On", color: "var(--color-accent-green)" },
+  "6": { label: "Startup", color: "var(--color-accent-cyan)" },
+  "7": { label: "Test", color: "var(--color-accent-orange)" },
+};
+
 function CcaaStatus({ module, status }: CcaaStatusProps) {
-  const ok = status.toLowerCase().includes("on") || status.toLowerCase().includes("nominal");
+  const decoded = CCAA_STATUS_MAP[status.trim()] ?? { label: status || "—", color: "var(--color-text-muted)" };
   return (
     <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 2 }}>
       <span style={{ color: "var(--color-text-muted)", fontSize: 8 }}>{module}</span>
@@ -96,10 +107,10 @@ function CcaaStatus({ module, status }: CcaaStatusProps) {
         style={{
           fontSize: 8,
           fontWeight: 600,
-          color: ok ? "var(--color-accent-green)" : "var(--color-text-muted)",
+          color: decoded.color,
         }}
       >
-        {status || "—"}
+        {decoded.label}
       </span>
     </div>
   );
