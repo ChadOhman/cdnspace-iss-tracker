@@ -11,6 +11,9 @@ function getGitHash(): string {
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  env: {
+    NEXT_PUBLIC_BUILD_ID: getGitHash(),
+  },
   generateBuildId: async () => {
     return getGitHash();
   },

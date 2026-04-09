@@ -191,6 +191,9 @@ function BottomBarInner() {
         <span style={{ color: "var(--color-text-muted)", letterSpacing: "0.02em" }}>
           iss.cdnspace.ca
         </span>
+        <span style={{ color: "var(--color-border-accent)", fontSize: 9, letterSpacing: "0.02em", opacity: 0.5 }}>
+          {process.env.NEXT_PUBLIC_BUILD_ID ?? ""}
+        </span>
       </div>
     </div>
   );
