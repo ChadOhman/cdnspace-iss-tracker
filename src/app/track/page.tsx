@@ -3,8 +3,10 @@
 import { useEffect, useRef } from "react";
 import Link from "next/link";
 import { useTelemetryStream } from "@/hooks/useTelemetryStream";
+import { useLocale } from "@/context/LocaleContext";
 
 export default function TrackPage() {
+  const { t } = useLocale();
   const { orbital, connected } = useTelemetryStream();
   const mapRef = useRef<HTMLDivElement>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -100,10 +102,10 @@ export default function TrackPage() {
           padding: "2px 8px",
           borderRadius: 3,
         }}>
-          &larr; DASHBOARD
+          &larr; {t("pages.dashboard")}
         </Link>
         <span style={{ color: "#00e5ff", fontSize: 13, fontFamily: "var(--font-jetbrains-mono)", letterSpacing: "0.1em" }}>
-          ISS GROUND TRACK
+          {t("pages.groundTrack")}
         </span>
         <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 6 }}>
           <div style={{
@@ -112,7 +114,7 @@ export default function TrackPage() {
             boxShadow: connected ? "0 0 6px #00ff88" : "none",
           }} />
           <span style={{ color: "var(--color-text-muted, #8892a4)", fontSize: 10, fontFamily: "var(--font-jetbrains-mono)" }}>
-            {connected ? "LIVE" : "OFFLINE"}
+            {connected ? t("pages.live") : t("pages.offline")}
           </span>
           {orbital && (
             <span style={{ color: "var(--color-text-muted, #8892a4)", fontSize: 10, fontFamily: "var(--font-jetbrains-mono)", marginLeft: 8 }}>

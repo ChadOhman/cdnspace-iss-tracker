@@ -3,6 +3,7 @@
 import PanelFrame from "@/components/shared/PanelFrame";
 import Sparkline from "@/components/shared/Sparkline";
 import type { OrbitalState } from "@/lib/types";
+import { useLocale } from "@/context/LocaleContext";
 
 interface OrbitalParamsPanelProps {
   orbital: OrbitalState | null;
@@ -39,6 +40,8 @@ function ParamRow({ label, value }: ParamRowProps) {
 }
 
 export default function OrbitalParamsPanel({ orbital }: OrbitalParamsPanelProps) {
+  const { t } = useLocale();
+
   function formatPeriod(minutes: number): string {
     const m = Math.floor(minutes);
     const s = Math.round((minutes - m) * 60);
@@ -47,13 +50,13 @@ export default function OrbitalParamsPanel({ orbital }: OrbitalParamsPanelProps)
 
   return (
     <PanelFrame
-      title="ORBITAL PARAMETERS"
+      title={t("panels.orbitalParams").toUpperCase()}
       icon="📐"
       accentColor="var(--color-accent-cyan)"
     >
       {!orbital ? (
         <div style={{ color: "var(--color-text-muted)", fontSize: 10, textAlign: "center", padding: "12px 0" }}>
-          Awaiting data…
+          {t("orbital.awaitingData")}
         </div>
       ) : (
         <>
@@ -65,27 +68,27 @@ export default function OrbitalParamsPanel({ orbital }: OrbitalParamsPanelProps)
             }}
           >
             <ParamRow
-              label="Apoapsis"
+              label={t("orbital.apoapsis")}
               value={`${orbital.apoapsis.toFixed(1)} km`}
             />
             <ParamRow
-              label="Periapsis"
+              label={t("orbital.periapsis")}
               value={`${orbital.periapsis.toFixed(1)} km`}
             />
             <ParamRow
-              label="Inclination"
+              label={t("orbital.inclination")}
               value={`${orbital.inclination.toFixed(2)}°`}
             />
             <ParamRow
-              label="Eccentricity"
+              label={t("orbital.eccentricity")}
               value={orbital.eccentricity.toFixed(6)}
             />
             <ParamRow
-              label="Period"
+              label={t("orbital.period")}
               value={formatPeriod(orbital.period)}
             />
             <ParamRow
-              label="Revolutions"
+              label={t("orbital.revolutions")}
               value={`#${orbital.revolutionNumber}`}
             />
           </div>
@@ -102,7 +105,7 @@ export default function OrbitalParamsPanel({ orbital }: OrbitalParamsPanelProps)
           >
             <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
               <span style={{ color: "var(--color-text-muted)", fontSize: 9 }}>
-                ALT (24h)
+                {t("orbital.alt24h")}
               </span>
               <Sparkline
                 metric="altitude"
@@ -114,7 +117,7 @@ export default function OrbitalParamsPanel({ orbital }: OrbitalParamsPanelProps)
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
               <span style={{ color: "var(--color-text-muted)", fontSize: 9 }}>
-                SPD (24h)
+                {t("orbital.spd24h")}
               </span>
               <Sparkline
                 metric="speed_kmh"

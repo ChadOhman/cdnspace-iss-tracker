@@ -2,6 +2,7 @@
 
 import PanelFrame from "@/components/shared/PanelFrame";
 import type { OrbitalState } from "@/lib/types";
+import { useLocale } from "@/context/LocaleContext";
 
 interface DayNightPanelProps {
   orbital: OrbitalState | null;
@@ -19,6 +20,8 @@ function formatSecondsRelative(seconds: number, suffix: string): string {
 }
 
 export default function DayNightPanel({ orbital }: DayNightPanelProps) {
+  const { t } = useLocale();
+
   if (!orbital) {
     return (
       <PanelFrame
@@ -34,7 +37,7 @@ export default function DayNightPanel({ orbital }: DayNightPanelProps) {
             padding: "12px 0",
           }}
         >
-          Awaiting data…
+          {t("dayNight.awaitingData")}
         </div>
       </PanelFrame>
     );
@@ -55,14 +58,14 @@ export default function DayNightPanel({ orbital }: DayNightPanelProps) {
       const elapsedS = HALF_CYCLE_S - sunsetIn;
       progressPct = Math.max(0, Math.min(100, (elapsedS / HALF_CYCLE_S) * 100));
     }
-    phaseLabel = sunsetIn !== null ? `Sunset in ${formatSecondsRelative(sunsetIn, "")}` : "In Daylight";
+    phaseLabel = sunsetIn !== null ? `${t("dayNight.sunsetIn")} ${formatSecondsRelative(sunsetIn, "")}` : t("dayNight.inDaylight");
   } else {
     // In shadow: sunriseIn tells us how long until light
     if (sunriseIn !== null) {
       const elapsedS = HALF_CYCLE_S - sunriseIn;
       progressPct = Math.max(0, Math.min(100, (elapsedS / HALF_CYCLE_S) * 100));
     }
-    phaseLabel = sunriseIn !== null ? `Sunrise in ${formatSecondsRelative(sunriseIn, "")}` : "In Shadow";
+    phaseLabel = sunriseIn !== null ? `${t("dayNight.sunriseIn")} ${formatSecondsRelative(sunriseIn, "")}` : t("dayNight.inShadow");
   }
 
   const accentColor = isInSunlight
@@ -91,7 +94,7 @@ export default function DayNightPanel({ orbital }: DayNightPanelProps) {
               letterSpacing: "0.05em",
             }}
           >
-            {isInSunlight ? "DAYLIGHT" : "SHADOW"}
+            {isInSunlight ? t("dayNight.daylight").toUpperCase() : t("dayNight.shadow").toUpperCase()}
           </span>
         </div>
 
@@ -123,10 +126,10 @@ export default function DayNightPanel({ orbital }: DayNightPanelProps) {
             }}
           >
             <span style={{ color: "var(--color-text-muted)", fontSize: 8 }}>
-              {isInSunlight ? "Sunrise" : "Sunset"}
+              {isInSunlight ? t("dayNight.sunrise") : t("dayNight.sunset")}
             </span>
             <span style={{ color: "var(--color-text-muted)", fontSize: 8 }}>
-              {isInSunlight ? "Sunset" : "Sunrise"}
+              {isInSunlight ? t("dayNight.sunset") : t("dayNight.sunrise")}
             </span>
           </div>
         </div>

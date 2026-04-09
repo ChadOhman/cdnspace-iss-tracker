@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import PanelFrame from "@/components/shared/PanelFrame";
 import type { PassPrediction } from "@/lib/types";
+import { useLocale } from "@/context/LocaleContext";
 
 type GeoState = "idle" | "requesting" | "granted" | "denied";
 
@@ -27,18 +28,19 @@ function formatTime(ts: number): string {
   });
 }
 
-function formatDate(ts: number): string {
+function formatDate(ts: number, tonight: string, tomorrow: string): string {
   const d = new Date(ts);
   const today = new Date();
-  const tomorrow = new Date(today);
-  tomorrow.setDate(today.getDate() + 1);
+  const tomorrowDate = new Date(today);
+  tomorrowDate.setDate(today.getDate() + 1);
 
-  if (d.toDateString() === today.toDateString()) return "Tonight";
-  if (d.toDateString() === tomorrow.toDateString()) return "Tomorrow";
+  if (d.toDateString() === today.toDateString()) return tonight;
+  if (d.toDateString() === tomorrowDate.toDateString()) return tomorrow;
   return d.toLocaleDateString("en-CA", { month: "short", day: "numeric" });
 }
 
 export default function PassPredictionPanel() {
+  const { t } = useLocale();
   const [geoState, setGeoState] = useState<GeoState>("idle");
   const [coords, setCoords] = useState<Coords | null>(null);
   const [passes, setPasses] = useState<PassPrediction[]>([]);
@@ -98,9 +100,7 @@ export default function PassPredictionPanel() {
       }}
     >
       <span>
-        {coords
-          ? `Based on your location`
-          : "Enable location for pass predictions"}
+        {coords ? t("passes.basedOnLocation") : t("passes.enableLocation")}
       </span>
       <button
         onClick={requestLocation}
@@ -114,21 +114,21 @@ export default function PassPredictionPanel() {
           padding: 0,
         }}
       >
-        {coords ? "Change" : "Enable"}
+        {coords ? t("passes.change") : t("passes.enable")}
       </button>
     </div>
   );
 
   return (
     <PanelFrame
-      title="NEXT VISIBLE PASSES"
+      title={t("panels.passPredictions").toUpperCase()}
       icon="👁️"
       accentColor="var(--color-accent-cyan)"
     >
       {geoState === "idle" ? (
         <div style={{ textAlign: "center", padding: "12px 0" }}>
           <p style={{ color: "var(--color-text-muted)", fontSize: 10, marginBottom: 8 }}>
-            Enable location for pass predictions
+            {t("passes.enableLocation")}
           </p>
           <button
             onClick={requestLocation}
@@ -143,20 +143,20 @@ export default function PassPredictionPanel() {
               fontFamily: "inherit",
             }}
           >
-            Use My Location
+            {t("passes.useMyLocation")}
           </button>
         </div>
       ) : geoState === "requesting" ? (
         <div style={{ color: "var(--color-text-muted)", fontSize: 10, textAlign: "center", padding: "12px 0" }}>
-          Requesting location…
+          {t("passes.requestingLocation")}
         </div>
       ) : geoState === "denied" ? (
         <div style={{ color: "var(--color-text-muted)", fontSize: 10, textAlign: "center", padding: "12px 0" }}>
-          Location access denied
+          {t("passes.locationDenied")}
         </div>
       ) : loading ? (
         <div style={{ color: "var(--color-text-muted)", fontSize: 10, textAlign: "center", padding: "12px 0" }}>
-          Loading passes…
+          {t("passes.loadingPasses")}
         </div>
       ) : error ? (
         <div style={{ color: "var(--color-accent-red)", fontSize: 10, textAlign: "center", padding: "12px 0" }}>
@@ -164,7 +164,7 @@ export default function PassPredictionPanel() {
         </div>
       ) : passes.length === 0 ? (
         <div style={{ color: "var(--color-text-muted)", fontSize: 10, textAlign: "center", padding: "12px 0" }}>
-          No visible passes found
+          {t("passes.noPassesFound")}
         </div>
       ) : (
         <>
@@ -185,14 +185,14 @@ export default function PassPredictionPanel() {
             >
               <div>
                 <div style={{ color: "var(--color-accent-orange)", fontSize: 9 }}>
-                  {formatDate(pass.riseTime)}
+                  {formatDate(pass.riseTime, t("passes.tonight"), t("passes.tomorrow"))}
                 </div>
                 <div style={{ color: "var(--color-text-primary)", fontSize: 10 }}>
                   {formatTime(pass.riseTime)}
                 </div>
               </div>
               <div>
-                <div style={{ color: "var(--color-text-muted)", fontSize: 9 }}>Max Elev</div>
+                <div style={{ color: "var(--color-text-muted)", fontSize: 9 }}>{t("passes.maxElev")}</div>
                 <div style={{ color: "var(--color-accent-cyan)", fontSize: 10 }}>
                   {pass.maxElevation.toFixed(0)}°
                 </div>
@@ -205,10 +205,10 @@ export default function PassPredictionPanel() {
                     textTransform: "uppercase",
                   }}
                 >
-                  {pass.quality}
+                  {t(`passes.${pass.quality}`) ?? pass.quality}
                 </div>
                 <div style={{ color: "var(--color-text-muted)", fontSize: 9 }}>
-                  mag {pass.magnitude.toFixed(1)}
+                  {t("passes.magnitude").toLowerCase()} {pass.magnitude.toFixed(1)}
                 </div>
               </div>
             </div>

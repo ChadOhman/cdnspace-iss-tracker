@@ -5,6 +5,7 @@ import PanelFrame from "@/components/shared/PanelFrame";
 import Modal from "@/components/shared/Modal";
 import { CURRENT_CREW, CURRENT_EXPEDITION, FLAG_EMOJI } from "@/data/iss-modules";
 import type { CrewMember } from "@/lib/types";
+import { useLocale } from "@/context/LocaleContext";
 
 const AGENCY_COLOR: Record<string, string> = {
   NASA: "var(--color-accent-cyan)",
@@ -15,6 +16,7 @@ const AGENCY_COLOR: Record<string, string> = {
 };
 
 export default function CrewRosterPanel() {
+  const { t } = useLocale();
   const [selected, setSelected] = useState<CrewMember | null>(null);
 
   const openBio = useCallback((member: CrewMember) => {
@@ -28,7 +30,7 @@ export default function CrewRosterPanel() {
   return (
     <>
       <PanelFrame
-        title={`CREW — EXPEDITION ${CURRENT_EXPEDITION}`}
+        title={`${t("crew.expedition")} ${CURRENT_EXPEDITION}`}
         icon="👨‍🚀"
         accentColor="var(--color-accent-cyan)"
       >
@@ -124,7 +126,7 @@ export default function CrewRosterPanel() {
                   {selected.name}
                 </div>
                 <div style={{ color: "var(--color-text-muted)", fontSize: 10 }}>
-                  {selected.role} · {selected.agency} · Expedition{" "}
+                  {selected.role} · {selected.agency} · {t("panels.crew")}{" "}
                   {selected.expedition}
                 </div>
               </div>
@@ -147,7 +149,7 @@ export default function CrewRosterPanel() {
                   fontStyle: "italic",
                 }}
               >
-                No biographical information available.
+                {t("crew.noBio")}
               </p>
             )}
           </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useLocale } from "@/context/LocaleContext";
 
 const ISS_LAUNCH_DATE = new Date("1998-11-20T06:40:00Z");
 const REVS_PER_DAY = 15.49;
@@ -37,6 +38,7 @@ const staticFacts = [
 ];
 
 export default function StatsPage() {
+  const { t } = useLocale();
   const stats = computeStats();
 
   return (
@@ -66,10 +68,10 @@ export default function StatsPage() {
           padding: "2px 8px",
           borderRadius: 3,
         }}>
-          &larr; DASHBOARD
+          &larr; {t("pages.dashboard")}
         </Link>
         <span style={{ color: "#00e5ff", fontSize: 13, letterSpacing: "0.1em" }}>
-          ISS CUMULATIVE STATISTICS
+          {t("pages.stats")}
         </span>
       </div>
 
@@ -78,15 +80,15 @@ export default function StatsPage() {
         {/* Section: Live computed stats */}
         <div style={{ marginBottom: 32 }}>
           <div style={{ fontSize: 10, color: "#00e5ff", letterSpacing: "0.1em", marginBottom: 16, borderBottom: "1px solid rgba(0,229,255,0.15)", paddingBottom: 6 }}>
-            LIVE CUMULATIVE METRICS — Since {ISS_LAUNCH_DATE.toDateString()}
+            {t("pages.liveCumulativeMetrics")} — {t("pages.since")} {ISS_LAUNCH_DATE.toDateString()}
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 12 }}>
             {[
-              { label: "Years in Orbit", value: stats.yearsInOrbit, unit: "years" },
-              { label: "Days in Orbit", value: stats.daysInOrbit, unit: "days" },
-              { label: "Total Orbits", value: stats.totalOrbits, unit: "revolutions" },
-              { label: "Distance Traveled", value: stats.totalDistanceKm, unit: "km" },
-              { label: "Distance (light-years)", value: stats.totalDistanceLightYears, unit: "ly" },
+              { label: t("pages.yearsInOrbit"), value: stats.yearsInOrbit, unit: "years" },
+              { label: t("pages.daysInOrbit"), value: stats.daysInOrbit, unit: "days" },
+              { label: t("pages.totalOrbits"), value: stats.totalOrbits, unit: "revolutions" },
+              { label: t("pages.distanceTraveled"), value: stats.totalDistanceKm, unit: "km" },
+              { label: t("pages.distanceLightYears"), value: stats.totalDistanceLightYears, unit: "ly" },
             ].map(({ label, value, unit }) => (
               <div key={label} style={{
                 background: "rgba(0,229,255,0.04)",
@@ -105,7 +107,7 @@ export default function StatsPage() {
         {/* Section: Static facts */}
         <div>
           <div style={{ fontSize: 10, color: "#00e5ff", letterSpacing: "0.1em", marginBottom: 16, borderBottom: "1px solid rgba(0,229,255,0.15)", paddingBottom: 6 }}>
-            ISS PROGRAM FACTS
+            {t("pages.issProgramFacts")}
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 12 }}>
             {staticFacts.map(({ label, value, unit }) => (
@@ -124,8 +126,7 @@ export default function StatsPage() {
         </div>
 
         <div style={{ marginTop: 32, fontSize: 9, color: "#4a5568", lineHeight: 1.6 }}>
-          * Orbit counts and distances are computed dynamically using 15.49 rev/day and an average altitude of 408 km.
-          Static facts are approximate as of 2024. Sources: NASA, ESA, Roscosmos.
+          {t("pages.statsFootnote")}
         </div>
       </div>
     </div>

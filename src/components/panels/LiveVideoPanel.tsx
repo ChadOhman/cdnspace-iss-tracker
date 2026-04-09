@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import PanelFrame from "@/components/shared/PanelFrame";
+import { useLocale } from "@/context/LocaleContext";
 
 // NASA ISS live stream YouTube IDs
 const STREAMS = {
@@ -12,6 +13,7 @@ const STREAMS = {
 type Camera = keyof typeof STREAMS;
 
 export default function LiveVideoPanel() {
+  const { t } = useLocale();
   const [camera, setCamera] = useState<Camera>("external");
 
   const cameraToggle = (
@@ -47,7 +49,7 @@ export default function LiveVideoPanel() {
 
   return (
     <PanelFrame
-      title="LIVE VIDEO"
+      title={t("panels.liveVideo").toUpperCase()}
       icon="🔴"
       accentColor="var(--color-accent-red)"
       headerRight={cameraToggle}

@@ -2,6 +2,7 @@
 
 import PanelFrame from "@/components/shared/PanelFrame";
 import type { SolarActivity, RadiationRisk } from "@/lib/types";
+import { useLocale } from "@/context/LocaleContext";
 
 interface SpaceWeatherPanelProps {
   solar: SolarActivity | null;
@@ -52,9 +53,10 @@ function MetricCell({ label, value, sub, color = "var(--color-accent-orange)" }:
 }
 
 export default function SpaceWeatherPanel({ solar }: SpaceWeatherPanelProps) {
+  const { t } = useLocale();
   return (
     <PanelFrame
-      title="SPACE WEATHER"
+      title={t("panels.spaceWeather").toUpperCase()}
       icon="☀️"
       accentColor="var(--color-accent-orange)"
     >
@@ -67,7 +69,7 @@ export default function SpaceWeatherPanel({ solar }: SpaceWeatherPanelProps) {
             padding: "12px 0",
           }}
         >
-          Awaiting data…
+          {t("weather.awaitingData")}
         </div>
       ) : (
         <div
@@ -78,27 +80,27 @@ export default function SpaceWeatherPanel({ solar }: SpaceWeatherPanelProps) {
           }}
         >
           <MetricCell
-            label="KP INDEX"
+            label={t("weather.kpIndex").toUpperCase()}
             value={solar.kpIndex.toFixed(1)}
             sub={solar.kpLabel}
             color="var(--color-accent-orange)"
           />
           <MetricCell
-            label="X-RAY"
+            label={t("weather.xray").toUpperCase()}
             value={solar.xrayClass}
             sub={`${solar.xrayFlux.toExponential(2)} W/m²`}
             color="var(--color-accent-yellow)"
           />
           <MetricCell
-            label="PROTON FLUX"
+            label={t("weather.protonFlux").toUpperCase()}
             value={solar.protonFlux10MeV.toFixed(1)}
             sub="≥10 MeV pfu"
             color="var(--color-accent-cyan)"
           />
           <MetricCell
-            label="RADIATION"
+            label={t("weather.radiation").toUpperCase()}
             value={solar.radiationRisk.toUpperCase()}
-            sub="crew risk level"
+            sub={t("weather.crewRisk")}
             color={radiationColor(solar.radiationRisk)}
           />
         </div>

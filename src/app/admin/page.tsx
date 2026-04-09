@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useLocale } from "@/context/LocaleContext";
 
 interface EventForm {
   type: string;
@@ -32,6 +33,7 @@ const emptyForm: EventForm = {
 };
 
 export default function AdminPage() {
+  const { t } = useLocale();
   const [token, setToken] = useState("");
   const [authed, setAuthed] = useState(false);
   const [events, setEvents] = useState<ISSEvent[]>([]);
@@ -65,7 +67,7 @@ export default function AdminPage() {
   }
 
   async function createEvent() {
-    if (!form.title.trim()) { showStatus("Title is required"); return; }
+    if (!form.title.trim()) { showStatus(t("pages.titleRequired")); return; }
     setLoading(true);
     try {
       const body: Record<string, unknown> = {
@@ -81,7 +83,7 @@ export default function AdminPage() {
         body: JSON.stringify(body),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      showStatus("Event created");
+      showStatus(t("pages.eventCreated"));
       setForm(emptyForm);
       await loadEvents();
     } catch (e) {
@@ -100,7 +102,7 @@ export default function AdminPage() {
         body: JSON.stringify({ isActive }),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      showStatus(isActive ? "Event activated" : "Event ended");
+      showStatus(isActive ? t("pages.eventActivated") : t("pages.eventEnded"));
       await loadEvents();
     } catch (e) {
       showStatus(`Error: ${e instanceof Error ? e.message : "Unknown error"}`);
@@ -154,19 +156,19 @@ export default function AdminPage() {
         gap: 16,
       }}>
         <Link href="/" style={{ color: "#00e5ff", textDecoration: "none", fontSize: 11, letterSpacing: "0.05em", border: "1px solid rgba(0,229,255,0.3)", padding: "2px 8px", borderRadius: 3 }}>
-          &larr; DASHBOARD
+          &larr; {t("pages.dashboard")}
         </Link>
-        <span style={{ color: "#00e5ff", fontSize: 13, letterSpacing: "0.1em" }}>ADMIN PANEL</span>
+        <span style={{ color: "#00e5ff", fontSize: 13, letterSpacing: "0.1em" }}>{t("pages.adminPanel")}</span>
       </div>
 
       <div style={{ maxWidth: 800, margin: "0 auto", padding: "24px 16px", display: "flex", flexDirection: "column", gap: 20 }}>
 
         {/* Auth section */}
         <div style={{ background: "rgba(0,0,0,0.3)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 6, padding: "16px" }}>
-          <div style={{ fontSize: 10, color: "#00e5ff", letterSpacing: "0.1em", marginBottom: 12 }}>AUTHENTICATION</div>
+          <div style={{ fontSize: 10, color: "#00e5ff", letterSpacing: "0.1em", marginBottom: 12 }}>{t("pages.authentication")}</div>
           <div style={{ display: "flex", gap: 8, alignItems: "flex-end" }}>
             <div style={{ flex: 1 }}>
-              <label style={labelStyle}>ADMIN TOKEN</label>
+              <label style={labelStyle}>{t("pages.adminToken")}</label>
               <input
                 type="password"
                 value={token}
@@ -177,10 +179,10 @@ export default function AdminPage() {
               />
             </div>
             <button onClick={loadEvents} disabled={loading || !token} style={btnStyle("primary")}>
-              {loading ? "..." : "CONNECT"}
+              {loading ? "..." : t("pages.connect")}
             </button>
           </div>
-          {authed && <div style={{ fontSize: 9, color: "#00ff88", marginTop: 6 }}>AUTHENTICATED</div>}
+          {authed && <div style={{ fontSize: 9, color: "#00ff88", marginTop: 6 }}>{t("pages.authenticated")}</div>}
         </div>
 
         {statusMsg && (
@@ -193,10 +195,10 @@ export default function AdminPage() {
           <>
             {/* Create event form */}
             <div style={{ background: "rgba(0,0,0,0.3)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 6, padding: "16px" }}>
-              <div style={{ fontSize: 10, color: "#00e5ff", letterSpacing: "0.1em", marginBottom: 12 }}>CREATE NEW EVENT</div>
+              <div style={{ fontSize: 10, color: "#00e5ff", letterSpacing: "0.1em", marginBottom: 12 }}>{t("pages.createNewEvent")}</div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: 10, marginBottom: 10 }}>
                 <div>
-                  <label style={labelStyle}>TYPE</label>
+                  <label style={labelStyle}>{t("pages.type")}</label>
                   <select
                     value={form.type}
                     onChange={(e) => setForm((f) => ({ ...f, type: e.target.value }))}
@@ -208,7 +210,7 @@ export default function AdminPage() {
                   </select>
                 </div>
                 <div>
-                  <label style={labelStyle}>TITLE</label>
+                  <label style={labelStyle}>{t("pages.title")}</label>
                   <input
                     type="text"
                     value={form.title}
@@ -219,7 +221,7 @@ export default function AdminPage() {
                 </div>
               </div>
               <div style={{ marginBottom: 10 }}>
-                <label style={labelStyle}>DESCRIPTION</label>
+                <label style={labelStyle}>{t("pages.description")}</label>
                 <textarea
                   value={form.description}
                   onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
@@ -229,7 +231,7 @@ export default function AdminPage() {
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>
                 <div>
-                  <label style={labelStyle}>SCHEDULED START (UTC)</label>
+                  <label style={labelStyle}>{t("pages.scheduledStart")}</label>
                   <input
                     type="datetime-local"
                     value={form.scheduledStart}
@@ -238,7 +240,7 @@ export default function AdminPage() {
                   />
                 </div>
                 <div>
-                  <label style={labelStyle}>SCHEDULED END (UTC)</label>
+                  <label style={labelStyle}>{t("pages.scheduledEnd")}</label>
                   <input
                     type="datetime-local"
                     value={form.scheduledEnd}
@@ -248,20 +250,20 @@ export default function AdminPage() {
                 </div>
               </div>
               <button onClick={createEvent} disabled={loading} style={btnStyle("primary")}>
-                {loading ? "CREATING..." : "CREATE EVENT"}
+                {loading ? t("pages.creating") : t("pages.createEvent")}
               </button>
             </div>
 
             {/* Events list */}
             <div style={{ background: "rgba(0,0,0,0.3)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 6, padding: "16px" }}>
               <div style={{ fontSize: 10, color: "#00e5ff", letterSpacing: "0.1em", marginBottom: 12, display: "flex", alignItems: "center", gap: 8 }}>
-                ACTIVE EVENTS
+                {t("pages.activeEvents")}
                 <button onClick={loadEvents} disabled={loading} style={{ ...btnStyle("secondary"), fontSize: 9, padding: "1px 6px" }}>
-                  REFRESH
+                  {t("pages.refresh")}
                 </button>
               </div>
               {events.length === 0 ? (
-                <div style={{ fontSize: 10, color: "#4a5568" }}>No events found.</div>
+                <div style={{ fontSize: 10, color: "#4a5568" }}>{t("pages.noEventsFound")}</div>
               ) : (
                 <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                   {events.map((ev) => (
@@ -276,16 +278,16 @@ export default function AdminPage() {
                     }}>
                       <div style={{ fontSize: 9, color: "#8892a4", width: 70 }}>{ev.type?.toUpperCase()}</div>
                       <div style={{ flex: 1, fontSize: 11, color: "#e2e8f0" }}>{ev.title}</div>
-                      {ev.isActive && <div style={{ fontSize: 9, color: "#00ff88", letterSpacing: "0.06em" }}>ACTIVE</div>}
+                      {ev.isActive && <div style={{ fontSize: 9, color: "#00ff88", letterSpacing: "0.06em" }}>{t("pages.active")}</div>}
                       <div style={{ display: "flex", gap: 6 }}>
                         {!ev.isActive && (
                           <button onClick={() => setEventActive(ev.id, true)} disabled={loading} style={btnStyle("primary")}>
-                            ACTIVATE
+                            {t("pages.activate")}
                           </button>
                         )}
                         {ev.isActive && (
                           <button onClick={() => setEventActive(ev.id, false)} disabled={loading} style={btnStyle("danger")}>
-                            END
+                            {t("pages.end")}
                           </button>
                         )}
                       </div>

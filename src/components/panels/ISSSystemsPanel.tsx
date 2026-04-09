@@ -2,6 +2,7 @@
 
 import PanelFrame from "@/components/shared/PanelFrame";
 import type { ISSTelemetry } from "@/lib/types";
+import { useLocale } from "@/context/LocaleContext";
 
 interface ISSSystemsPanelProps {
   telemetry: ISSTelemetry | null;
@@ -69,9 +70,10 @@ function ProgressBar({ value, max, color = "var(--color-accent-green)" }: Progre
 }
 
 export default function ISSSystemsPanel({ telemetry }: ISSSystemsPanelProps) {
+  const { t } = useLocale();
   return (
     <PanelFrame
-      title="ISS SYSTEMS"
+      title={t("panels.issSystems").toUpperCase()}
       icon="⚡"
       accentColor="var(--color-accent-green)"
     >
@@ -84,12 +86,12 @@ export default function ISSSystemsPanel({ telemetry }: ISSSystemsPanelProps) {
             padding: "12px 0",
           }}
         >
-          Awaiting telemetry…
+          {t("crew.awaitingTelemetry")}
         </div>
       ) : (
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
           {/* POWER */}
-          <SubPanel title="POWER">
+          <SubPanel title={t("systems.power").toUpperCase()}>
             <div
               style={{
                 color: "var(--color-accent-green)",
@@ -107,7 +109,7 @@ export default function ISSSystemsPanel({ telemetry }: ISSSystemsPanelProps) {
           </SubPanel>
 
           {/* THERMAL */}
-          <SubPanel title="THERMAL">
+          <SubPanel title={t("systems.thermal").toUpperCase()}>
             <div
               style={{
                 color: "var(--color-accent-cyan)",
@@ -124,7 +126,7 @@ export default function ISSSystemsPanel({ telemetry }: ISSSystemsPanelProps) {
           </SubPanel>
 
           {/* ATTITUDE */}
-          <SubPanel title="ATTITUDE">
+          <SubPanel title={t("systems.attitude").toUpperCase()}>
             <div
               style={{
                 color: "var(--color-accent-yellow)",
@@ -138,7 +140,7 @@ export default function ISSSystemsPanel({ telemetry }: ISSSystemsPanelProps) {
           </SubPanel>
 
           {/* ATMOSPHERE */}
-          <SubPanel title="ATMOSPHERE">
+          <SubPanel title={t("systems.atmosphere").toUpperCase()}>
             <div style={{ display: "flex", flexDirection: "column", gap: 1 }}>
               <div style={{ display: "flex", justifyContent: "space-between" }}>
                 <span style={{ color: "var(--color-text-muted)", fontSize: 9 }}>PSI</span>

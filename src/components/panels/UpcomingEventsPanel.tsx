@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import PanelFrame from "@/components/shared/PanelFrame";
 import type { ISSEvent } from "@/lib/types";
+import { useLocale } from "@/context/LocaleContext";
 
 const EVENT_TYPE_ICONS: Record<string, string> = {
   eva: "🚶",
@@ -25,6 +26,7 @@ function formatEventDate(ts: number): { date: string; time: string } {
 }
 
 export default function UpcomingEventsPanel() {
+  const { t } = useLocale();
   const [events, setEvents] = useState<ISSEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -49,7 +51,7 @@ export default function UpcomingEventsPanel() {
 
   return (
     <PanelFrame
-      title="UPCOMING"
+      title={t("panels.upcoming").toUpperCase()}
       icon="📋"
       accentColor="var(--color-accent-orange)"
     >
@@ -62,7 +64,7 @@ export default function UpcomingEventsPanel() {
             padding: "12px 0",
           }}
         >
-          Loading events…
+          {t("upcoming.loadingEvents")}
         </div>
       ) : error ? (
         <div
@@ -73,7 +75,7 @@ export default function UpcomingEventsPanel() {
             padding: "12px 0",
           }}
         >
-          No events available
+          {t("upcoming.noEventsAvailable")}
         </div>
       ) : events.length === 0 ? (
         <div
@@ -84,7 +86,7 @@ export default function UpcomingEventsPanel() {
             padding: "12px 0",
           }}
         >
-          No upcoming events
+          {t("upcoming.noUpcomingEvents")}
         </div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>

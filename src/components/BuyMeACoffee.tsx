@@ -1,8 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import { useLocale } from "@/context/LocaleContext";
 
 export function BuyMeACoffee() {
+  const { t } = useLocale();
   const [dismissed, setDismissed] = useState(false);
 
   if (dismissed) return null;
@@ -37,7 +39,7 @@ export function BuyMeACoffee() {
           fontWeight: 500,
         }}
       >
-        ☕ Support this project
+        ☕ {t("support.supportProject")}
       </a>
       <button
         onClick={() => setDismissed(true)}

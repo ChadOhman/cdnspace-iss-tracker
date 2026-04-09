@@ -4,10 +4,11 @@ import { useState, useEffect, useRef } from "react";
 import dynamic from "next/dynamic";
 import PanelFrame from "@/components/shared/PanelFrame";
 import type { OrbitalState } from "@/lib/types";
+import { useLocale } from "@/context/LocaleContext";
 
-const Globe3D = dynamic(() => import("@/components/panels/Globe3D"), {
-  ssr: false,
-  loading: () => (
+function Globe3DLoader() {
+  const { t } = useLocale();
+  return (
     <div
       style={{
         height: 240,
@@ -18,9 +19,14 @@ const Globe3D = dynamic(() => import("@/components/panels/Globe3D"), {
         fontSize: 11,
       }}
     >
-      Loading 3D Globe...
+      {t("ground.loading3DGlobe")}
     </div>
-  ),
+  );
+}
+
+const Globe3D = dynamic(() => import("@/components/panels/Globe3D"), {
+  ssr: false,
+  loading: () => <Globe3DLoader />,
 });
 
 interface GroundTrackPanelProps {
@@ -28,6 +34,7 @@ interface GroundTrackPanelProps {
 }
 
 export default function GroundTrackPanel({ orbital }: GroundTrackPanelProps) {
+  const { t } = useLocale();
   const [mode3D, setMode3D] = useState(false);
   const mapRef = useRef<HTMLDivElement>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -138,7 +145,7 @@ export default function GroundTrackPanel({ orbital }: GroundTrackPanelProps) {
 
   return (
     <PanelFrame
-      title="GROUND TRACK"
+      title={t("panels.groundTrack").toUpperCase()}
       icon="🗺️"
       accentColor="var(--color-accent-cyan)"
       headerRight={toggle}

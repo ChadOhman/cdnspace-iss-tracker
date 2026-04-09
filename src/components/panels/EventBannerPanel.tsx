@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import PanelFrame from "@/components/shared/PanelFrame";
 import type { ISSEvent, EventType } from "@/lib/types";
+import { useLocale } from "@/context/LocaleContext";
 
 interface EventBannerPanelProps {
   event: ISSEvent | null;
@@ -28,6 +29,7 @@ function formatDuration(startTs: number): string {
 }
 
 export default function EventBannerPanel({ event }: EventBannerPanelProps) {
+  const { t } = useLocale();
   const [, setTick] = useState(0);
 
   useEffect(() => {
@@ -79,7 +81,7 @@ export default function EventBannerPanel({ event }: EventBannerPanelProps) {
               }}
             >
               <div style={{ color: "var(--color-text-muted)", fontSize: 9 }}>
-                Duration
+                {t("events.duration")}
               </div>
               <div
                 style={{
@@ -123,7 +125,7 @@ export default function EventBannerPanel({ event }: EventBannerPanelProps) {
         )}
         {event.type === "docking" && event.metadata.vehicle && (
           <span style={{ color: "var(--color-accent-cyan)", fontSize: 10 }}>
-            Vehicle: {event.metadata.vehicle}
+            {t("events.docking")}: {event.metadata.vehicle}
           </span>
         )}
         {event.type === "reboost" && event.metadata.deltaV && (

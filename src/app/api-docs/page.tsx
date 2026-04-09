@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { useLocale } from "@/context/LocaleContext";
 
 interface Endpoint {
   method: "GET" | "POST" | "PUT" | "DELETE";
@@ -123,6 +126,7 @@ const methodColors: Record<string, string> = {
 };
 
 export default function ApiDocsPage() {
+  const { t } = useLocale();
   return (
     <div style={{ width: "100vw", minHeight: "100vh", background: "#0a0e14", fontFamily: "monospace", color: "#e2e8f0" }}>
       {/* Header */}
@@ -136,9 +140,9 @@ export default function ApiDocsPage() {
         gap: 16,
       }}>
         <Link href="/" style={{ color: "#00e5ff", textDecoration: "none", fontSize: 11, letterSpacing: "0.05em", border: "1px solid rgba(0,229,255,0.3)", padding: "2px 8px", borderRadius: 3 }}>
-          &larr; DASHBOARD
+          &larr; {t("pages.dashboard")}
         </Link>
-        <span style={{ color: "#00e5ff", fontSize: 13, letterSpacing: "0.1em" }}>ISS TRACKER — API REFERENCE</span>
+        <span style={{ color: "#00e5ff", fontSize: 13, letterSpacing: "0.1em" }}>{t("pages.apiReference")}</span>
       </div>
 
       <div style={{ maxWidth: 900, margin: "0 auto", padding: "32px 16px" }}>
@@ -182,7 +186,7 @@ export default function ApiDocsPage() {
 
                 {ep.params && ep.params.length > 0 && (
                   <div style={{ marginBottom: 10 }}>
-                    <div style={{ fontSize: 9, color: "#00e5ff", letterSpacing: "0.08em", marginBottom: 6 }}>PARAMETERS</div>
+                    <div style={{ fontSize: 9, color: "#00e5ff", letterSpacing: "0.08em", marginBottom: 6 }}>{t("pages.parameters")}</div>
                     <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 10 }}>
                       <thead>
                         <tr>
@@ -206,7 +210,7 @@ export default function ApiDocsPage() {
                 )}
 
                 <div>
-                  <div style={{ fontSize: 9, color: "#00e5ff", letterSpacing: "0.08em", marginBottom: 6 }}>RESPONSE</div>
+                  <div style={{ fontSize: 9, color: "#00e5ff", letterSpacing: "0.08em", marginBottom: 6 }}>{t("pages.response")}</div>
                   <pre style={{
                     background: "rgba(0,0,0,0.4)",
                     border: "1px solid rgba(255,255,255,0.06)",

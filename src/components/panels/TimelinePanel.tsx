@@ -3,6 +3,7 @@
 import { useMemo, useState, useEffect } from "react";
 import PanelFrame from "@/components/shared/PanelFrame";
 import type { ActivityType, TimelineActivity } from "@/lib/types";
+import { useLocale } from "@/context/LocaleContext";
 
 const ACTIVITY_COLORS: Record<ActivityType, string> = {
   sleep: "var(--color-activity-sleep)",
@@ -38,6 +39,7 @@ function makeSampleActivities(): TimelineActivity[] {
 }
 
 export default function TimelinePanel() {
+  const { t } = useLocale();
   const activities = useMemo(() => makeSampleActivities(), []);
 
   const DAY_MS = 24 * 60 * 60 * 1000;
@@ -63,7 +65,7 @@ export default function TimelinePanel() {
 
   return (
     <PanelFrame
-      title="CREW TIMELINE"
+      title={t("panels.crewTimeline").toUpperCase()}
       icon="📅"
       accentColor="var(--color-accent-purple)"
     >
@@ -146,11 +148,11 @@ export default function TimelinePanel() {
       >
         {(
           [
-            ["sleep", "Sleep"],
-            ["science", "Science"],
-            ["exercise", "Exercise"],
-            ["meal", "Meal"],
-            ["eva", "EVA"],
+            ["sleep", t("timeline.sleep")],
+            ["science", t("timeline.science")],
+            ["exercise", t("timeline.exercise")],
+            ["meal", t("timeline.meal")],
+            ["eva", t("timeline.eva")],
           ] as [ActivityType, string][]
         ).map(([type, label]) => (
           <div
