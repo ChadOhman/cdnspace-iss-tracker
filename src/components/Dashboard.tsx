@@ -1,10 +1,27 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { TopBar } from "@/components/TopBar";
 import { BottomBar } from "@/components/BottomBar";
 import { useTelemetryStream } from "@/hooks/useTelemetryStream";
 import { useTime } from "@/context/TimeContext";
 import { useEvent } from "@/context/EventContext";
+
+// Dynamic imports to avoid SSR issues with Leaflet
+const GroundTrackPanel = dynamic(
+  () => import("@/components/panels/GroundTrackPanel"),
+  { ssr: false }
+);
+import OrbitalParamsPanel from "@/components/panels/OrbitalParamsPanel";
+import SpaceWeatherPanel from "@/components/panels/SpaceWeatherPanel";
+import PassPredictionPanel from "@/components/panels/PassPredictionPanel";
+import LiveVideoPanel from "@/components/panels/LiveVideoPanel";
+import TimelinePanel from "@/components/panels/TimelinePanel";
+import ISSSystemsPanel from "@/components/panels/ISSSystemsPanel";
+import EventBannerPanel from "@/components/panels/EventBannerPanel";
+import CrewRosterPanel from "@/components/panels/CrewRosterPanel";
+import UpcomingEventsPanel from "@/components/panels/UpcomingEventsPanel";
+import DayNightPanel from "@/components/panels/DayNightPanel";
 
 export function Dashboard() {
   const { mode } = useTime();
@@ -13,6 +30,7 @@ export function Dashboard() {
 
   return (
     <div className="dashboard-grid">
+      {/* Top bar */}
       <TopBar
         orbital={stream.orbital}
         connected={stream.connected}
@@ -21,37 +39,42 @@ export function Dashboard() {
         visitorCount={stream.visitorCount}
       />
 
-      {/* Timeline row — placeholder */}
+      {/* Timeline row */}
       <div
         style={{
           gridArea: "timeline",
           background: "var(--color-bg-secondary)",
           borderBottom: "1px solid var(--color-border-accent)",
-          display: "flex",
-          alignItems: "center",
-          padding: "0 8px",
-          fontSize: 10,
-          color: "var(--color-text-muted)",
+          padding: "4px 8px",
+          overflow: "hidden",
         }}
       >
-        {/* TimelinePanel will be placed here */}
+        <TimelinePanel />
       </div>
 
       {/* Left column */}
       <div className="col-left">
-        <div className="panel" style={{ minHeight: 40, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--color-text-muted)", fontSize: 10 }}>Left panels loading…</div>
+        <GroundTrackPanel orbital={stream.orbital} />
+        <OrbitalParamsPanel orbital={stream.orbital} />
+        <SpaceWeatherPanel solar={stream.solar} />
+        <PassPredictionPanel />
       </div>
 
       {/* Center column */}
       <div className="col-center">
-        <div className="panel" style={{ minHeight: 40, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--color-text-muted)", fontSize: 10 }}>Center panels loading…</div>
+        <LiveVideoPanel />
+        <ISSSystemsPanel telemetry={stream.telemetry} />
       </div>
 
       {/* Right column */}
       <div className="col-right">
-        <div className="panel" style={{ minHeight: 40, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--color-text-muted)", fontSize: 10 }}>Right panels loading…</div>
+        <EventBannerPanel event={stream.activeEvent ?? activeEvent} />
+        <CrewRosterPanel />
+        <UpcomingEventsPanel />
+        <DayNightPanel orbital={stream.orbital} />
       </div>
 
+      {/* Bottom bar */}
       <BottomBar />
     </div>
   );
