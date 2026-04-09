@@ -6,12 +6,12 @@ import { usePathname } from "next/navigation";
 import { useTime } from "@/context/TimeContext";
 import { useLocale } from "@/context/LocaleContext";
 import { useUnits } from "@/context/UnitsContext";
+import { useEvent } from "@/context/EventContext";
 import { PLAYBACK_SPEEDS } from "@/lib/constants";
 import type { PlaybackSpeed } from "@/lib/types";
 
 const NAV_LINKS = [
   { href: "/track", label: "TRACK" },
-  { href: "/live", label: "LIVE" },
   { href: "/stats", label: "STATS" },
   { href: "/api-docs", label: "API" },
 ] as const;
@@ -20,6 +20,7 @@ function BottomBarInner() {
   const { mode, setMode, playbackSpeed, setPlaybackSpeed } = useTime();
   const { locale, setLocale } = useLocale();
   const { units, setUnits } = useUnits();
+  const { isEventMode } = useEvent();
   const pathname = usePathname();
 
   const isLive = mode === "LIVE";
@@ -170,6 +171,43 @@ function BottomBarInner() {
             </Link>
           );
         })}
+
+        {/* LIVE link — only shown during active events, styled prominently */}
+        {isEventMode && (
+          <Link
+            href="/live"
+            style={{
+              padding: "2px 8px",
+              borderRadius: 3,
+              border: pathname === "/live"
+                ? "1px solid var(--color-accent-red)"
+                : "1px solid rgba(255,61,61,0.4)",
+              background: pathname === "/live"
+                ? "rgba(255,61,61,0.15)"
+                : "rgba(255,61,61,0.08)",
+              color: "var(--color-accent-red)",
+              fontSize: 10,
+              fontFamily: "inherit",
+              fontWeight: 700,
+              letterSpacing: "0.05em",
+              textDecoration: "none",
+              display: "flex",
+              alignItems: "center",
+              gap: 4,
+              animation: "pulse-live 2s ease-in-out infinite",
+            }}
+          >
+            <span
+              style={{
+                width: 6,
+                height: 6,
+                borderRadius: "50%",
+                background: "var(--color-accent-red)",
+              }}
+            />
+            LIVE EVENT
+          </Link>
+        )}
       </div>
 
       {/* Right side: language toggle + site name */}
