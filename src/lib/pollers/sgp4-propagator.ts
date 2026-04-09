@@ -30,6 +30,11 @@ const GM_KM3_S2 = 398600.4418;
 
 // ─── Public API ──────────────────────────────────────────────────────────────
 
+// Cache for sunrise/sunset prediction (recomputed every 10s, not every 1s tick)
+let lastSunlightComputeMs = 0;
+let cachedSunriseIn: number | null = null;
+let cachedSunsetIn: number | null = null;
+
 /**
  * Propagate an ISS TLE to a given date and return a complete OrbitalState.
  * Returns null if satellite.js cannot propagate (e.g. decayed or bad TLE).
@@ -116,6 +121,44 @@ export function propagateFromTle(tle: TleData, date: Date): OrbitalState | null 
   );
   const betaAngle = betaRad * (180 / Math.PI);
 
+  // ── Sunrise/Sunset prediction ──────────────────────────────────────────────
+  // Step forward in 30-second increments up to 50 minutes to find the next
+  // sunlight transition. Only recompute every 10 seconds to limit CPU.
+  let sunriseIn: number | null = cachedSunriseIn;
+  let sunsetIn: number | null = cachedSunsetIn;
+
+  const now = Date.now();
+  const shouldRecompute = now - lastSunlightComputeMs > 10_000;
+  if (shouldRecompute) {
+    lastSunlightComputeMs = now;
+    sunriseIn = null;
+    sunsetIn = null;
+
+    const STEP_SEC = 30;
+    const MAX_LOOK_AHEAD_SEC = 50 * 60;
+    for (let dt = STEP_SEC; dt <= MAX_LOOK_AHEAD_SEC; dt += STEP_SEC) {
+    const futureDate = new Date(date.getTime() + dt * 1000);
+    const futureResult = propagate(satrec, futureDate);
+    if (typeof futureResult.position === "boolean") break;
+
+    const futureJd = dateToJulian(futureDate);
+    const futureSun = sunPos(futureJd);
+    const futureFraction = shadowFraction(futureSun.rsun, futureResult.position);
+    const futureInSunlight = futureFraction < 0.5;
+
+    if (isInSunlight && !futureInSunlight) {
+      sunsetIn = dt;
+      break;
+    }
+    if (!isInSunlight && futureInSunlight) {
+      sunriseIn = dt;
+      break;
+    }
+    }
+    cachedSunriseIn = sunriseIn;
+    cachedSunsetIn = sunsetIn;
+  }
+
   return {
     timestamp: date.getTime(),
     lat,
@@ -130,8 +173,8 @@ export function propagateFromTle(tle: TleData, date: Date): OrbitalState | null 
     periapsis,
     revolutionNumber,
     isInSunlight,
-    sunriseIn: isInSunlight ? null : null, // computed by orbit manager if needed
-    sunsetIn: isInSunlight ? null : null,
+    sunriseIn,
+    sunsetIn,
     betaAngle,
   };
 }
