@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import PanelFrame from "@/components/shared/PanelFrame";
 import { useLocale } from "@/context/LocaleContext";
 
@@ -14,6 +14,12 @@ const STREAMS = [
 export default function LiveVideoPanel() {
   const { t } = useLocale();
   const [activeIdx, setActiveIdx] = useState(0);
+  // Cache-buster forces fresh iframe on mount and stream switch
+  const [cacheBuster, setCacheBuster] = useState(() => Date.now());
+
+  useEffect(() => {
+    setCacheBuster(Date.now());
+  }, [activeIdx]);
 
   const cameraToggle = (
     <div style={{ display: "flex", gap: 3 }}>
@@ -55,8 +61,8 @@ export default function LiveVideoPanel() {
     >
       <div style={{ position: "relative", paddingBottom: "56.25%", height: 0 }}>
         <iframe
-          key={STREAMS[activeIdx].id}
-          src={`https://www.youtube.com/embed/${STREAMS[activeIdx].id}?autoplay=1&mute=1&controls=1&rel=0`}
+          key={`${STREAMS[activeIdx].id}-${cacheBuster}`}
+          src={`https://www.youtube.com/embed/${STREAMS[activeIdx].id}?autoplay=1&mute=1&controls=1&rel=0&_=${cacheBuster}`}
           title={`NASA ISS — ${STREAMS[activeIdx].label}`}
           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
           allowFullScreen
