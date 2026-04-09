@@ -4,26 +4,27 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import Link from "next/link";
 import { useTelemetryStream } from "@/hooks/useTelemetryStream";
 import { useLocale } from "@/context/LocaleContext";
+import { useUnits } from "@/context/UnitsContext";
+import type { PassPrediction } from "@/lib/types";
 
-// Keep at most 5400 points (90 min at ~1/sec)
+// ── Constants ────────────────────────────────────────────────────────────────
+
 const MAX_PATH_POINTS = 5400;
-
-// ISS orbital inclination in degrees
 const ISS_INCLINATION_DEG = 51.6;
-// Approx orbital period in seconds
-const ORBITAL_PERIOD_SEC = 92.68 * 60; // ~5561 s
-// Approx lon shift per orbit (westward, degrees)
+const ORBITAL_PERIOD_SEC = 92.68 * 60;
 const LON_SHIFT_PER_ORBIT_DEG = -22.9;
-// Future track steps: every 30s for 90 minutes
 const FUTURE_STEP_SEC = 30;
-const FUTURE_STEPS = (90 * 60) / FUTURE_STEP_SEC; // 180 steps
+const FUTURE_STEPS = (90 * 60) / FUTURE_STEP_SEC;
 
-// TDRS geostationary satellite positions (lon, label)
 const TDRS_STATIONS = [
   { lon: -171, label: "TDRS-West" },
-  { lon: -41, label: "TDRS-East" },
+  { lon: -41,  label: "TDRS-East" },
   { lon: -150, label: "TDRS-Pacific" },
 ];
+
+const EARTH_RADIUS_KM = 6371;
+
+// ── Helper functions ─────────────────────────────────────────────────────────
 
 function formatSeconds(sec: number | null): string {
   if (sec === null) return "—";
@@ -35,51 +36,251 @@ function formatSeconds(sec: number | null): string {
   return `${s}s`;
 }
 
+function formatLatLon(lat: number, lon: number): { latStr: string; lonStr: string } {
+  const latStr = `${Math.abs(lat).toFixed(4)}° ${lat >= 0 ? "N" : "S"}`;
+  const lonStr = `${Math.abs(lon).toFixed(4)}° ${lon >= 0 ? "E" : "W"}`;
+  return { latStr, lonStr };
+}
+
+function formatAzimuth(deg: number): string {
+  const dirs = ["N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE",
+                "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"];
+  const idx = Math.round(deg / 22.5) % 16;
+  return `${Math.round(deg)}° ${dirs[idx]}`;
+}
+
+function formatPassTime(ts: number): string {
+  return new Date(ts).toLocaleString(undefined, {
+    month: "short", day: "numeric",
+    hour: "2-digit", minute: "2-digit",
+  });
+}
+
+function formatDuration(riseTs: number, setTs: number): string {
+  const sec = Math.round((setTs - riseTs) / 1000);
+  const m = Math.floor(sec / 60);
+  const s = sec % 60;
+  return `${m}m ${s}s`;
+}
+
+/** Haversine distance in km */
+function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const toRad = (d: number) => (d * Math.PI) / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+  return 2 * EARTH_RADIUS_KM * Math.asin(Math.sqrt(a));
+}
+
 /**
- * Simple sinusoidal great-circle extrapolation of ISS ground track.
- * Given a known lat/lon at t=0 and the orbital angular velocity, project
- * forward in `stepSec` increments for `steps` steps.
- *
- * The ISS latitude follows:  lat(t) = incl * sin(ω·t + φ₀)
- * where φ₀ is chosen so that lat(0) == currentLat.
- * Longitude advances uniformly at the Earth's surface rate minus Earth's rotation.
+ * Simplified elevation angle of ISS from observer.
+ * Uses: atan2(alt_iss - R*(1-cos(sigma)), R*sin(sigma))
+ * where sigma is the central angle between observer and sub-satellite point.
  */
+function issElevationDeg(
+  obsLat: number, obsLon: number,
+  issLat: number, issLon: number,
+  issAltKm: number
+): number {
+  const toRad = (d: number) => (d * Math.PI) / 180;
+  const toDeg = (r: number) => (r * 180) / Math.PI;
+  const sigma = toRad(haversineKm(obsLat, obsLon, issLat, issLon) / EARTH_RADIUS_KM * 180 / Math.PI);
+  // rho = Earth central angle in radians
+  const rho = 2 * Math.asin(Math.sqrt(
+    Math.sin(toRad(issLat - obsLat) / 2) ** 2 +
+    Math.cos(toRad(obsLat)) * Math.cos(toRad(issLat)) * Math.sin(toRad(issLon - obsLon) / 2) ** 2
+  ));
+  const R = EARTH_RADIUS_KM;
+  const H = issAltKm;
+  // Horizontal range from observer to ISS ground track
+  const d_h = R * rho;
+  const d_v = H;
+  const elev = Math.atan2(d_v - R * (1 - Math.cos(rho)), d_h);
+  return toDeg(elev);
+}
+
 function computeFutureTrack(
-  lat: number,
-  lon: number,
-  steps: number,
-  stepSec: number
+  lat: number, lon: number, steps: number, stepSec: number
 ): [number, number][] {
   const points: [number, number][] = [];
-
-  // Angular frequency of the orbit (rad/s)
   const omega = (2 * Math.PI) / ORBITAL_PERIOD_SEC;
-
-  // Solve for initial phase: lat = incl * sin(φ₀)  →  φ₀ = asin(clamp(lat/incl))
   const clampedRatio = Math.max(-1, Math.min(1, lat / ISS_INCLINATION_DEG));
   const phi0 = Math.asin(clampedRatio);
-
-  // Lon rate: orbital period / 360° minus Earth rotation
-  // ISS moves ~360°/92.68min eastward while Earth rotates ~360°/1440min
-  // Net westward ground track per second:
   const lonRatePerSec = LON_SHIFT_PER_ORBIT_DEG / ORBITAL_PERIOD_SEC;
-
   for (let i = 1; i <= steps; i++) {
     const t = i * stepSec;
     const futureLat = ISS_INCLINATION_DEG * Math.sin(omega * t + phi0);
     let futureLon = lon + lonRatePerSec * t;
-    // Normalize lon to [-180, 180]
     futureLon = ((futureLon + 180) % 360 + 360) % 360 - 180;
     points.push([futureLat, futureLon]);
   }
-
   return points;
 }
 
+// ── Sub-components ────────────────────────────────────────────────────────────
+
+function CardHeader({ title, badge }: { title: string; badge?: React.ReactNode }) {
+  return (
+    <div style={{
+      display: "flex", alignItems: "center", justifyContent: "space-between",
+      padding: "6px 10px",
+      background: "var(--color-bg-panel-header)",
+      borderBottom: "1px solid var(--color-border-accent)",
+      borderRadius: "6px 6px 0 0",
+    }}>
+      <span style={{
+        color: "var(--color-accent-cyan)",
+        fontSize: 9,
+        letterSpacing: "0.12em",
+        fontFamily: "var(--font-jetbrains-mono)",
+      }}>
+        {title}
+      </span>
+      {badge}
+    </div>
+  );
+}
+
+function CardBody({ children, style }: { children: React.ReactNode; style?: React.CSSProperties }) {
+  return (
+    <div style={{ padding: "8px 10px", ...style }}>
+      {children}
+    </div>
+  );
+}
+
+function Card({ children, style }: { children: React.ReactNode; style?: React.CSSProperties }) {
+  return (
+    <div style={{
+      background: "var(--color-bg-panel)",
+      border: "1px solid var(--color-border-accent)",
+      borderRadius: 6,
+      flexShrink: 0,
+      ...style,
+    }}>
+      {children}
+    </div>
+  );
+}
+
+function Row({ label, value, valueColor }: {
+  label: string;
+  value: string | React.ReactNode;
+  valueColor?: string;
+}) {
+  return (
+    <div style={{
+      display: "flex",
+      justifyContent: "space-between",
+      alignItems: "baseline",
+      marginBottom: 4,
+    }}>
+      <span style={{ color: "var(--color-text-muted)", fontSize: 9, letterSpacing: "0.04em" }}>
+        {label}
+      </span>
+      <span style={{
+        color: valueColor ?? "var(--color-text-primary)",
+        fontSize: 10,
+        fontVariantNumeric: "tabular-nums",
+        fontFamily: "var(--font-jetbrains-mono)",
+      }}>
+        {value}
+      </span>
+    </div>
+  );
+}
+
+function Divider() {
+  return <div style={{ borderTop: "1px solid var(--color-border-subtle)", margin: "6px 0" }} />;
+}
+
+// ── Main component ────────────────────────────────────────────────────────────
+
 export default function TrackPage() {
   const { t } = useLocale();
-  const { orbital, connected } = useTelemetryStream();
+  const { distance: distConv, speed: speedConv } = useUnits();
+  const { orbital, telemetry, connected } = useTelemetryStream();
 
+  // ── Observer location ──────────────────────────────────────────────────────
+  const [observer, setObserver] = useState<{ lat: number; lon: number } | null>(() => {
+    if (typeof window === "undefined") return null;
+    try {
+      const stored = localStorage.getItem("iss-observer-loc");
+      if (stored) return JSON.parse(stored) as { lat: number; lon: number };
+    } catch { /* ignore */ }
+    return null;
+  });
+  const [obsInputLat, setObsInputLat] = useState(observer ? observer.lat.toString() : "");
+  const [obsInputLon, setObsInputLon] = useState(observer ? observer.lon.toString() : "");
+  const [geoError, setGeoError] = useState<string | null>(null);
+
+  const persistObserver = useCallback((loc: { lat: number; lon: number }) => {
+    setObserver(loc);
+    setObsInputLat(loc.lat.toString());
+    setObsInputLon(loc.lon.toString());
+    try { localStorage.setItem("iss-observer-loc", JSON.stringify(loc)); } catch { /* ignore */ }
+  }, []);
+
+  const handleUseMyLocation = useCallback(() => {
+    setGeoError(null);
+    if (!navigator.geolocation) {
+      setGeoError("Geolocation not supported by this browser.");
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      (pos) => persistObserver({ lat: pos.coords.latitude, lon: pos.coords.longitude }),
+      (err) => setGeoError(err.message),
+      { timeout: 10000 }
+    );
+  }, [persistObserver]);
+
+  const handleManualSet = useCallback(() => {
+    const lat = parseFloat(obsInputLat);
+    const lon = parseFloat(obsInputLon);
+    if (isNaN(lat) || isNaN(lon) || lat < -90 || lat > 90 || lon < -180 || lon > 180) {
+      setGeoError("Invalid coordinates.");
+      return;
+    }
+    setGeoError(null);
+    persistObserver({ lat, lon });
+  }, [obsInputLat, obsInputLon, persistObserver]);
+
+  // ── Pass predictions ───────────────────────────────────────────────────────
+  const [passes, setPasses] = useState<PassPrediction[] | null>(null);
+  const [passesLoading, setPassesLoading] = useState(false);
+  const [passesError, setPassesError] = useState<string | null>(null);
+  const lastObsKeyRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!observer) return;
+    const key = `${observer.lat.toFixed(4)},${observer.lon.toFixed(4)}`;
+    if (key === lastObsKeyRef.current) return;
+    lastObsKeyRef.current = key;
+
+    setPassesLoading(true);
+    setPassesError(null);
+    fetch(`/api/passes?lat=${observer.lat}&lon=${observer.lon}`)
+      .then((r) => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.json() as Promise<PassPrediction[]>;
+      })
+      .then((data) => { setPasses(data.slice(0, 5)); setPassesLoading(false); })
+      .catch((e: Error) => { setPassesError(e.message); setPassesLoading(false); });
+  }, [observer]);
+
+  // ── Observer-derived values ────────────────────────────────────────────────
+  const obsValues = (() => {
+    if (!observer || !orbital) return null;
+    const distKm = haversineKm(observer.lat, observer.lon, orbital.lat, orbital.lon);
+    const elevDeg = issElevationDeg(observer.lat, observer.lon, orbital.lat, orbital.lon, orbital.altitude);
+    const aboveHorizon = elevDeg > 0;
+    const visible = aboveHorizon && orbital.isInSunlight;
+    return { distKm, elevDeg, aboveHorizon, visible };
+  })();
+
+  // ── Leaflet refs ───────────────────────────────────────────────────────────
   const mapRef = useRef<HTMLDivElement>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const mapInstanceRef = useRef<any>(null);
@@ -93,35 +294,14 @@ export default function TrackPage() {
   const tdrsLayerRef = useRef<any>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const popupRef = useRef<any>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const obsMarkerRef = useRef<any>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const obsLineRef = useRef<any>(null);
   const pathHistoryRef = useRef<[number, number][]>([]);
   const initialCenteredRef = useRef(false);
 
-  const [isFullscreen, setIsFullscreen] = useState(false);
-
-  // Local state mirror for the info overlay (avoids re-renders on every tick
-  // via the ref — we update a separate state at most once per second via the
-  // orbital update from the hook, which is already throttled).
-  const [displayOrbital, setDisplayOrbital] = useState(orbital);
-  useEffect(() => {
-    setDisplayOrbital(orbital);
-  }, [orbital]);
-
-  // ── Fullscreen toggle ────────────────────────────────────────────────────
-  const toggleFullscreen = useCallback(() => {
-    if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen().catch(() => {});
-    } else {
-      document.exitFullscreen().catch(() => {});
-    }
-  }, []);
-
-  useEffect(() => {
-    const handler = () => setIsFullscreen(!!document.fullscreenElement);
-    document.addEventListener("fullscreenchange", handler);
-    return () => document.removeEventListener("fullscreenchange", handler);
-  }, []);
-
-  // ── Initialize Leaflet map ───────────────────────────────────────────────
+  // ── Initialize Leaflet ─────────────────────────────────────────────────────
   useEffect(() => {
     if (!mapRef.current) return;
     let cancelled = false;
@@ -144,59 +324,44 @@ export default function TrackPage() {
         { maxZoom: 18, attribution: "&copy; OpenStreetMap &copy; CARTO" }
       ).addTo(map);
 
+      // ISS marker
       const issIcon = L.divIcon({
         className: "",
         html: `<div style="
           width:18px;height:18px;border-radius:50%;
-          background:var(--color-accent-red,#ff3d3d);
-          box-shadow:0 0 12px 5px rgba(255,61,61,0.7);
+          background:#ff3d3d;
+          box-shadow:0 0 14px 6px rgba(255,61,61,0.7);
           border:2px solid #fff;
           cursor:pointer;
         "></div>`,
         iconSize: [18, 18],
         iconAnchor: [9, 9],
-        popupAnchor: [0, -12],
+        popupAnchor: [0, -14],
       });
-
       const marker = L.marker([0, 0], { icon: issIcon }).addTo(map);
-
-      // ISS popup — content will be updated each tick
       const popup = L.popup({ closeButton: true, className: "iss-popup" });
       marker.bindPopup(popup);
 
-      // ── Historical ground track polyline ─────────────────────────────────
+      // Ground track polyline
       const polyline = L.polyline([], {
-        color: "#00e5ff",
-        weight: 1.5,
-        opacity: 0.7,
+        color: "#00e5ff", weight: 1.5, opacity: 0.7,
       }).addTo(map);
 
-      // ── Predicted future track: dashed cyan at 50% opacity ───────────────
+      // Future track
       const futurePolyline = L.polyline([], {
-        color: "#00e5ff",
-        weight: 1.5,
-        opacity: 0.5,
-        dashArray: "6 6",
+        color: "#00e5ff", weight: 1.5, opacity: 0.5, dashArray: "6 6",
       }).addTo(map);
 
-      // ── TDRS ground station footprints ────────────────────────────────────
-      // Each TDRS is geostationary; we draw a circle centered on the equator
-      // at the satellite's sub-satellite longitude with ~2500km radius.
+      // TDRS footprints
       const tdrsGroup = L.layerGroup().addTo(map);
       TDRS_STATIONS.forEach(({ lon: tdrsLon, label }) => {
         const circle = L.circle([0, tdrsLon], {
-          radius: 2_500_000, // 2500 km in metres
-          color: "#00e5ff",
-          weight: 1,
-          opacity: 0.2,
-          fillColor: "#00e5ff",
-          fillOpacity: 0.05,
+          radius: 2_500_000,
+          color: "#00e5ff", weight: 1, opacity: 0.2,
+          fillColor: "#00e5ff", fillOpacity: 0.05,
         }).addTo(tdrsGroup);
-
         circle.bindTooltip(label, {
-          permanent: true,
-          direction: "center",
-          className: "tdrs-label",
+          permanent: true, direction: "center", className: "tdrs-label",
         });
       });
 
@@ -208,12 +373,10 @@ export default function TrackPage() {
       popupRef.current = popup;
     });
 
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, []);
 
-  // ── Cleanup on unmount ───────────────────────────────────────────────────
+  // Cleanup on unmount
   useEffect(() => {
     return () => {
       if (mapInstanceRef.current) {
@@ -224,65 +387,102 @@ export default function TrackPage() {
         futurePolylineRef.current = null;
         tdrsLayerRef.current = null;
         popupRef.current = null;
+        obsMarkerRef.current = null;
+        obsLineRef.current = null;
       }
     };
   }, []);
 
-  // ── Update marker + ground track on each orbital tick ───────────────────
+  // ── Update ISS marker + track ──────────────────────────────────────────────
   useEffect(() => {
     if (!orbital || !markerRef.current || !mapInstanceRef.current) return;
 
     const latlng: [number, number] = [orbital.lat, orbital.lon];
-
-    // Move marker
     markerRef.current.setLatLng(latlng);
 
-    // Update popup content (only refreshes if popup is open)
     if (popupRef.current) {
+      const alt = distConv(orbital.altitude);
+      const spd = speedConv(orbital.speedKmH);
+      const { latStr, lonStr } = formatLatLon(orbital.lat, orbital.lon);
       popupRef.current.setContent(`
         <div style="font-family:monospace;font-size:11px;line-height:1.7;color:#e8f0fe;background:#0f1621;padding:4px 2px;">
           <div style="color:#00e5ff;font-size:10px;letter-spacing:.1em;margin-bottom:4px;">ISS POSITION</div>
-          <div><span style="color:#94adc4">ALT</span> ${Math.round(orbital.altitude)} km</div>
-          <div><span style="color:#94adc4">SPD</span> ${Math.round(orbital.speedKmH).toLocaleString()} km/h</div>
-          <div><span style="color:#94adc4">LAT</span> ${orbital.lat.toFixed(4)}&deg;</div>
-          <div><span style="color:#94adc4">LON</span> ${orbital.lon.toFixed(4)}&deg;</div>
+          <div><span style="color:#94adc4">ALT</span> ${alt.value.toFixed(1)} ${alt.unit}</div>
+          <div><span style="color:#94adc4">SPD</span> ${Math.round(spd.value).toLocaleString()} ${spd.unit}</div>
+          <div><span style="color:#94adc4">LAT</span> ${latStr}</div>
+          <div><span style="color:#94adc4">LON</span> ${lonStr}</div>
           <div><span style="color:#94adc4">ORB</span> ${orbital.revolutionNumber.toLocaleString()}</div>
+          <div><span style="color:#94adc4">SUN</span> ${orbital.isInSunlight ? "☀ Sunlight" : "🌑 Shadow"}</div>
         </div>
       `);
     }
 
-    // First fix — center the map once
     if (!initialCenteredRef.current) {
       mapInstanceRef.current.setView(latlng, 2);
       initialCenteredRef.current = true;
     }
 
-    // Accumulate path history — handle anti-meridian wrapping by NOT
-    // splitting here; Leaflet's polyline handles wrap reasonably at zoom 2.
     const history = pathHistoryRef.current;
     history.push(latlng);
-    if (history.length > MAX_PATH_POINTS) {
-      history.splice(0, history.length - MAX_PATH_POINTS);
-    }
+    if (history.length > MAX_PATH_POINTS) history.splice(0, history.length - MAX_PATH_POINTS);
+    if (polylineRef.current) polylineRef.current.setLatLngs(history);
 
-    // Update historical polyline
-    if (polylineRef.current) {
-      polylineRef.current.setLatLngs(history);
-    }
-
-    // Update predicted future track
     if (futurePolylineRef.current) {
-      const futurePoints = computeFutureTrack(
-        orbital.lat,
-        orbital.lon,
-        FUTURE_STEPS,
-        FUTURE_STEP_SEC
-      );
+      const futurePoints = computeFutureTrack(orbital.lat, orbital.lon, FUTURE_STEPS, FUTURE_STEP_SEC);
       futurePolylineRef.current.setLatLngs(futurePoints);
     }
-  }, [orbital]);
+  }, [orbital, distConv, speedConv]);
 
-  // ── Render ───────────────────────────────────────────────────────────────
+  // ── Update observer marker + line ─────────────────────────────────────────
+  useEffect(() => {
+    if (!mapInstanceRef.current) return;
+    import("leaflet").then((L) => {
+      if (!observer) {
+        if (obsMarkerRef.current) { obsMarkerRef.current.remove(); obsMarkerRef.current = null; }
+        if (obsLineRef.current) { obsLineRef.current.remove(); obsLineRef.current = null; }
+        return;
+      }
+
+      const obsLatLng: [number, number] = [observer.lat, observer.lon];
+
+      if (!obsMarkerRef.current) {
+        const obsIcon = L.divIcon({
+          className: "",
+          html: `<div style="
+            width:12px;height:12px;border-radius:50%;
+            background:#4fc3f7;
+            box-shadow:0 0 8px 3px rgba(79,195,247,0.6);
+            border:1.5px solid #fff;
+          "></div>`,
+          iconSize: [12, 12],
+          iconAnchor: [6, 6],
+        });
+        obsMarkerRef.current = L.marker(obsLatLng, { icon: obsIcon }).addTo(mapInstanceRef.current);
+        obsMarkerRef.current.bindTooltip("Observer", { className: "tdrs-label", direction: "top" });
+      } else {
+        obsMarkerRef.current.setLatLng(obsLatLng);
+      }
+
+      // Line from observer to ISS sub-point
+      if (orbital) {
+        const issLatLng: [number, number] = [orbital.lat, orbital.lon];
+        if (!obsLineRef.current) {
+          obsLineRef.current = L.polyline([obsLatLng, issLatLng], {
+            color: "#ffffff", weight: 1, opacity: 0.4, dashArray: "4 4",
+          }).addTo(mapInstanceRef.current);
+        } else {
+          obsLineRef.current.setLatLngs([obsLatLng, issLatLng]);
+        }
+      }
+    });
+  }, [observer, orbital]);
+
+  // ── Render ─────────────────────────────────────────────────────────────────
+  const altDisplay = orbital ? distConv(orbital.altitude) : null;
+  const spdDisplay = orbital ? speedConv(orbital.speedKmH) : null;
+  const periodMin = orbital ? Math.floor(orbital.period) : 0;
+  const periodSec = orbital ? Math.round((orbital.period - periodMin) * 60) : 0;
+
   return (
     <div style={{
       width: "100vw",
@@ -291,10 +491,12 @@ export default function TrackPage() {
       display: "flex",
       flexDirection: "column",
       overflow: "hidden",
+      fontFamily: "var(--font-jetbrains-mono), monospace",
     }}>
-      {/* ── Header bar ── */}
+      {/* ── Header ── */}
       <div style={{
         height: 48,
+        flexShrink: 0,
         background: "rgba(0,0,0,0.6)",
         borderBottom: "1px solid rgba(0,229,255,0.2)",
         display: "flex",
@@ -302,13 +504,11 @@ export default function TrackPage() {
         padding: "0 16px",
         gap: 16,
         zIndex: 1000,
-        flexShrink: 0,
       }}>
         <Link href="/" style={{
           color: "var(--color-accent-cyan)",
           textDecoration: "none",
           fontSize: 11,
-          fontFamily: "var(--font-jetbrains-mono)",
           letterSpacing: "0.05em",
           border: "1px solid rgba(0,229,255,0.3)",
           padding: "2px 8px",
@@ -321,205 +521,416 @@ export default function TrackPage() {
         <span style={{
           color: "var(--color-accent-cyan)",
           fontSize: 13,
-          fontFamily: "var(--font-jetbrains-mono)",
           letterSpacing: "0.1em",
           whiteSpace: "nowrap",
         }}>
           {t("pages.groundTrack")}
         </span>
 
-        {/* Quick orbital readout in header */}
         {orbital && (
           <div style={{
-            display: "flex",
-            gap: 16,
-            fontSize: 10,
-            color: "var(--color-text-muted)",
-            fontFamily: "var(--font-jetbrains-mono)",
+            display: "flex", gap: 14,
+            fontSize: 10, color: "var(--color-text-muted)",
             fontVariantNumeric: "tabular-nums",
-            marginLeft: 4,
           }}>
-            <span>
-              <span style={{ color: "var(--color-accent-cyan)", marginRight: 3 }}>ALT</span>
-              {Math.round(orbital.altitude)} km
-            </span>
-            <span>
-              <span style={{ color: "var(--color-accent-cyan)", marginRight: 3 }}>SPD</span>
-              {Math.round(orbital.speedKmH).toLocaleString()} km/h
-            </span>
-            <span>{orbital.lat.toFixed(2)}&deg;N</span>
-            <span>{orbital.lon.toFixed(2)}&deg;E</span>
+            {altDisplay && (
+              <span>
+                <span style={{ color: "var(--color-accent-cyan)", marginRight: 3 }}>ALT</span>
+                {Math.round(altDisplay.value)} {altDisplay.unit}
+              </span>
+            )}
+            {spdDisplay && (
+              <span>
+                <span style={{ color: "var(--color-accent-cyan)", marginRight: 3 }}>SPD</span>
+                {Math.round(spdDisplay.value).toLocaleString()} {spdDisplay.unit}
+              </span>
+            )}
+            <span>{orbital.lat.toFixed(2)}°{orbital.lat >= 0 ? "N" : "S"}</span>
+            <span>{orbital.lon.toFixed(2)}°{orbital.lon >= 0 ? "E" : "W"}</span>
           </div>
         )}
 
-        {/* Spacer */}
-        <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 12 }}>
-          {/* Connection status */}
-          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <div style={{
-              width: 6, height: 6, borderRadius: "50%",
-              background: connected ? "var(--color-accent-green)" : "var(--color-accent-red)",
-              boxShadow: connected ? "0 0 6px var(--color-accent-green)" : "none",
-            }} />
-            <span style={{
-              color: "var(--color-text-muted)",
-              fontSize: 10,
-              fontFamily: "var(--font-jetbrains-mono)",
-            }}>
-              {connected ? t("pages.live") : t("pages.offline")}
-            </span>
-          </div>
-
-          {/* Fullscreen toggle button */}
-          <button
-            onClick={toggleFullscreen}
-            title={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
-            style={{
-              background: "transparent",
-              border: "1px solid rgba(0,229,255,0.3)",
-              borderRadius: 3,
-              color: "var(--color-accent-cyan)",
-              cursor: "pointer",
-              padding: "2px 7px",
-              fontSize: 14,
-              lineHeight: 1,
-              fontFamily: "inherit",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
-            {isFullscreen ? "⊠" : "⛶"}
-          </button>
+        <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 8 }}>
+          <div style={{
+            width: 6, height: 6, borderRadius: "50%",
+            background: connected ? "var(--color-accent-green)" : "var(--color-accent-red)",
+            boxShadow: connected ? "0 0 6px var(--color-accent-green)" : "none",
+          }} />
+          <span style={{ color: "var(--color-text-muted)", fontSize: 10 }}>
+            {connected ? t("pages.live") : t("pages.offline")}
+          </span>
         </div>
       </div>
 
-      {/* ── Map container (relative so overlay can position inside) ── */}
-      <div style={{ flex: 1, position: "relative" }}>
-        <div ref={mapRef} style={{ width: "100%", height: "100%" }} />
-
-        {/* ── Info overlay (bottom-left) ── */}
+      {/* ── Body: two-column layout ── */}
+      <div style={{
+        flex: 1,
+        display: "grid",
+        gridTemplateColumns: "40% 60%",
+        overflow: "hidden",
+      }}>
+        {/* ── Left column: data cards ── */}
         <div style={{
-          position: "absolute",
-          bottom: 24,
-          left: 16,
-          zIndex: 900,
-          background: "rgba(13,17,23,0.88)",
-          border: "1px solid rgba(0,229,255,0.2)",
-          borderRadius: 5,
-          padding: "10px 14px",
-          minWidth: 200,
-          backdropFilter: "blur(4px)",
-          fontFamily: "var(--font-jetbrains-mono)",
-          pointerEvents: "none",
+          overflowY: "auto",
+          padding: "10px 8px 10px 10px",
+          display: "flex",
+          flexDirection: "column",
+          gap: 8,
+          borderRight: "1px solid var(--color-border-accent)",
         }}>
-          <div style={{
-            fontSize: 9,
-            color: "var(--color-accent-cyan)",
-            letterSpacing: "0.12em",
-            marginBottom: 6,
-            borderBottom: "1px solid rgba(0,229,255,0.12)",
-            paddingBottom: 4,
-          }}>
-            ISS STATUS
-          </div>
 
-          {displayOrbital ? (
-            <div style={{ display: "flex", flexDirection: "column", gap: 3, fontSize: 11 }}>
-              {/* Altitude + speed */}
-              <InfoRow label="ALT" value={`${Math.round(displayOrbital.altitude)} km`} />
-              <InfoRow label="SPD" value={`${Math.round(displayOrbital.speedKmH).toLocaleString()} km/h`} />
-              <InfoRow label="LAT" value={`${displayOrbital.lat.toFixed(4)}\u00b0`} />
-              <InfoRow label="LON" value={`${displayOrbital.lon.toFixed(4)}\u00b0`} />
-
-              <div style={{ borderTop: "1px solid rgba(255,255,255,0.06)", margin: "4px 0" }} />
-
-              {/* Orbit + period */}
-              <InfoRow label={t("pages.orbitNumber")} value={displayOrbital.revolutionNumber.toLocaleString()} />
-              <InfoRow label={t("pages.period")} value={`${displayOrbital.period.toFixed(1)} min`} />
-
-              <div style={{ borderTop: "1px solid rgba(255,255,255,0.06)", margin: "4px 0" }} />
-
-              {/* Day/night — color-coded */}
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <span style={{ color: "var(--color-text-muted)", fontSize: 9, letterSpacing: "0.04em" }}>
-                  {t("pages.dayNightStatus")}
-                </span>
+          {/* 1. Current Position Card */}
+          <Card>
+            <CardHeader title="CURRENT POSITION" badge={
+              orbital ? (
                 <span style={{
-                  color: displayOrbital.isInSunlight
-                    ? "#fbbf24"  // warm yellow for daylight
-                    : "#818cf8", // indigo/violet for shadow
+                  fontSize: 8, color: "var(--color-accent-green)",
+                  letterSpacing: "0.08em",
+                }}>LIVE</span>
+              ) : null
+            } />
+            <CardBody>
+              {orbital ? (() => {
+                const { latStr, lonStr } = formatLatLon(orbital.lat, orbital.lon);
+                const alt = distConv(orbital.altitude);
+                const spd = speedConv(orbital.speedKmH);
+                return (
+                  <>
+                    <Row label="LATITUDE"  value={latStr} />
+                    <Row label="LONGITUDE" value={lonStr} />
+                    <Divider />
+                    <Row label="ALTITUDE"  value={`${alt.value.toFixed(1)} ${alt.unit}`} />
+                    <Row label="SPEED"     value={`${Math.round(spd.value).toLocaleString()} ${spd.unit}`} />
+                    <Row label="HEADING"   value={formatAzimuth(orbital.velocity > 0 ? 90 : 270)} />
+                    <Divider />
+                    <Row label="ORBIT #"   value={orbital.revolutionNumber.toLocaleString()} />
+                    <Row label="BETA ANGLE" value={`${orbital.betaAngle.toFixed(1)}°`} />
+                    <Row label="INCLINATION" value={`${orbital.inclination.toFixed(2)}°`} />
+                  </>
+                );
+              })() : (
+                <span style={{ fontSize: 10, color: "var(--color-text-muted)" }}>{t("common.loading")}</span>
+              )}
+            </CardBody>
+          </Card>
+
+          {/* 2. Orbital Elements Card */}
+          <Card>
+            <CardHeader title="ORBITAL ELEMENTS" />
+            <CardBody>
+              {orbital ? (() => {
+                const apo = distConv(orbital.apoapsis);
+                const peri = distConv(orbital.periapsis);
+                return (
+                  <>
+                    <Row label="APOAPSIS"     value={`${apo.value.toFixed(1)} ${apo.unit}`} />
+                    <Row label="PERIAPSIS"    value={`${peri.value.toFixed(1)} ${peri.unit}`} />
+                    <Divider />
+                    <Row label="INCLINATION"  value={`${orbital.inclination.toFixed(3)}°`} />
+                    <Row label="ECCENTRICITY" value={orbital.eccentricity.toFixed(6)} />
+                    <Row label="PERIOD"       value={`${periodMin}m ${periodSec}s`} />
+                    <Row label="VELOCITY"     value={`${orbital.velocity.toFixed(3)} km/s`} />
+                  </>
+                );
+              })() : (
+                <span style={{ fontSize: 10, color: "var(--color-text-muted)" }}>{t("common.loading")}</span>
+              )}
+            </CardBody>
+          </Card>
+
+          {/* 3. Day/Night Status Card */}
+          <Card>
+            <CardHeader title="DAY / NIGHT STATUS" />
+            <CardBody>
+              {orbital ? (
+                <>
+                  <div style={{
+                    display: "flex", alignItems: "center", gap: 8, marginBottom: 8,
+                  }}>
+                    <div style={{
+                      width: 10, height: 10, borderRadius: "50%",
+                      background: orbital.isInSunlight ? "#fbbf24" : "#818cf8",
+                      boxShadow: orbital.isInSunlight
+                        ? "0 0 8px 3px rgba(251,191,36,0.5)"
+                        : "0 0 6px 2px rgba(129,140,248,0.4)",
+                    }} />
+                    <span style={{
+                      color: orbital.isInSunlight ? "#fbbf24" : "#818cf8",
+                      fontSize: 11, letterSpacing: "0.06em",
+                    }}>
+                      {orbital.isInSunlight ? t("pages.inDaylight") : t("pages.inShadow")}
+                    </span>
+                  </div>
+                  {orbital.isInSunlight && orbital.sunsetIn !== null && (
+                    <Row label={t("pages.sunsetIn")} value={formatSeconds(orbital.sunsetIn)} />
+                  )}
+                  {!orbital.isInSunlight && orbital.sunriseIn !== null && (
+                    <Row label={t("pages.sunriseIn")} value={formatSeconds(orbital.sunriseIn)} />
+                  )}
+                  <Divider />
+                  <Row label="BETA ANGLE" value={`${orbital.betaAngle.toFixed(1)}°`} />
+                  <div style={{ fontSize: 9, color: "var(--color-text-muted)", marginTop: 4, lineHeight: 1.5 }}>
+                    {Math.abs(orbital.betaAngle) > 60
+                      ? "High beta — long eclipse-free periods"
+                      : Math.abs(orbital.betaAngle) > 30
+                        ? "Moderate beta — normal eclipse cycles"
+                        : "Low beta — frequent short eclipses"}
+                  </div>
+                </>
+              ) : (
+                <span style={{ fontSize: 10, color: "var(--color-text-muted)" }}>{t("common.loading")}</span>
+              )}
+            </CardBody>
+          </Card>
+
+          {/* 4. Observer Location Card */}
+          <Card>
+            <CardHeader title="OBSERVER LOCATION" />
+            <CardBody>
+              <button
+                onClick={handleUseMyLocation}
+                style={{
+                  width: "100%",
+                  padding: "5px 0",
+                  background: "rgba(0,229,255,0.08)",
+                  border: "1px solid rgba(0,229,255,0.3)",
+                  borderRadius: 3,
+                  color: "var(--color-accent-cyan)",
                   fontSize: 10,
-                  fontWeight: 600,
-                }}>
-                  {displayOrbital.isInSunlight ? t("pages.inDaylight") : t("pages.inShadow")}
-                </span>
+                  letterSpacing: "0.06em",
+                  cursor: "pointer",
+                  fontFamily: "var(--font-jetbrains-mono), monospace",
+                  marginBottom: 8,
+                }}
+              >
+                ⊕ USE MY LOCATION
+              </button>
+
+              <div style={{ display: "flex", gap: 4, marginBottom: 8 }}>
+                <input
+                  type="text"
+                  placeholder="Lat (e.g. 43.65)"
+                  value={obsInputLat}
+                  onChange={(e) => setObsInputLat(e.target.value)}
+                  style={{
+                    flex: 1, padding: "4px 6px",
+                    background: "#0d1117",
+                    border: "1px solid rgba(0,229,255,0.2)",
+                    borderRadius: 3,
+                    color: "var(--color-text-primary)",
+                    fontSize: 10,
+                    fontFamily: "var(--font-jetbrains-mono), monospace",
+                    outline: "none",
+                  }}
+                />
+                <input
+                  type="text"
+                  placeholder="Lon (e.g. -79.38)"
+                  value={obsInputLon}
+                  onChange={(e) => setObsInputLon(e.target.value)}
+                  style={{
+                    flex: 1, padding: "4px 6px",
+                    background: "#0d1117",
+                    border: "1px solid rgba(0,229,255,0.2)",
+                    borderRadius: 3,
+                    color: "var(--color-text-primary)",
+                    fontSize: 10,
+                    fontFamily: "var(--font-jetbrains-mono), monospace",
+                    outline: "none",
+                  }}
+                />
+                <button
+                  onClick={handleManualSet}
+                  style={{
+                    padding: "4px 8px",
+                    background: "rgba(0,229,255,0.08)",
+                    border: "1px solid rgba(0,229,255,0.3)",
+                    borderRadius: 3,
+                    color: "var(--color-accent-cyan)",
+                    fontSize: 9,
+                    cursor: "pointer",
+                    fontFamily: "var(--font-jetbrains-mono), monospace",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  SET
+                </button>
               </div>
 
-              {displayOrbital.isInSunlight && displayOrbital.sunsetIn !== null && (
-                <InfoRow label={t("pages.sunsetIn")} value={formatSeconds(displayOrbital.sunsetIn)} />
-              )}
-              {!displayOrbital.isInSunlight && displayOrbital.sunriseIn !== null && (
-                <InfoRow label={t("pages.sunriseIn")} value={formatSeconds(displayOrbital.sunriseIn)} />
+              {geoError && (
+                <div style={{ fontSize: 9, color: "var(--color-accent-red)", marginBottom: 6 }}>
+                  {geoError}
+                </div>
               )}
 
-              <div style={{ borderTop: "1px solid rgba(255,255,255,0.06)", margin: "4px 0" }} />
+              {observer && (
+                <>
+                  <Divider />
+                  <Row
+                    label="OBSERVER"
+                    value={`${observer.lat.toFixed(3)}° ${observer.lat >= 0 ? "N" : "S"}, ${Math.abs(observer.lon).toFixed(3)}° ${observer.lon >= 0 ? "E" : "W"}`}
+                  />
+                  {obsValues && (
+                    <>
+                      {(() => {
+                        const d = distConv(obsValues.distKm);
+                        return <Row label="DIST TO ISS TRACK" value={`${Math.round(d.value).toLocaleString()} ${d.unit}`} />;
+                      })()}
+                      <Row
+                        label="ELEVATION"
+                        value={`${obsValues.elevDeg.toFixed(1)}°`}
+                        valueColor={obsValues.aboveHorizon ? "var(--color-accent-green)" : "var(--color-text-muted)"}
+                      />
+                      <Row
+                        label="VISIBLE NOW"
+                        value={obsValues.visible ? "YES" : "NO"}
+                        valueColor={obsValues.visible ? "var(--color-accent-green)" : "var(--color-text-muted)"}
+                      />
+                    </>
+                  )}
+                </>
+              )}
+            </CardBody>
+          </Card>
 
-              {/* Path history count */}
-              <InfoRow
-                label={t("pages.pathHistory")}
-                value={`${Math.min(pathHistoryRef.current.length, MAX_PATH_POINTS)} pts`}
-                muted
-              />
-            </div>
-          ) : (
-            <div style={{ fontSize: 10, color: "var(--color-text-muted)" }}>
-              {t("common.loading")}
-            </div>
+          {/* 5. Next Passes Card */}
+          <Card>
+            <CardHeader title="NEXT PASSES" badge={
+              observer
+                ? <span style={{ fontSize: 8, color: "var(--color-text-muted)" }}>
+                    {observer.lat.toFixed(2)}°, {observer.lon.toFixed(2)}°
+                  </span>
+                : null
+            } />
+            <CardBody>
+              {!observer ? (
+                <span style={{ fontSize: 10, color: "var(--color-text-muted)" }}>
+                  Set observer location above to see upcoming passes.
+                </span>
+              ) : passesLoading ? (
+                <span style={{ fontSize: 10, color: "var(--color-text-muted)" }}>Computing passes…</span>
+              ) : passesError ? (
+                <span style={{ fontSize: 9, color: "var(--color-accent-red)" }}>Error: {passesError}</span>
+              ) : passes && passes.length > 0 ? (
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  {passes.map((p, i) => {
+                    const isBright = p.magnitude < -2;
+                    return (
+                      <div key={i} style={{
+                        background: isBright ? "rgba(255,214,0,0.06)" : "rgba(255,255,255,0.02)",
+                        border: `1px solid ${isBright ? "rgba(255,214,0,0.25)" : "var(--color-border-subtle)"}`,
+                        borderRadius: 4,
+                        padding: "6px 8px",
+                      }}>
+                        <div style={{
+                          display: "flex", justifyContent: "space-between",
+                          alignItems: "center", marginBottom: 3,
+                        }}>
+                          <span style={{
+                            fontSize: 10,
+                            color: isBright ? "var(--color-accent-yellow)" : "var(--color-text-primary)",
+                            letterSpacing: "0.04em",
+                          }}>
+                            {isBright ? "★ " : ""}{formatPassTime(p.riseTime)}
+                          </span>
+                          <span style={{
+                            fontSize: 9,
+                            background: p.quality === "bright" ? "rgba(255,214,0,0.15)" :
+                                        p.quality === "good" ? "rgba(0,255,136,0.1)" :
+                                        "rgba(148,173,196,0.1)",
+                            color: p.quality === "bright" ? "var(--color-accent-yellow)" :
+                                   p.quality === "good" ? "var(--color-accent-green)" :
+                                   "var(--color-text-muted)",
+                            padding: "1px 5px", borderRadius: 2,
+                            letterSpacing: "0.06em",
+                          }}>
+                            {p.quality.toUpperCase()}
+                          </span>
+                        </div>
+                        <div style={{ display: "flex", gap: 12, fontSize: 9, color: "var(--color-text-muted)" }}>
+                          <span>MAX <span style={{ color: "var(--color-text-primary)" }}>{p.maxElevation.toFixed(0)}°</span></span>
+                          <span>DUR <span style={{ color: "var(--color-text-primary)" }}>{formatDuration(p.riseTime, p.setTime)}</span></span>
+                          <span>MAG <span style={{ color: "var(--color-text-primary)" }}>{p.magnitude.toFixed(1)}</span></span>
+                        </div>
+                        <div style={{ fontSize: 8, color: "var(--color-text-muted)", marginTop: 2 }}>
+                          Rise {formatAzimuth(p.riseAzimuth)} → Set {formatAzimuth(p.setAzimuth)}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <span style={{ fontSize: 10, color: "var(--color-text-muted)" }}>No passes found.</span>
+              )}
+            </CardBody>
+          </Card>
+
+          {/* 6. ISS Systems Summary Card */}
+          {telemetry && (
+            <Card>
+              <CardHeader title="SYSTEMS SUMMARY" />
+              <CardBody>
+                <Row label="POWER GEN"    value={`${telemetry.powerKw.toFixed(1)} kW`} />
+                <Row label="ATT MODE"     value={telemetry.attitudeMode} />
+                <Row label="STATION MODE" value={telemetry.attitude.stationMode} />
+                <Row label="CABIN TEMP"   value={`${telemetry.temperatureC.toFixed(1)} °C`} />
+                <Row label="CABIN PRES"   value={`${telemetry.pressurePsi.toFixed(2)} psi`} />
+                <Row label="O₂ CONC"      value={`${telemetry.oxygenPercent.toFixed(1)}%`} />
+              </CardBody>
+            </Card>
           )}
         </div>
 
-        {/* ── Map legend (bottom-right) ── */}
-        <div style={{
-          position: "absolute",
-          bottom: 24,
-          right: 16,
-          zIndex: 900,
-          background: "rgba(13,17,23,0.80)",
-          border: "1px solid rgba(0,229,255,0.15)",
-          borderRadius: 4,
-          padding: "7px 10px",
-          backdropFilter: "blur(4px)",
-          fontFamily: "var(--font-jetbrains-mono)",
-          fontSize: 9,
-          color: "var(--color-text-muted)",
-          pointerEvents: "none",
-          display: "flex",
-          flexDirection: "column",
-          gap: 4,
-        }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <svg width="20" height="6">
-              <line x1="0" y1="3" x2="20" y2="3" stroke="#00e5ff" strokeWidth="1.5" strokeOpacity="0.7" />
-            </svg>
-            <span>Ground track</span>
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <svg width="20" height="6">
-              <line x1="0" y1="3" x2="20" y2="3" stroke="#00e5ff" strokeWidth="1.5" strokeOpacity="0.5" strokeDasharray="4 3" />
-            </svg>
-            <span>Predicted orbit (~90 min)</span>
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <svg width="20" height="12">
-              <ellipse cx="10" cy="6" rx="8" ry="5" stroke="#00e5ff" strokeWidth="1" strokeOpacity="0.2" fill="#00e5ff" fillOpacity="0.05" />
-            </svg>
-            <span>TDRS coverage</span>
+        {/* ── Right column: map ── */}
+        <div style={{ position: "relative", overflow: "hidden" }}>
+          <div ref={mapRef} style={{ width: "100%", height: "100%" }} />
+
+          {/* Map legend (bottom-right) */}
+          <div style={{
+            position: "absolute", bottom: 24, right: 16,
+            zIndex: 900,
+            background: "rgba(13,17,23,0.85)",
+            border: "1px solid rgba(0,229,255,0.15)",
+            borderRadius: 4, padding: "7px 10px",
+            backdropFilter: "blur(4px)",
+            fontSize: 9, color: "var(--color-text-muted)",
+            fontFamily: "var(--font-jetbrains-mono), monospace",
+            pointerEvents: "none",
+            display: "flex", flexDirection: "column", gap: 4,
+          }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <div style={{ width: 10, height: 10, borderRadius: "50%", background: "#ff3d3d", boxShadow: "0 0 6px rgba(255,61,61,0.6)", border: "1px solid #fff" }} />
+              <span>ISS</span>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <svg width="20" height="6">
+                <line x1="0" y1="3" x2="20" y2="3" stroke="#00e5ff" strokeWidth="1.5" strokeOpacity="0.7" />
+              </svg>
+              <span>Ground track</span>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <svg width="20" height="6">
+                <line x1="0" y1="3" x2="20" y2="3" stroke="#00e5ff" strokeWidth="1.5" strokeOpacity="0.5" strokeDasharray="4 3" />
+              </svg>
+              <span>Predicted (~90 min)</span>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <svg width="20" height="12">
+                <ellipse cx="10" cy="6" rx="8" ry="5" stroke="#00e5ff" strokeWidth="1" strokeOpacity="0.2" fill="#00e5ff" fillOpacity="0.05" />
+              </svg>
+              <span>TDRS coverage</span>
+            </div>
+            {observer && (
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#4fc3f7", border: "1px solid #fff" }} />
+                <span>Observer</span>
+              </div>
+            )}
           </div>
         </div>
       </div>
 
-      {/* Leaflet popup + TDRS label dark theme overrides — injected inline */}
+      {/* Leaflet CSS overrides */}
       <style>{`
         .leaflet-popup-content-wrapper {
           background: #0f1621 !important;
@@ -528,12 +939,8 @@ export default function TrackPage() {
           box-shadow: 0 0 16px rgba(0,229,255,0.15) !important;
           color: #e8f0fe !important;
         }
-        .leaflet-popup-tip {
-          background: #0f1621 !important;
-        }
-        .leaflet-popup-content {
-          margin: 8px 12px !important;
-        }
+        .leaflet-popup-tip { background: #0f1621 !important; }
+        .leaflet-popup-content { margin: 8px 12px !important; }
         .tdrs-label {
           background: rgba(13,17,23,0.75) !important;
           border: 1px solid rgba(0,229,255,0.2) !important;
@@ -546,37 +953,8 @@ export default function TrackPage() {
           white-space: nowrap !important;
           box-shadow: none !important;
         }
-        .tdrs-label::before {
-          display: none !important;
-        }
+        .tdrs-label::before { display: none !important; }
       `}</style>
-    </div>
-  );
-}
-
-// ── Small helper component (defined outside main to avoid re-declaration) ────
-
-function InfoRow({
-  label,
-  value,
-  muted,
-}: {
-  label: string;
-  value: string;
-  muted?: boolean;
-}) {
-  return (
-    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-      <span style={{ color: "var(--color-text-muted)", fontSize: 9, letterSpacing: "0.04em" }}>
-        {label}
-      </span>
-      <span style={{
-        color: muted ? "var(--color-text-muted)" : "var(--color-text-primary)",
-        fontSize: 10,
-        fontVariantNumeric: "tabular-nums",
-      }}>
-        {value}
-      </span>
     </div>
   );
 }
