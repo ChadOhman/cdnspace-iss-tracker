@@ -3,6 +3,7 @@
 import PanelFrame from "@/components/shared/PanelFrame";
 import type { ISSTelemetry } from "@/lib/types";
 import { useLocale } from "@/context/LocaleContext";
+import { useUnits } from "@/context/UnitsContext";
 
 interface EclssPanelProps {
   telemetry: ISSTelemetry | null;
@@ -153,6 +154,7 @@ function StatusRow({ label, value }: { label: string; value: string }) {
 
 export default function EclssPanel({ telemetry }: EclssPanelProps) {
   const { t } = useLocale();
+  const { pressure } = useUnits();
 
   return (
     <PanelFrame
@@ -227,9 +229,14 @@ export default function EclssPanel({ telemetry }: EclssPanelProps) {
               >
                 {telemetry.eclss.totalMmhg.toFixed(1)}
                 <span style={{ fontSize: 8, color: "var(--color-text-muted)", marginLeft: 2 }}>mmHg</span>
-                <span style={{ fontSize: 8, color: "var(--color-text-muted)", marginLeft: 6 }}>
-                  ({telemetry.eclss.totalKpa.toFixed(1)} kPa)
-                </span>
+                {(() => {
+                  const p = pressure(telemetry.pressurePsi);
+                  return (
+                    <span style={{ fontSize: 8, color: "var(--color-text-muted)", marginLeft: 6 }}>
+                      ({p.value.toFixed(1)} {p.unit})
+                    </span>
+                  );
+                })()}
               </span>
             </div>
           </div>

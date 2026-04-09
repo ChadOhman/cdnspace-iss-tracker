@@ -3,22 +3,28 @@
 import PanelFrame from "@/components/shared/PanelFrame";
 import type { ISSTelemetry } from "@/lib/types";
 import { useLocale } from "@/context/LocaleContext";
+import { useUnits } from "@/context/UnitsContext";
 
 interface AirlockPanelProps {
   telemetry: ISSTelemetry | null;
 }
 
+type PressureConverter = (psi: number) => { value: number; unit: string };
+
 interface PressureGaugeProps {
   label: string;
+  /** Raw value in psi */
   value: number;
-  max: number;
-  unit?: string;
+  /** Max value in psi (will be converted alongside value) */
+  maxPsi: number;
   color?: string;
+  pressureConv: PressureConverter;
 }
 
-function PressureGauge({ label, value, max, unit = "kPa", color = "var(--color-accent-orange)" }: PressureGaugeProps) {
-  const valueKPa = value * 6.89476;
-  const pct = Math.max(0, Math.min(100, (valueKPa / max) * 100));
+function PressureGauge({ label, value, maxPsi, color = "var(--color-accent-orange)", pressureConv }: PressureGaugeProps) {
+  const converted = pressureConv(value);
+  const convertedMax = pressureConv(maxPsi);
+  const pct = Math.max(0, Math.min(100, (converted.value / convertedMax.value) * 100));
   return (
     <div
       style={{
@@ -39,8 +45,8 @@ function PressureGauge({ label, value, max, unit = "kPa", color = "var(--color-a
           marginBottom: 3,
         }}
       >
-        {valueKPa.toFixed(0)}
-        <span style={{ fontSize: 8, color: "var(--color-text-muted)", marginLeft: 2 }}>{unit}</span>
+        {converted.value.toFixed(0)}
+        <span style={{ fontSize: 8, color: "var(--color-text-muted)", marginLeft: 2 }}>{converted.unit}</span>
       </div>
       <div
         style={{
@@ -66,12 +72,15 @@ function PressureGauge({ label, value, max, unit = "kPa", color = "var(--color-a
 
 interface EmuCardProps {
   index: number;
+  /** Raw o2 pressure in psi */
   o2Pressure: number;
   o2Current: number;
   standby: boolean;
+  pressureConv: PressureConverter;
 }
 
-function EmuCard({ index, o2Pressure, o2Current, standby }: EmuCardProps) {
+function EmuCard({ index, o2Pressure, o2Current, standby, pressureConv }: EmuCardProps) {
+  const converted = pressureConv(o2Pressure);
   return (
     <div
       style={{
@@ -95,8 +104,8 @@ function EmuCard({ index, o2Pressure, o2Current, standby }: EmuCardProps) {
               fontVariantNumeric: "tabular-nums",
             }}
           >
-            {(o2Pressure * 6.89476).toFixed(0)}
-            <span style={{ fontSize: 8, color: "var(--color-text-muted)", marginLeft: 1 }}>kPa</span>
+            {converted.value.toFixed(0)}
+            <span style={{ fontSize: 8, color: "var(--color-text-muted)", marginLeft: 1 }}>{converted.unit}</span>
           </div>
           <div style={{ color: "var(--color-text-muted)", fontSize: 8, marginTop: 1 }}>
             {o2Current.toFixed(2)} A
@@ -113,6 +122,7 @@ function isEmuStandby(o2Pressure: number, o2Current: number): boolean {
 
 export default function AirlockPanel({ telemetry }: AirlockPanelProps) {
   const { t } = useLocale();
+  const { pressure } = useUnits();
 
   return (
     <PanelFrame
@@ -149,14 +159,16 @@ export default function AirlockPanel({ telemetry }: AirlockPanelProps) {
             <PressureGauge
               label="O₂ SUPPLY A"
               value={telemetry.airlock.o2SupplyPressureA}
-              max={6895}
+              maxPsi={1000}
               color="var(--color-accent-orange)"
+              pressureConv={pressure}
             />
             <PressureGauge
               label="O₂ SUPPLY B"
               value={telemetry.airlock.o2SupplyPressureB}
-              max={6895}
+              maxPsi={1000}
               color="var(--color-accent-orange)"
+              pressureConv={pressure}
             />
             <div
               style={{
@@ -200,20 +212,23 @@ export default function AirlockPanel({ telemetry }: AirlockPanelProps) {
             <PressureGauge
               label="O₂ HIGH"
               value={telemetry.airlock.o2HighTank}
-              max={96527}
+              maxPsi={14000}
               color="var(--color-accent-green)"
+              pressureConv={pressure}
             />
             <PressureGauge
               label="O₂ LOW"
               value={telemetry.airlock.o2LowTank}
-              max={34474}
+              maxPsi={5000}
               color="var(--color-accent-cyan)"
+              pressureConv={pressure}
             />
             <PressureGauge
               label="N₂"
               value={telemetry.airlock.n2Tank}
-              max={68948}
+              maxPsi={10000}
               color="var(--color-accent-orange)"
+              pressureConv={pressure}
             />
           </div>
 
@@ -236,18 +251,21 @@ export default function AirlockPanel({ telemetry }: AirlockPanelProps) {
                 o2Pressure={telemetry.airlock.emu1O2Pressure}
                 o2Current={telemetry.airlock.emu1O2Current}
                 standby={isEmuStandby(telemetry.airlock.emu1O2Pressure, telemetry.airlock.emu1O2Current)}
+                pressureConv={pressure}
               />
               <EmuCard
                 index={2}
                 o2Pressure={telemetry.airlock.emu2O2Pressure}
                 o2Current={telemetry.airlock.emu2O2Current}
                 standby={isEmuStandby(telemetry.airlock.emu2O2Pressure, telemetry.airlock.emu2O2Current)}
+                pressureConv={pressure}
               />
               <EmuCard
                 index={3}
                 o2Pressure={telemetry.airlock.emu3O2Pressure}
                 o2Current={telemetry.airlock.emu3O2Current}
                 standby={isEmuStandby(telemetry.airlock.emu3O2Pressure, telemetry.airlock.emu3O2Current)}
+                pressureConv={pressure}
               />
             </div>
           </div>

@@ -4,6 +4,7 @@ import PanelFrame from "@/components/shared/PanelFrame";
 import Sparkline from "@/components/shared/Sparkline";
 import type { OrbitalState } from "@/lib/types";
 import { useLocale } from "@/context/LocaleContext";
+import { useUnits } from "@/context/UnitsContext";
 
 interface OrbitalParamsPanelProps {
   orbital: OrbitalState | null;
@@ -41,6 +42,7 @@ function ParamRow({ label, value }: ParamRowProps) {
 
 export default function OrbitalParamsPanel({ orbital }: OrbitalParamsPanelProps) {
   const { t } = useLocale();
+  const { distance } = useUnits();
 
   function formatPeriod(minutes: number): string {
     const m = Math.floor(minutes);
@@ -69,11 +71,11 @@ export default function OrbitalParamsPanel({ orbital }: OrbitalParamsPanelProps)
           >
             <ParamRow
               label={t("orbital.apoapsis")}
-              value={`${orbital.apoapsis.toFixed(1)} km`}
+              value={(() => { const d = distance(orbital.apoapsis); return `${d.value.toFixed(1)} ${d.unit}`; })()}
             />
             <ParamRow
               label={t("orbital.periapsis")}
-              value={`${orbital.periapsis.toFixed(1)} km`}
+              value={(() => { const d = distance(orbital.periapsis); return `${d.value.toFixed(1)} ${d.unit}`; })()}
             />
             <ParamRow
               label={t("orbital.inclination")}

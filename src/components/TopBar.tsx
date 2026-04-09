@@ -3,6 +3,7 @@
 import { useEffect, useState, memo } from "react";
 import type { OrbitalState } from "@/lib/types";
 import { useLocale } from "@/context/LocaleContext";
+import { useUnits } from "@/context/UnitsContext";
 
 interface TopBarProps {
   orbital: OrbitalState | null;
@@ -20,6 +21,7 @@ function TopBarInner({
   visitorCount,
 }: TopBarProps) {
   const { t } = useLocale();
+  const { distance, speed } = useUnits();
   const [utc, setUtc] = useState("");
 
   useEffect(() => {
@@ -108,13 +110,13 @@ function TopBarInner({
           <span>
             <span style={{ color: "var(--color-text-muted)" }}>{t("topbar.altitude")} </span>
             <span style={{ color: "var(--color-accent-cyan)" }}>
-              {orbital.altitude.toFixed(1)} km
+              {(() => { const d = distance(orbital.altitude); return `${d.value.toFixed(1)} ${d.unit}`; })()}
             </span>
           </span>
           <span>
             <span style={{ color: "var(--color-text-muted)" }}>{t("topbar.speed")} </span>
             <span style={{ color: "var(--color-accent-cyan)" }}>
-              {Math.round(orbital.speedKmH).toLocaleString()} km/h
+              {(() => { const s = speed(orbital.speedKmH); return `${Math.round(s.value).toLocaleString()} ${s.unit}`; })()}
             </span>
           </span>
           <span>

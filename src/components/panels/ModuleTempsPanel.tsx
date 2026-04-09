@@ -3,19 +3,24 @@
 import PanelFrame from "@/components/shared/PanelFrame";
 import type { ISSTelemetry } from "@/lib/types";
 import { useLocale } from "@/context/LocaleContext";
+import { useUnits } from "@/context/UnitsContext";
 
 interface ModuleTempsPanelProps {
   telemetry: ISSTelemetry | null;
 }
+
+type TemperatureConverter = (celsius: number) => { value: number; unit: string };
 
 interface ModuleBoxProps {
   name: string;
   cabinTemp: number;
   avionicsTemp?: number;
   accent?: string;
+  temperature: TemperatureConverter;
 }
 
-function ModuleBox({ name, cabinTemp, avionicsTemp, accent = "var(--color-accent-cyan)" }: ModuleBoxProps) {
+function ModuleBox({ name, cabinTemp, avionicsTemp, accent = "var(--color-accent-cyan)", temperature }: ModuleBoxProps) {
+  const cabinConverted = temperature(cabinTemp);
   return (
     <div
       style={{
@@ -36,28 +41,34 @@ function ModuleBox({ name, cabinTemp, avionicsTemp, accent = "var(--color-accent
           fontVariantNumeric: "tabular-nums",
         }}
       >
-        {cabinTemp.toFixed(1)}°C
+        {cabinConverted.value.toFixed(1)}{cabinConverted.unit}
       </div>
       {avionicsTemp !== undefined && (
         <div style={{ color: "var(--color-text-muted)", fontSize: 8, marginTop: 2 }}>
-          {t_avionics}: {avionicsTemp.toFixed(1)}°C
+          AVN: {temperature(avionicsTemp).value.toFixed(1)}{temperature(avionicsTemp).unit}
         </div>
       )}
     </div>
   );
 }
 
-// Since ModuleBox is defined inside this module, we need to handle t differently.
-// We'll restructure with a wrapper component.
+type FlowRateConverter = (lbPerHr: number) => { value: number; unit: string };
+type PressureConverter = (psi: number) => { value: number; unit: string };
 
 interface ThermalLoopRowProps {
   label: string;
   flow: number;
   pressure: number;
   radTemp: number;
+  flowRate: FlowRateConverter;
+  pressureConv: PressureConverter;
+  temperature: TemperatureConverter;
 }
 
-function ThermalLoopRow({ label, flow, pressure, radTemp }: ThermalLoopRowProps) {
+function ThermalLoopRow({ label, flow, pressure, radTemp, flowRate, pressureConv, temperature }: ThermalLoopRowProps) {
+  const flowConverted = flowRate(flow);
+  const pressureConverted = pressureConv(pressure);
+  const radConverted = temperature(radTemp);
   return (
     <div
       style={{
@@ -70,13 +81,13 @@ function ThermalLoopRow({ label, flow, pressure, radTemp }: ThermalLoopRowProps)
     >
       <span style={{ color: "var(--color-accent-cyan)", fontSize: 9, fontWeight: 700, minWidth: 60 }}>{label}</span>
       <span style={{ color: "var(--color-text-secondary)", fontSize: 9, fontVariantNumeric: "tabular-nums" }}>
-        {(flow * 0.453592).toFixed(1)} kg/hr
+        {flowConverted.value.toFixed(1)} {flowConverted.unit}
       </span>
       <span style={{ color: "var(--color-text-secondary)", fontSize: 9, fontVariantNumeric: "tabular-nums" }}>
-        {(pressure * 6.89476).toFixed(1)} kPa
+        {pressureConverted.value.toFixed(1)} {pressureConverted.unit}
       </span>
       <span style={{ color: "var(--color-text-secondary)", fontSize: 9, fontVariantNumeric: "tabular-nums" }}>
-        {radTemp.toFixed(1)}°C
+        {radConverted.value.toFixed(1)}{radConverted.unit}
       </span>
     </div>
   );
@@ -116,11 +127,9 @@ function CcaaStatus({ module, status }: CcaaStatusProps) {
   );
 }
 
-// Label used inside ModuleBox for avionics — set as a module-level constant
-const t_avionics = "AVN";
-
 export default function ModuleTempsPanel({ telemetry }: ModuleTempsPanelProps) {
   const { t } = useLocale();
+  const { flowRate, pressure, temperature } = useUnits();
 
   return (
     <PanelFrame
@@ -179,6 +188,7 @@ export default function ModuleTempsPanel({ telemetry }: ModuleTempsPanelProps) {
               <ModuleBox
                 name="NODE 1"
                 cabinTemp={telemetry.moduleTemps.node1Cabin}
+                temperature={temperature}
               />
 
               <div style={{ color: "var(--color-border-subtle)", fontSize: 10 }}>—</div>
@@ -189,6 +199,7 @@ export default function ModuleTempsPanel({ telemetry }: ModuleTempsPanelProps) {
                 cabinTemp={telemetry.moduleTemps.uslabCabin}
                 avionicsTemp={telemetry.moduleTemps.uslabAvionics}
                 accent="var(--color-accent-cyan)"
+                temperature={temperature}
               />
 
               <div style={{ color: "var(--color-border-subtle)", fontSize: 10 }}>—</div>
@@ -199,6 +210,7 @@ export default function ModuleTempsPanel({ telemetry }: ModuleTempsPanelProps) {
                 cabinTemp={telemetry.moduleTemps.node2Cabin}
                 avionicsTemp={telemetry.moduleTemps.node2Avionics}
                 accent="var(--color-accent-cyan)"
+                temperature={temperature}
               />
             </div>
 
@@ -220,6 +232,7 @@ export default function ModuleTempsPanel({ telemetry }: ModuleTempsPanelProps) {
                 cabinTemp={telemetry.moduleTemps.node3Cabin}
                 avionicsTemp={telemetry.moduleTemps.node3Avionics}
                 accent="var(--color-accent-cyan)"
+                temperature={temperature}
               />
             </div>
           </div>
@@ -246,12 +259,18 @@ export default function ModuleTempsPanel({ telemetry }: ModuleTempsPanelProps) {
               flow={telemetry.externalThermal.loopAFlow}
               pressure={telemetry.externalThermal.loopAPressure}
               radTemp={telemetry.externalThermal.loopARadiatorTemp}
+              flowRate={flowRate}
+              pressureConv={pressure}
+              temperature={temperature}
             />
             <ThermalLoopRow
               label="LOOP B (P1)"
               flow={telemetry.externalThermal.loopBFlow}
               pressure={telemetry.externalThermal.loopBPressure}
               radTemp={telemetry.externalThermal.loopBRadiatorTemp}
+              flowRate={flowRate}
+              pressureConv={pressure}
+              temperature={temperature}
             />
           </div>
 

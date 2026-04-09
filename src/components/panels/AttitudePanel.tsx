@@ -3,10 +3,13 @@
 import PanelFrame from "@/components/shared/PanelFrame";
 import type { ISSTelemetry } from "@/lib/types";
 import { useLocale } from "@/context/LocaleContext";
+import { useUnits } from "@/context/UnitsContext";
 
 interface AttitudePanelProps {
   telemetry: ISSTelemetry | null;
 }
+
+type TemperatureConverter = (celsius: number) => { value: number; unit: string };
 
 interface CmgCardProps {
   index: number;
@@ -14,9 +17,11 @@ interface CmgCardProps {
   spinRate: number;
   spinMotorTemp: number;
   vibration: number;
+  temperature: TemperatureConverter;
 }
 
-function CmgCard({ index, on, spinRate, spinMotorTemp, vibration }: CmgCardProps) {
+function CmgCard({ index, on, spinRate, spinMotorTemp, vibration, temperature }: CmgCardProps) {
+  const tempConverted = temperature(spinMotorTemp);
   return (
     <div
       style={{
@@ -60,7 +65,7 @@ function CmgCard({ index, on, spinRate, spinMotorTemp, vibration }: CmgCardProps
       </div>
       <div style={{ display: "flex", justifyContent: "space-between" }}>
         <span style={{ color: "var(--color-text-muted)", fontSize: 8 }}>
-          {spinMotorTemp.toFixed(1)}°C
+          {tempConverted.value.toFixed(1)}{tempConverted.unit}
         </span>
         <span style={{ color: "var(--color-text-muted)", fontSize: 8 }}>
           {vibration.toFixed(3)}g
@@ -126,6 +131,7 @@ function AngleRow({ label, value, rateErr }: AngleRowProps) {
 
 export default function AttitudePanel({ telemetry }: AttitudePanelProps) {
   const { t } = useLocale();
+  const { temperature } = useUnits();
 
   return (
     <PanelFrame
@@ -168,6 +174,7 @@ export default function AttitudePanel({ telemetry }: AttitudePanelProps) {
                   spinRate={cmg.spinRate}
                   spinMotorTemp={cmg.spinMotorTemp}
                   vibration={cmg.vibration}
+                  temperature={temperature}
                 />
               ))}
             </div>
