@@ -93,6 +93,45 @@ export default function OrbitalParamsPanel({ orbital }: OrbitalParamsPanelProps)
               label={t("orbital.revolutions")}
               value={`#${orbital.revolutionNumber}`}
             />
+            {/* Beta angle — full-width row with colour coding */}
+            <div
+              style={{
+                gridColumn: "1 / -1",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                padding: "4px 0",
+                borderBottom: "1px solid var(--color-border-subtle)",
+              }}
+            >
+              <span
+                style={{ color: "var(--color-text-muted)", fontSize: 10 }}
+                title="Beta angle — angle between the ISS orbital plane and the Sun-Earth vector. High absolute values (>60°) mean continuous sunlight; near zero means frequent eclipses."
+              >
+                Beta Angle
+              </span>
+              {(() => {
+                const beta = orbital.betaAngle;
+                const absBeta = Math.abs(beta);
+                const betaColor =
+                  absBeta > 60
+                    ? "var(--color-accent-yellow)"   // continuous sunlight
+                    : absBeta > 45
+                      ? "var(--color-accent-orange)"
+                      : "var(--color-accent-cyan)";
+                return (
+                  <span
+                    style={{
+                      color: betaColor,
+                      fontSize: 10,
+                      fontVariantNumeric: "tabular-nums",
+                    }}
+                  >
+                    {beta >= 0 ? "+" : ""}{beta.toFixed(2)}°
+                  </span>
+                );
+              })()}
+            </div>
           </div>
 
           {/* Sparklines */}
