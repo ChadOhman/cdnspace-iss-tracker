@@ -132,11 +132,11 @@ const TELEMETRY_IDS = [
   "USLAB000064", // Destiny CCAA 1 status (enumerated)
   "USLAB000065", // Destiny CCAA 2 status (enumerated)
   // ETCS Loop A (Starboard 1 truss)
-  "S1000001",    // ETCS Loop A flow rate (kg/min)
+  "S1000001",    // ETCS Loop A flow rate (lb/hr)
   "S1000002",    // ETCS Loop A pressure (psi)
   "S1000003",    // ETCS Loop A radiator outlet temp (°C)
   // ETCS Loop B (Port 1 truss)
-  "P1000001",    // ETCS Loop B flow rate (kg/min)
+  "P1000001",    // ETCS Loop B flow rate (lb/hr)
   "P1000002",    // ETCS Loop B pressure (psi)
   "P1000003",    // ETCS Loop B radiator outlet temp (°C)
   // TRRJ angles

@@ -70,7 +70,7 @@ function ThermalLoopRow({ label, flow, pressure, radTemp }: ThermalLoopRowProps)
     >
       <span style={{ color: "var(--color-accent-cyan)", fontSize: 9, fontWeight: 700, minWidth: 60 }}>{label}</span>
       <span style={{ color: "var(--color-text-secondary)", fontSize: 9, fontVariantNumeric: "tabular-nums" }}>
-        {flow.toFixed(1)} kg/min
+        {flow.toFixed(0)} lb/hr
       </span>
       <span style={{ color: "var(--color-text-secondary)", fontSize: 9, fontVariantNumeric: "tabular-nums" }}>
         {pressure.toFixed(1)} psi
