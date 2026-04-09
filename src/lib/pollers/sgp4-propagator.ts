@@ -136,25 +136,36 @@ export function propagateFromTle(tle: TleData, date: Date): OrbitalState | null 
 
     const STEP_SEC = 30;
     const MAX_LOOK_AHEAD_SEC = 50 * 60;
+    let stepsChecked = 0;
+    let lastFraction = fraction;
+
     for (let dt = STEP_SEC; dt <= MAX_LOOK_AHEAD_SEC; dt += STEP_SEC) {
-    const futureDate = new Date(date.getTime() + dt * 1000);
-    const futureResult = propagate(satrec, futureDate);
-    if (typeof futureResult.position === "boolean") break;
+      const futureDate = new Date(date.getTime() + dt * 1000);
+      const futureResult = propagate(satrec, futureDate);
+      if (!futureResult.position || typeof futureResult.position === "boolean") break;
 
-    const futureJd = dateToJulian(futureDate);
-    const futureSun = sunPos(futureJd);
-    const futureFraction = shadowFraction(futureSun.rsun, futureResult.position);
-    const futureInSunlight = futureFraction < 0.5;
+      const futureJd = dateToJulian(futureDate);
+      const futureSun = sunPos(futureJd);
+      const futureFraction = shadowFraction(futureSun.rsun, futureResult.position);
+      const futureInSunlight = futureFraction < 0.5;
+      stepsChecked++;
+      lastFraction = futureFraction;
 
-    if (isInSunlight && !futureInSunlight) {
-      sunsetIn = dt;
-      break;
+      if (isInSunlight && !futureInSunlight) {
+        sunsetIn = dt;
+        break;
+      }
+      if (!isInSunlight && futureInSunlight) {
+        sunriseIn = dt;
+        break;
+      }
     }
-    if (!isInSunlight && futureInSunlight) {
-      sunriseIn = dt;
-      break;
+
+    if (stepsChecked > 0 && sunriseIn === null && sunsetIn === null) {
+      // Log once if we scanned the full range without finding a transition
+      console.log(`[sgp4] Sunlight scan: ${stepsChecked} steps, no transition found. isInSunlight=${isInSunlight}, lastFraction=${lastFraction.toFixed(4)}, beta=${betaAngle.toFixed(1)}°`);
     }
-    }
+
     cachedSunriseIn = sunriseIn;
     cachedSunsetIn = sunsetIn;
   }
