@@ -180,19 +180,20 @@ export default function AirlockPanel({ telemetry }: AirlockPanelProps) {
               }}
             >
               <div style={{ color: "var(--color-text-muted)", fontSize: 8, marginBottom: 2 }}>PUMP</div>
-              <div
-                style={{
-                  color:
-                    telemetry.airlock.crewLockPump.toLowerCase().includes("on") ||
-                    telemetry.airlock.crewLockPump.toLowerCase().includes("active")
-                      ? "var(--color-accent-green)"
-                      : "var(--color-text-muted)",
-                  fontSize: 9,
-                  fontWeight: 600,
-                }}
-              >
-                {telemetry.airlock.crewLockPump || "—"}
-              </div>
+              {(() => {
+                const PUMP_STATUS: Record<string, { label: string; color: string }> = {
+                  "0": { label: "Off", color: "var(--color-text-muted)" },
+                  "1": { label: "On", color: "var(--color-accent-green)" },
+                  "2": { label: "Failed", color: "var(--color-accent-red)" },
+                };
+                const raw = telemetry.airlock.crewLockPump.trim();
+                const decoded = PUMP_STATUS[raw] ?? { label: raw || "—", color: "var(--color-text-muted)" };
+                return (
+                  <div style={{ color: decoded.color, fontSize: 9, fontWeight: 600 }}>
+                    {decoded.label}
+                  </div>
+                );
+              })()}
             </div>
           </div>
 
