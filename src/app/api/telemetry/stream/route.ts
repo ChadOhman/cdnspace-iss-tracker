@@ -62,8 +62,14 @@ function ensurePollers() {
   }, SGP4_TICK_INTERVAL_MS);
 
   // 4. Lightstreamer: connect and update cache on callback
+  let lsUpdateCount = 0;
   connectLightstreamer((channels) => {
     cache.telemetry = deriveTelemetry(channels);
+    lsUpdateCount++;
+    if (lsUpdateCount <= 3 || lsUpdateCount % 100 === 0) {
+      const keys = Object.keys(channels);
+      console.log(`[lightstreamer] Update #${lsUpdateCount}: ${keys.length} channels, latest: ${keys.slice(-3).join(", ")}`);
+    }
   }).then((connected) => {
     if (connected) {
       console.log("[stream] Lightstreamer connected successfully");
