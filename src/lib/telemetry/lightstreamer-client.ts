@@ -1,12 +1,8 @@
 /**
  * Lightstreamer Client for NASA ISS Live telemetry.
  *
- * Uses a two-phase subscription strategy matching NASA's reference implementation:
- *   1. Subscribe to TIME_000001 as a heartbeat
- *   2. When Status.Class === '24' (feed is live), subscribe to all channels
- *   3. Unsubscribe (with grace period) when status leaves '24'
- *
- * Reference: github.com/sensedata/space-telemetry/blob/develop/server/lightstreamer.js
+ * Connects to push.lightstreamer.com with the ISSLIVE adapter and subscribes
+ * to ISS telemetry channels.
  */
 
 import {
@@ -41,10 +37,12 @@ const TELEMETRY_IDS = [
   "USLAB000020", // CMG 2 speed
   "USLAB000021", // CMG 3 speed
   "USLAB000022", // CMG 4 speed
+  // Time
+  "TIME_000001", // Station time
 ];
 
-export const CHANNEL_IDS = ["TIME_000001", ...TELEMETRY_IDS] as const;
-export type ChannelId = (typeof CHANNEL_IDS)[number];
+export const CHANNEL_IDS = TELEMETRY_IDS;
+export type ChannelId = (typeof TELEMETRY_IDS)[number];
 
 export type TelemetryUpdateCallback = (channels: Record<string, LightstreamerChannel>) => void;
 
@@ -52,13 +50,7 @@ export type TelemetryUpdateCallback = (channels: Record<string, LightstreamerCha
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let lsClient: any = null;
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-let telemetrySub: any = null;
 let latestChannels: Record<string, LightstreamerChannel> = {};
-let isLive = false;
-let gracePeriodTimer: ReturnType<typeof setTimeout> | null = null;
-
-const GRACE_PERIOD_MS = 10_000;
 
 // ─── Connect / Disconnect ────────────────────────────────────────────────────
 
@@ -67,84 +59,124 @@ export async function connectLightstreamer(
 ): Promise<boolean> {
   try {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const LS = require("lightstreamer-client");
+    const LS = require("lightstreamer-client-node");
     const { LightstreamerClient, Subscription } = LS;
 
-    const client = new LightstreamerClient(LIGHTSTREAMER_SERVER, LIGHTSTREAMER_ADAPTER);
-    // Prevent Lightstreamer from throttling rapid updates
-    if (client.connectionOptions?.setSlowingEnabled) {
-      client.connectionOptions.setSlowingEnabled(false);
+    if (!LightstreamerClient) {
+      // Try alternate package name
+      console.error("[lightstreamer] LightstreamerClient not found in lightstreamer-client-node");
+      return false;
     }
-    lsClient = client;
 
-    // Phase 1: Subscribe to TIME_000001 heartbeat to detect live status
-    const heartbeatSub = new Subscription(
-      "MERGE",
-      ["TIME_000001"],
-      ["TimeStamp", "Value", "Status.Class"]
-    );
+    const client = new LightstreamerClient(LIGHTSTREAMER_SERVER, LIGHTSTREAMER_ADAPTER);
 
-    heartbeatSub.addListener({
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      onItemUpdate(update: any) {
-        const statusClass = update.getValue("Status.Class");
-        console.log(`[lightstreamer] TIME_000001 Status.Class = ${statusClass}`);
+    // Disable throttling
+    try { client.connectionOptions.setSlowingEnabled(false); } catch { /* not all versions support this */ }
 
-        if (statusClass === "24" && !isLive) {
-          // Feed went live — subscribe to all telemetry
-          if (gracePeriodTimer) {
-            clearTimeout(gracePeriodTimer);
-            gracePeriodTimer = null;
-          }
-          isLive = true;
-          subscribeTelemetry(client, Subscription, onUpdate);
-        } else if (statusClass !== "24" && isLive) {
-          // Feed went offline — unsubscribe after grace period
-          if (!gracePeriodTimer) {
-            gracePeriodTimer = setTimeout(() => {
-              console.log("[lightstreamer] Feed offline, unsubscribing telemetry");
-              unsubscribeTelemetry(client);
-              isLive = false;
-              gracePeriodTimer = null;
-            }, GRACE_PERIOD_MS);
-          }
-        }
-
-        // Also update the TIME channel in our data
-        const value = update.getValue("Value") ?? "";
-        const tsStr = update.getValue("TimeStamp");
-        const timestamp = tsStr ? parseFloat(tsStr) * 1000 : Date.now();
-        latestChannels = {
-          ...latestChannels,
-          TIME_000001: { value, status: statusClass ?? "OK", timestamp },
-        };
-        onUpdate({ ...latestChannels });
+    // Connection status listener
+    client.addListener({
+      onStatusChange(status: string) {
+        console.log(`[lightstreamer] Connection status: ${status}`);
+      },
+      onServerError(code: number, message: string) {
+        console.error(`[lightstreamer] Server error ${code}: ${message}`);
       },
     });
 
-    client.subscribe(heartbeatSub);
+    const sub = new Subscription(
+      "MERGE",
+      TELEMETRY_IDS,
+      ["TimeStamp", "Value", "Status.Class", "CalibratedData"]
+    );
+
+    let updateCount = 0;
+
+    sub.addListener({
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      onItemUpdate(update: any) {
+        const item = update.getItemName();
+        const value = update.getValue("Value") ?? update.getValue("CalibratedData") ?? "";
+        const status = update.getValue("Status.Class") ?? "OK";
+        const tsStr = update.getValue("TimeStamp");
+        const timestamp = tsStr ? parseFloat(tsStr) * 1000 : Date.now();
+
+        latestChannels = {
+          ...latestChannels,
+          [item]: { value, status, timestamp },
+        };
+
+        onUpdate({ ...latestChannels });
+
+        updateCount++;
+        if (updateCount <= 5 || updateCount % 200 === 0) {
+          console.log(`[lightstreamer] Update #${updateCount}: ${item} = ${value} (status: ${status})`);
+        }
+      },
+      onSubscription() {
+        console.log(`[lightstreamer] Subscription active — ${TELEMETRY_IDS.length} items`);
+      },
+      onSubscriptionError(code: number, message: string) {
+        console.error(`[lightstreamer] Subscription error ${code}: ${message}`);
+      },
+      onUnsubscription() {
+        console.log("[lightstreamer] Unsubscribed");
+      },
+    });
+
+    client.subscribe(sub);
     client.connect();
-    console.log("[lightstreamer] Connected to", LIGHTSTREAMER_SERVER, "adapter:", LIGHTSTREAMER_ADAPTER);
-    console.log("[lightstreamer] Waiting for TIME_000001 Status.Class = 24 (feed live)...");
+    lsClient = client;
+
+    console.log("[lightstreamer] Connecting to", LIGHTSTREAMER_SERVER, "adapter:", LIGHTSTREAMER_ADAPTER);
     return true;
   } catch (err) {
-    console.error("[lightstreamer] Failed to connect:", err instanceof Error ? err.message : err);
-    return false;
+    console.error("[lightstreamer] Failed to initialize:", err instanceof Error ? err.message : err);
+
+    // Fallback: try alternate package name
+    try {
+      return await connectLightstreamerFallback(onUpdate);
+    } catch (err2) {
+      console.error("[lightstreamer] Fallback also failed:", err2 instanceof Error ? err2.message : err2);
+      return false;
+    }
   }
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function subscribeTelemetry(client: any, Subscription: any, onUpdate: TelemetryUpdateCallback) {
-  if (telemetrySub) return; // already subscribed
+async function connectLightstreamerFallback(
+  onUpdate: TelemetryUpdateCallback
+): Promise<boolean> {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const LS = require("lightstreamer-client");
+  const LightstreamerClient = LS.LightstreamerClient ?? LS.default?.LightstreamerClient ?? LS;
+  const Subscription = LS.Subscription ?? LS.default?.Subscription;
 
-  telemetrySub = new Subscription(
+  if (!Subscription) {
+    console.error("[lightstreamer] Could not find Subscription class in lightstreamer-client");
+    return false;
+  }
+
+  const client = new LightstreamerClient(LIGHTSTREAMER_SERVER, LIGHTSTREAMER_ADAPTER);
+
+  try { client.connectionOptions.setSlowingEnabled(false); } catch { /* */ }
+
+  client.addListener({
+    onStatusChange(status: string) {
+      console.log(`[lightstreamer-fallback] Connection status: ${status}`);
+    },
+    onServerError(code: number, message: string) {
+      console.error(`[lightstreamer-fallback] Server error ${code}: ${message}`);
+    },
+  });
+
+  const sub = new Subscription(
     "MERGE",
-    [...TELEMETRY_IDS],
+    TELEMETRY_IDS,
     ["TimeStamp", "Value", "Status.Class", "CalibratedData"]
   );
 
   let updateCount = 0;
-  telemetrySub.addListener({
+
+  sub.addListener({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     onItemUpdate(update: any) {
       const item = update.getItemName();
@@ -161,23 +193,24 @@ function subscribeTelemetry(client: any, Subscription: any, onUpdate: TelemetryU
       onUpdate({ ...latestChannels });
 
       updateCount++;
-      if (updateCount <= 3 || updateCount % 100 === 0) {
-        console.log(`[lightstreamer] Telemetry update #${updateCount}: ${item} = ${value}`);
+      if (updateCount <= 5 || updateCount % 200 === 0) {
+        console.log(`[lightstreamer-fallback] Update #${updateCount}: ${item} = ${value}`);
       }
+    },
+    onSubscription() {
+      console.log(`[lightstreamer-fallback] Subscription active — ${TELEMETRY_IDS.length} items`);
+    },
+    onSubscriptionError(code: number, message: string) {
+      console.error(`[lightstreamer-fallback] Subscription error ${code}: ${message}`);
     },
   });
 
-  client.subscribe(telemetrySub);
-  console.log(`[lightstreamer] Feed is LIVE — subscribed to ${TELEMETRY_IDS.length} telemetry channels`);
-}
+  client.subscribe(sub);
+  client.connect();
+  lsClient = client;
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function unsubscribeTelemetry(client: any) {
-  if (!telemetrySub) return;
-  try {
-    client.unsubscribe(telemetrySub);
-  } catch { /* best effort */ }
-  telemetrySub = null;
+  console.log("[lightstreamer-fallback] Connecting to", LIGHTSTREAMER_SERVER);
+  return true;
 }
 
 export function disconnectLightstreamer(): void {
@@ -187,13 +220,7 @@ export function disconnectLightstreamer(): void {
       lsClient = null;
     }
   } catch { /* best effort */ }
-  telemetrySub = null;
   latestChannels = {};
-  isLive = false;
-  if (gracePeriodTimer) {
-    clearTimeout(gracePeriodTimer);
-    gracePeriodTimer = null;
-  }
 }
 
 export function getLatestChannels(): Record<string, LightstreamerChannel> {
@@ -213,7 +240,6 @@ export function deriveTelemetry(
   }
 
   const powerKw = num("USLAB000058");
-
   const co2Percent = num("NODE3000007");
   const oxygenPercent = num("NODE3000008");
   const pressurePsi = num("NODE3000009");
