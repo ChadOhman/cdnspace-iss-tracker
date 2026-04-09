@@ -1,36 +1,156 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# ISS Tracker — Live Dashboard
 
-## Getting Started
+Real-time International Space Station tracking dashboard at [iss.cdnspace.ca](https://iss.cdnspace.ca). Live orbital telemetry, crew schedules, space weather, pass predictions, and systems data from NASA Lightstreamer.
 
-First, run the development server:
+## Features
+
+**Telemetry & Tracking**
+- Real-time orbital position via SGP4 propagation from CelesTrak TLEs
+- Ground track map (2D Leaflet + 3D Three.js globe toggle)
+- Orbital parameters: altitude, speed, apoapsis, periapsis, inclination, eccentricity, period
+- Day/night cycle indicator (ISS crosses the terminator every ~45 minutes)
+- Visible pass predictions based on your location
+
+**ISS Systems**
+- Live telemetry from NASA Lightstreamer (~297 channels): power, thermal, attitude, atmosphere
+- Crew timeline with color-coded activities (sleep, science, exercise, EVA)
+- Current expedition crew roster with agency flags
+
+**Event Mode**
+- Auto-detects EVAs, dockings, reboosts from schedule data
+- Dashboard transforms to spotlight active events (larger video, event timer, crew/vehicle details)
+- Admin override for manual event management
+
+**Additional Pages**
+- `/track` — Full-page ground track map
+- `/live` — Full-page NASA ISS live stream with event context
+- `/stats` — Cumulative ISS statistics (orbits, distance, years in orbit)
+- `/admin` — Protected event management panel
+- `/api-docs` — REST & SSE endpoint documentation
+
+**Customization**
+- Bilingual (English / French)
+- LIVE / SIM mode with 0–100× playback
+- Dark command-center aesthetic (matching [artemis.cdnspace.ca](https://artemis.cdnspace.ca))
+
+## Tech Stack
+
+Next.js 16, TypeScript, React 19, Tailwind CSS 4, Three.js, Leaflet, MySQL, Server-Sent Events
+
+## Data Sources
+
+| Source | Data | Update Interval |
+|--------|------|-----------------|
+| NASA Lightstreamer (`ISSLIVE`) | ~297 ISS telemetry channels | Real-time push |
+| CelesTrak | ISS TLEs (NORAD 25544) | 2 hours |
+| SGP4 propagation | Position, velocity, ground track | 1 second |
+| NOAA SWPC | Kp index, X-ray flux, proton flux | 60 seconds |
+| NASA ISS schedule | Crew activities, EVA/docking events | 15 minutes |
+
+## API Endpoints
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/telemetry/stream` | SSE | Real-time telemetry firehose |
+| `/api/orbit` | GET | Current orbital state |
+| `/api/systems` | GET | Latest ISS systems telemetry |
+| `/api/passes?lat=X&lon=Y` | GET | Visible pass predictions |
+| `/api/events` | GET | Upcoming and active events |
+| `/api/weather` | GET | Space weather |
+| `/api/history?metric=X&hours=Y` | GET | Historical time-series |
+| `/api/snapshot?timestamp=X` | GET | Point-in-time for SIM mode |
+| `/api/admin/events` | POST/PUT | Event management (token auth) |
+
+## Quick Start
 
 ```bash
+git clone https://github.com/ChadOhman/cdnspace-iss-tracker.git
+cd cdnspace-iss-tracker
+cp .env.example .env    # configure MySQL URL and admin token
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+> **Note:** The dashboard works without MySQL — orbital tracking, space weather, and Lightstreamer telemetry run independently. MySQL is needed for history, SIM mode replay, and event persistence.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Deploy to Proxmox LXC
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+One-liner to create a Debian 12 container and deploy:
 
-## Learn More
+```bash
+CTID=201 bash -c '
+pct create $CTID local:vztmpl/debian-12-standard_12.12-1_amd64.tar.zst \
+  --hostname iss-tracker \
+  --memory 2048 --cores 4 --swap 512 \
+  --rootfs local-lvm:8 \
+  --net0 name=eth0,bridge=vmbr0,ip=dhcp \
+  --unprivileged 1 --features nesting=1 \
+  --start 1 && sleep 5 && \
+pct exec $CTID -- bash -c "
+  apt-get update && apt-get install -y curl git ca-certificates mariadb-server && \
+  curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
+  apt-get install -y nodejs && \
 
-To learn more about Next.js, take a look at the following resources:
+  # Set up MariaDB
+  systemctl enable --now mariadb && \
+  mysql -e \"CREATE DATABASE IF NOT EXISTS iss_tracker; \
+             CREATE USER IF NOT EXISTS '"'"'iss'"'"'@'"'"'localhost'"'"' IDENTIFIED BY '"'"'changeme'"'"'; \
+             GRANT ALL ON iss_tracker.* TO '"'"'iss'"'"'@'"'"'localhost'"'"'; \
+             FLUSH PRIVILEGES;\" && \
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+  # Clone and build
+  git clone https://github.com/ChadOhman/cdnspace-iss-tracker.git /opt/iss-tracker && \
+  cd /opt/iss-tracker && \
+  npm ci && npm run build && \
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+  # Systemd service
+  cat > /etc/systemd/system/iss-tracker.service <<EOF
+[Unit]
+Description=ISS Tracker
+After=network.target mariadb.service
 
-## Deploy on Vercel
+[Service]
+WorkingDirectory=/opt/iss-tracker
+ExecStart=/usr/bin/node .next/standalone/server.js
+Restart=always
+Environment=NODE_ENV=production
+Environment=PORT=3000
+Environment=HOSTNAME=0.0.0.0
+Environment=MYSQL_URL=mysql://iss:changeme@localhost:3306/iss_tracker
+Environment=ADMIN_TOKEN=$(openssl rand -hex 16)
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+[Install]
+WantedBy=multi-user.target
+EOF
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+  systemctl daemon-reload && \
+  systemctl enable --now iss-tracker
+"
+'
+```
+
+### Update existing deployment
+
+```bash
+cd /opt/iss-tracker && git pull && rm -rf .next node_modules && npm ci && npm run build && systemctl restart iss-tracker
+```
+
+### Cloudflare Tunnel
+
+If proxying through Cloudflare Tunnel, set SSE keepalives in your tunnel config:
+
+```yaml
+ingress:
+  - hostname: iss.cdnspace.ca
+    service: http://localhost:3000
+    originRequest:
+      keepAliveTimeout: 30s
+```
+
+## License
+
+MIT
+
+## Acknowledgements
+
+Built with data from NASA, NOAA, and CelesTrak. Companion project to the [Artemis II Tracker](https://artemis.cdnspace.ca).
