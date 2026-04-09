@@ -114,13 +114,13 @@ function SideBlock({
       <WingPair label={wing2Label} voltage={wing2Voltage} current={wing2Current} />
       <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4 }}>
         <div>
-          <div style={{ color: "var(--color-text-muted)", fontSize: 8 }}>BGA ROT</div>
+          <div style={{ color: "var(--color-text-muted)", fontSize: 8, cursor: "help" }} title="Beta Gimbal Assembly Rotation — angle of the solar array drive mechanism">BGA ROT</div>
           <div style={{ color: "var(--color-text-secondary)", fontSize: 10, fontVariantNumeric: "tabular-nums" }}>
             {bgaRotation.toFixed(1)}°
           </div>
         </div>
         <div style={{ textAlign: "right" }}>
-          <div style={{ color: "var(--color-text-muted)", fontSize: 8 }}>INCIDENCE</div>
+          <div style={{ color: "var(--color-text-muted)", fontSize: 8, cursor: "help" }} title="Sun incidence angle — angle between the solar panel surface and incoming sunlight (0° = edge-on, 90° = face-on)">INCIDENCE</div>
           <div style={{ color: "var(--color-text-secondary)", fontSize: 10, fontVariantNumeric: "tabular-nums" }}>
             {bgaIncidence.toFixed(1)}°
           </div>
@@ -219,7 +219,7 @@ export default function SolarArrayPanel({ telemetry }: SolarArrayPanelProps) {
                 padding: "5px 8px",
               }}
             >
-              <div style={{ color: "var(--color-text-muted)", fontSize: 8 }}>PORT SARJ</div>
+              <div style={{ color: "var(--color-text-muted)", fontSize: 8, cursor: "help" }} title="Solar Alpha Rotary Joint — rotates the port-side solar array wings to track the sun">PORT SARJ</div>
               <div style={{ color: "var(--color-accent-green)", fontSize: 13, fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>
                 {telemetry.solarArrays.portSarj.toFixed(1)}°
               </div>
@@ -232,7 +232,7 @@ export default function SolarArrayPanel({ telemetry }: SolarArrayPanelProps) {
                 padding: "5px 8px",
               }}
             >
-              <div style={{ color: "var(--color-text-muted)", fontSize: 8 }}>STARBOARD SARJ</div>
+              <div style={{ color: "var(--color-text-muted)", fontSize: 8, cursor: "help" }} title="Solar Alpha Rotary Joint — rotates the starboard-side solar array wings to track the sun">STARBOARD SARJ</div>
               <div style={{ color: "var(--color-accent-green)", fontSize: 13, fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>
                 {telemetry.solarArrays.starboardSarj.toFixed(1)}°
               </div>
