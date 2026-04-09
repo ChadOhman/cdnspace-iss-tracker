@@ -203,7 +203,7 @@ export default function GroundTrackPanel({ orbital }: GroundTrackPanelProps) {
 
     // Center map only on first fix
     if (!initialCenteredRef.current) {
-      mapInstanceRef.current.setView(latlng, 2);
+      mapInstanceRef.current.setView([20, 0], 1);
       initialCenteredRef.current = true;
     }
 

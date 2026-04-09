@@ -10,9 +10,9 @@ import type { PassPrediction } from "@/lib/types";
 // ── Constants ────────────────────────────────────────────────────────────────
 
 const MAX_PATH_POINTS = 5400;
-const ISS_INCLINATION_DEG = 51.6;
-const ORBITAL_PERIOD_SEC = 92.68 * 60;
-const LON_SHIFT_PER_ORBIT_DEG = -22.9;
+const ISS_INCLINATION_DEG = 51.64;
+const ORBITAL_PERIOD_SEC = 92 * 60 + 34; // ~5554 seconds
+const EARTH_ROTATION_DEG_PER_SEC = 360 / 86400;
 const FUTURE_STEP_SEC = 30;
 const FUTURE_STEPS = (90 * 60) / FUTURE_STEP_SEC;
 
@@ -102,18 +102,46 @@ function issElevationDeg(
 }
 
 function computeFutureTrack(
-  lat: number, lon: number, steps: number, stepSec: number
+  lat: number, lon: number, steps: number, stepSec: number,
+  pathHistory?: [number, number][]
 ): [number, number][] {
-  const points: [number, number][] = [];
+  const incRad = (ISS_INCLINATION_DEG * Math.PI) / 180;
   const omega = (2 * Math.PI) / ORBITAL_PERIOD_SEC;
-  const clampedRatio = Math.max(-1, Math.min(1, lat / ISS_INCLINATION_DEG));
-  const phi0 = Math.asin(clampedRatio);
-  const lonRatePerSec = LON_SHIFT_PER_ORBIT_DEG / ORBITAL_PERIOD_SEC;
+
+  // Solve for initial orbital phase from current latitude
+  const sinLat = Math.sin((lat * Math.PI) / 180);
+  const clampedSin = Math.max(-1, Math.min(1, sinLat / Math.sin(incRad)));
+  let phase = Math.asin(clampedSin);
+
+  // If heading south, use the other half of the sine wave
+  if (pathHistory && pathHistory.length >= 2) {
+    const prev = pathHistory[pathHistory.length - 2];
+    if (prev[0] > lat) phase = Math.PI - phase;
+  }
+
+  // Compute ascending node longitude from current position
+  const lonOffset = Math.atan2(
+    Math.cos(incRad) * Math.sin(phase),
+    Math.cos(phase)
+  ) * (180 / Math.PI);
+  const ascendingNodeLon = lon - lonOffset;
+
+  const points: [number, number][] = [];
   for (let i = 1; i <= steps; i++) {
-    const t = i * stepSec;
-    const futureLat = ISS_INCLINATION_DEG * Math.sin(omega * t + phi0);
-    let futureLon = lon + lonRatePerSec * t;
-    futureLon = ((futureLon + 180) % 360 + 360) % 360 - 180;
+    const dt = i * stepSec;
+    const futurePhase = phase + omega * dt;
+
+    const futureLat =
+      Math.asin(Math.sin(incRad) * Math.sin(futurePhase)) * (180 / Math.PI);
+
+    const futureNodeLon = ascendingNodeLon - EARTH_ROTATION_DEG_PER_SEC * dt;
+    const futureLonOffset = Math.atan2(
+      Math.cos(incRad) * Math.sin(futurePhase),
+      Math.cos(futurePhase)
+    ) * (180 / Math.PI);
+    let futureLon = futureNodeLon + futureLonOffset;
+
+    futureLon = ((futureLon + 540) % 360) - 180;
     points.push([futureLat, futureLon]);
   }
   return points;
@@ -313,7 +341,7 @@ export default function TrackPage() {
 
       const map = L.map(mapRef.current, {
         center: [0, 0],
-        zoom: 2,
+        zoom: 1,
         zoomControl: true,
         attributionControl: true,
         scrollWheelZoom: true,
@@ -428,8 +456,16 @@ export default function TrackPage() {
     if (polylineRef.current) polylineRef.current.setLatLngs(history);
 
     if (futurePolylineRef.current) {
-      const futurePoints = computeFutureTrack(orbital.lat, orbital.lon, FUTURE_STEPS, FUTURE_STEP_SEC);
-      futurePolylineRef.current.setLatLngs(futurePoints);
+      const futurePoints = computeFutureTrack(orbital.lat, orbital.lon, FUTURE_STEPS, FUTURE_STEP_SEC, pathHistoryRef.current);
+      // Split at antimeridian to prevent wrap-around lines
+      const segments: [number, number][][] = [[]];
+      for (let i = 0; i < futurePoints.length; i++) {
+        if (i > 0 && Math.abs(futurePoints[i][1] - futurePoints[i - 1][1]) > 180) {
+          segments.push([]);
+        }
+        segments[segments.length - 1].push(futurePoints[i]);
+      }
+      futurePolylineRef.current.setLatLngs(segments);
     }
   }, [orbital, distConv, speedConv]);
 
