@@ -16,8 +16,9 @@ interface PressureGaugeProps {
   color?: string;
 }
 
-function PressureGauge({ label, value, max, unit = "psi", color = "var(--color-accent-orange)" }: PressureGaugeProps) {
-  const pct = Math.max(0, Math.min(100, (value / max) * 100));
+function PressureGauge({ label, value, max, unit = "kPa", color = "var(--color-accent-orange)" }: PressureGaugeProps) {
+  const valueKPa = value * 6.89476;
+  const pct = Math.max(0, Math.min(100, (valueKPa / max) * 100));
   return (
     <div
       style={{
@@ -38,7 +39,7 @@ function PressureGauge({ label, value, max, unit = "psi", color = "var(--color-a
           marginBottom: 3,
         }}
       >
-        {value.toFixed(1)}
+        {valueKPa.toFixed(0)}
         <span style={{ fontSize: 8, color: "var(--color-text-muted)", marginLeft: 2 }}>{unit}</span>
       </div>
       <div
@@ -94,8 +95,8 @@ function EmuCard({ index, o2Pressure, o2Current, standby }: EmuCardProps) {
               fontVariantNumeric: "tabular-nums",
             }}
           >
-            {o2Pressure.toFixed(0)}
-            <span style={{ fontSize: 8, color: "var(--color-text-muted)", marginLeft: 1 }}>psi</span>
+            {(o2Pressure * 6.89476).toFixed(0)}
+            <span style={{ fontSize: 8, color: "var(--color-text-muted)", marginLeft: 1 }}>kPa</span>
           </div>
           <div style={{ color: "var(--color-text-muted)", fontSize: 8, marginTop: 1 }}>
             {o2Current.toFixed(2)} A
@@ -148,13 +149,13 @@ export default function AirlockPanel({ telemetry }: AirlockPanelProps) {
             <PressureGauge
               label="O₂ SUPPLY A"
               value={telemetry.airlock.o2SupplyPressureA}
-              max={1000}
+              max={6895}
               color="var(--color-accent-orange)"
             />
             <PressureGauge
               label="O₂ SUPPLY B"
               value={telemetry.airlock.o2SupplyPressureB}
-              max={1000}
+              max={6895}
               color="var(--color-accent-orange)"
             />
             <div
@@ -199,22 +200,19 @@ export default function AirlockPanel({ telemetry }: AirlockPanelProps) {
             <PressureGauge
               label="O₂ HIGH"
               value={telemetry.airlock.o2HighTank}
-              max={14000}
-              unit="psi"
+              max={96527}
               color="var(--color-accent-green)"
             />
             <PressureGauge
               label="O₂ LOW"
               value={telemetry.airlock.o2LowTank}
-              max={5000}
-              unit="psi"
+              max={34474}
               color="var(--color-accent-cyan)"
             />
             <PressureGauge
               label="N₂"
               value={telemetry.airlock.n2Tank}
-              max={10000}
-              unit="psi"
+              max={68948}
               color="var(--color-accent-orange)"
             />
           </div>

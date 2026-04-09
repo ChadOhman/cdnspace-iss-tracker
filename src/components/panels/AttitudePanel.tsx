@@ -117,7 +117,7 @@ function AngleRow({ label, value, rateErr }: AngleRowProps) {
           {value.toFixed(2)}°
         </span>
         <span style={{ color: "var(--color-text-muted)", fontSize: 8, fontVariantNumeric: "tabular-nums" }}>
-          Δ {rateErr.toFixed(4)}
+          Δ {rateErr.toFixed(4)} °/s
         </span>
       </div>
     </div>
@@ -298,6 +298,7 @@ export default function AttitudePanel({ telemetry }: AttitudePanelProps) {
                     }}
                   >
                     {value.toFixed(1)}
+                    <span style={{ fontSize: 7, color: "var(--color-text-muted)", marginLeft: 1 }}>Nm</span>
                   </div>
                 </div>
               ))}
