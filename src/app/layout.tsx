@@ -3,6 +3,7 @@ import { JetBrains_Mono } from "next/font/google";
 import { LocaleProvider } from "@/context/LocaleContext";
 import { TimeProvider } from "@/context/TimeContext";
 import { EventProvider } from "@/context/EventContext";
+import { BuyMeACoffee } from "@/components/BuyMeACoffee";
 import "./globals.css";
 
 const jetbrainsMono = JetBrains_Mono({
@@ -59,7 +60,7 @@ export default function RootLayout({
         >
           Skip to main content
         </a>
-        <LocaleProvider><TimeProvider><EventProvider><main id="main">{children}</main></EventProvider></TimeProvider></LocaleProvider>
+        <LocaleProvider><TimeProvider><EventProvider><main id="main">{children}</main><BuyMeACoffee /></EventProvider></TimeProvider></LocaleProvider>
       </body>
     </html>
   );

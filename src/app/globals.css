@@ -71,7 +71,7 @@ body {
 .dashboard-grid {
   display: grid;
   width: 100%;
-  height: 100%;
+  height: 100vh;
   grid-template-columns: 35fr 40fr 25fr;
   grid-template-rows: 48px auto 1fr 36px;
   grid-template-areas:
@@ -171,4 +171,9 @@ body {
 
 .animate-pulse-event {
   animation: pulse-event 2s ease-in-out infinite;
+}
+
+@keyframes bmac-slide-in {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
