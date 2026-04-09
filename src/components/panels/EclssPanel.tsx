@@ -124,7 +124,9 @@ const WPA_STATUS: Record<string, string> = {
   "4": "Hot Service", "5": "Flush", "6": "Warm Shutdown",
 };
 const ECLSS_DECODE: Record<string, Record<string, string>> = {
-  OGS: OGS_STATUS, UPA: UPA_STATUS, WPA: WPA_STATUS,
+  "Oxygen Generation System": OGS_STATUS,
+  "Urine Processor": UPA_STATUS,
+  "Water Processor": WPA_STATUS,
 };
 const NOMINAL_STATES = new Set(["Process", "Normal", "On"]);
 
@@ -274,12 +276,8 @@ export default function EclssPanel({ telemetry }: EclssPanelProps) {
                 color="var(--color-accent-yellow)"
               />
             </div>
-            <div style={{ cursor: "help" }} title="Urine Processor Assembly — converts urine into distilled water">
-              <StatusRow label="UPA" value={telemetry.eclss.upaStatus} />
-            </div>
-            <div style={{ cursor: "help" }} title="Water Processor Assembly — purifies water into potable drinking water">
-              <StatusRow label="WPA" value={telemetry.eclss.wpaStatus} />
-            </div>
+            <StatusRow label="Urine Processor" value={telemetry.eclss.upaStatus} />
+            <StatusRow label="Water Processor" value={telemetry.eclss.wpaStatus} />
           </div>
 
           {/* O2 Generation column */}
@@ -328,7 +326,7 @@ export default function EclssPanel({ telemetry }: EclssPanelProps) {
                 </div>
               )}
             </div>
-            <StatusRow label="OGS" value={telemetry.eclss.ogsStatus} />
+            <StatusRow label="Oxygen Generation System" value={telemetry.eclss.ogsStatus} />
             <div
               style={{
                 marginTop: 8,
