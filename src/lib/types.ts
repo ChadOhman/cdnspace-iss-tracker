@@ -49,18 +49,123 @@ export interface LightstreamerChannel {
 export interface ISSTelemetry {
   /** Unix timestamp (ms) of this telemetry snapshot */
   timestamp: number;
+
+  // ── Power ──────────────────────────────────────────────────────────────────
   /** Total electrical power generation in kW */
   powerKw: number;
-  /** Cabin temperature in °C */
+  /** Per-array voltage, current, BGA angles */
+  solarArrays: {
+    p4: { voltage2B: number; current2B: number; voltage4B: number; current4B: number; bgaRotation: number; bgaIncidence: number };
+    p6: { voltage2B: number; current2B: number; voltage4B: number; current4B: number; bgaRotation: number; bgaIncidence: number };
+    s4: { voltage2A: number; current2A: number; voltage4A: number; current4A: number; bgaRotation: number; bgaIncidence: number };
+    s6: { voltage2A: number; current2A: number; voltage4A: number; current4A: number; bgaRotation: number; bgaIncidence: number };
+    /** Port SARJ angle (degrees) */
+    portSarj: number;
+    /** Starboard SARJ angle (degrees) */
+    starboardSarj: number;
+  };
+
+  // ── Thermal ────────────────────────────────────────────────────────────────
+  /** Average cabin temperature in °C (derived) */
   temperatureC: number;
+  /** Per-module temperatures and CCAA statuses */
+  moduleTemps: {
+    node1Cabin: number;
+    node2Cabin: number; node2Avionics: number; node2MtlCoolant: number; node2LtlCoolant: number; node2Ccaa: string;
+    node3Cabin: number; node3Avionics: number; node3MtlCoolant: number; node3LtlCoolant: number; node3Ccaa: string;
+    uslabCabin: number; uslabAvionics: number; uslabCabinAir: number; uslabCcaa1: string; uslabCcaa2: string;
+  };
+  /** External thermal control system data */
+  externalThermal: {
+    loopAFlow: number; loopAPressure: number; loopARadiatorTemp: number;
+    loopBFlow: number; loopBPressure: number; loopBRadiatorTemp: number;
+    /** Starboard TRRJ angle (degrees) */
+    trrjStarboard: number;
+    /** Port TRRJ angle (degrees) */
+    trrjPort: number;
+  };
+
+  // ── Atmosphere / ECLSS ─────────────────────────────────────────────────────
   /** Cabin pressure in psi */
   pressurePsi: number;
   /** Oxygen concentration in percent */
   oxygenPercent: number;
   /** CO₂ concentration in percent */
   co2Percent: number;
-  /** Current attitude control mode */
+  /** ECLSS subsystem data */
+  eclss: {
+    /** Node 3 O₂ partial pressure (mmHg) */
+    o2Mmhg: number;
+    /** Node 3 N₂ partial pressure (mmHg) */
+    n2Mmhg: number;
+    /** Node 3 CO₂ partial pressure (mmHg) */
+    co2Mmhg: number;
+    /** Destiny O₂ partial pressure (mmHg) */
+    uslabO2Mmhg: number;
+    /** Destiny N₂ partial pressure (mmHg) */
+    uslabN2Mmhg: number;
+    /** Destiny CO₂ partial pressure (mmHg) */
+    uslabCo2Mmhg: number;
+    /** Clean water tank fill (%) */
+    cleanWaterPercent: number;
+    /** Waste water tank fill (%) */
+    wasteWaterPercent: number;
+    /** Urine tank fill (%) */
+    urinePercent: number;
+    /** Urine Processing Assembly status */
+    upaStatus: string;
+    /** Water Processing Assembly status */
+    wpaStatus: string;
+    /** O₂ Generation System H₂ dome status */
+    ogsStatus: string;
+    /** O₂ generation rate (mg/sec) */
+    o2GenRate: number;
+  };
+
+  // ── Attitude / CMG ─────────────────────────────────────────────────────────
+  /** Human-readable attitude control mode (derived) */
   attitudeMode: string;
+  /** Detailed GNC and attitude data */
+  attitude: {
+    gncMode: string;
+    navSource: string;
+    controlType: string;
+    refFrame: string;
+    stationMode: string;
+    quaternion: { w: number; x: number; y: number; z: number };
+    roll: number; pitch: number; yaw: number;
+    rollRateErr: number; pitchRateErr: number; yawRateErr: number;
+    cmdTorqueRoll: number; cmdTorquePitch: number; cmdTorqueYaw: number;
+    momentumSaturation: number;
+    stationAlarm: number;
+    gyroAlarm: number;
+    gps1Status: string;
+    gps2Status: string;
+  };
+  /** Per-CMG health data (index 0–3 = CMG 1–4) */
+  cmgs: Array<{
+    on: boolean;
+    spinRate: number;
+    vibration: number;
+    wheelCurrent: number;
+    spinMotorTemp: number;
+    hallResolverTemp: number;
+  }>;
+
+  // ── Airlock / EVA ──────────────────────────────────────────────────────────
+  /** Airlock and EMU data */
+  airlock: {
+    crewLockPressure: number;
+    equipLockPressure: number;
+    o2HighTank: number;
+    o2LowTank: number;
+    n2Tank: number;
+    crewLockPump: string;
+    emu1O2Pressure: number; emu1O2Current: number;
+    emu2O2Pressure: number; emu2O2Current: number;
+    emu3O2Pressure: number; emu3O2Current: number;
+  };
+
   /** Raw Lightstreamer channel values keyed by channel name */
   channels: Record<string, LightstreamerChannel>;
 }
