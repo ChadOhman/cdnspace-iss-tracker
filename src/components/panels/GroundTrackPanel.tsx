@@ -1,34 +1,10 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
-import dynamic from "next/dynamic";
+import { useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import PanelFrame from "@/components/shared/PanelFrame";
 import type { OrbitalState } from "@/lib/types";
 import { useLocale } from "@/context/LocaleContext";
-
-function Globe3DLoader() {
-  const { t } = useLocale();
-  return (
-    <div
-      style={{
-        height: 240,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        color: "var(--color-text-muted)",
-        fontSize: 11,
-      }}
-    >
-      {t("ground.loading3DGlobe")}
-    </div>
-  );
-}
-
-const Globe3D = dynamic(() => import("@/components/panels/Globe3D"), {
-  ssr: false,
-  loading: () => <Globe3DLoader />,
-});
 
 interface GroundTrackPanelProps {
   orbital: OrbitalState | null;
@@ -46,7 +22,6 @@ const MAX_PATH_POINTS = 5400; // 90 minutes at 1 point/sec
 
 export default function GroundTrackPanel({ orbital }: GroundTrackPanelProps) {
   const { t } = useLocale();
-  const [mode3D, setMode3D] = useState(false);
   const mapRef = useRef<HTMLDivElement>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const mapInstanceRef = useRef<any>(null);
@@ -114,7 +89,7 @@ export default function GroundTrackPanel({ orbital }: GroundTrackPanelProps) {
 
   // Initialize Leaflet map
   useEffect(() => {
-    if (mode3D || !mapRef.current) return;
+    if (!mapRef.current) return;
     if (mapInstanceRef.current) return;
 
     let cancelled = false;
@@ -179,7 +154,7 @@ export default function GroundTrackPanel({ orbital }: GroundTrackPanelProps) {
     return () => {
       cancelled = true;
     };
-  }, [mode3D]);
+  }, []);
 
   // Cleanup on unmount or mode switch
   useEffect(() => {
@@ -234,52 +209,23 @@ export default function GroundTrackPanel({ orbital }: GroundTrackPanelProps) {
   }, [orbital, computeFutureTrack]);
 
   const headerRight = (
-    <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
-      {(["2D", "3D"] as const).map((m) => (
-        <button
-          key={m}
-          onClick={() => setMode3D(m === "3D")}
-          style={{
-            padding: "1px 7px",
-            borderRadius: 3,
-            border:
-              (m === "3D") === mode3D
-                ? "1px solid var(--color-accent-cyan)"
-                : "1px solid var(--color-border-accent)",
-            background:
-              (m === "3D") === mode3D
-                ? "rgba(0,229,255,0.15)"
-                : "transparent",
-            color:
-              (m === "3D") === mode3D
-                ? "var(--color-accent-cyan)"
-                : "var(--color-text-muted)",
-            cursor: "pointer",
-            fontSize: 9,
-            fontFamily: "inherit",
-          }}
-        >
-          {m}
-        </button>
-      ))}
-      <Link
-        href="/track"
-        style={{
-          padding: "1px 7px",
-          borderRadius: 3,
-          border: "1px solid rgba(0,229,255,0.3)",
-          background: "rgba(0,229,255,0.08)",
-          color: "var(--color-accent-cyan)",
-          fontSize: 9,
-          fontFamily: "inherit",
-          textDecoration: "none",
-          fontWeight: 600,
-          letterSpacing: "0.05em",
-        }}
-      >
-        TRACK ↗
-      </Link>
-    </div>
+    <Link
+      href="/track"
+      style={{
+        padding: "1px 7px",
+        borderRadius: 3,
+        border: "1px solid rgba(0,229,255,0.3)",
+        background: "rgba(0,229,255,0.08)",
+        color: "var(--color-accent-cyan)",
+        fontSize: 9,
+        fontFamily: "inherit",
+        textDecoration: "none",
+        fontWeight: 600,
+        letterSpacing: "0.05em",
+      }}
+    >
+      TRACK ↗
+    </Link>
   );
 
   return (
@@ -290,14 +236,10 @@ export default function GroundTrackPanel({ orbital }: GroundTrackPanelProps) {
       headerRight={headerRight}
       bodyClassName=""
     >
-      {mode3D ? (
-        <Globe3D orbital={orbital} width={560} height={240} />
-      ) : (
-        <div
-          ref={mapRef}
-          style={{ height: 240, width: "100%", borderRadius: 4 }}
-        />
-      )}
+      <div
+        ref={mapRef}
+        style={{ height: 240, width: "100%", borderRadius: 4 }}
+      />
     </PanelFrame>
   );
 }
