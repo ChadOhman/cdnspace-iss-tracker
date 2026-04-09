@@ -6,12 +6,14 @@ import { SseManager } from "@/lib/telemetry/sse-manager";
 import { pollTle, getCurrentTle } from "@/lib/pollers/tle-poller";
 import { propagateFromTle } from "@/lib/pollers/sgp4-propagator";
 import { pollSolarActivity } from "@/lib/pollers/solar";
-import { archiveOrbitalState, archiveSolar, archiveTelemetryChannel, pruneOldData } from "@/lib/db";
+import { pollSchedule } from "@/lib/pollers/schedule-poller";
+import { archiveOrbitalState, archiveSolar, archiveTelemetryChannel, pruneOldData, upsertEvent, activateScheduledEvents, getCurrentActiveEvent } from "@/lib/db";
 import { connectLightstreamer, deriveTelemetry, getLatestChannels } from "@/lib/telemetry/lightstreamer-client";
 import {
   TLE_POLL_INTERVAL_MS,
   SGP4_TICK_INTERVAL_MS,
   SOLAR_POLL_INTERVAL_MS,
+  SCHEDULE_POLL_INTERVAL_MS,
   SSE_BROADCAST_INTERVAL_MS,
   VISITOR_COUNT_INTERVAL_MS,
 } from "@/lib/constants";
@@ -140,12 +142,52 @@ function ensurePollers() {
   setTimeout(runPrune, 30_000);
   setInterval(runPrune, PRUNE_INTERVAL_MS);
 
-  // 8. Broadcast full telemetry payload on interval
+  // 8. Schedule poller: fetch ISS events from Space Devs, upsert, activate/complete
+  const runSchedulePoll = () => {
+    pollSchedule()
+      .then(async (events) => {
+        if (events.length > 0) {
+          let upserted = 0;
+          for (const event of events) {
+            try {
+              await upsertEvent(event);
+              upserted++;
+            } catch (err) {
+              console.error("[schedule] upsertEvent failed:", err);
+            }
+          }
+          console.log(`[schedule] Fetched ${events.length} ISS events, upserted ${upserted}`);
+        } else {
+          console.log("[schedule] No ISS events returned from Space Devs");
+        }
+
+        // Transition scheduled → active → completed based on time
+        const changed = await activateScheduledEvents().catch((err) => {
+          console.error("[schedule] activateScheduledEvents failed:", err);
+          return 0;
+        });
+        if (changed > 0) {
+          console.log(`[schedule] ${changed} event(s) transitioned status`);
+        }
+
+        // Update cache with the current active event (if any)
+        const activeEvent = await getCurrentActiveEvent().catch(() => null);
+        cache.activeEvent = activeEvent;
+      })
+      .catch((err) => {
+        console.error("[schedule] Poll failed:", err);
+      });
+  };
+
+  runSchedulePoll();
+  setInterval(runSchedulePoll, SCHEDULE_POLL_INTERVAL_MS);
+
+  // 9. Broadcast full telemetry payload on interval
   setInterval(() => {
     sseManager.broadcast("telemetry", cache.getPayload());
   }, SSE_BROADCAST_INTERVAL_MS);
 
-  // 9. Visitor count broadcast
+  // 10. Visitor count broadcast
   setInterval(() => {
     const count = sseManager.getClientCount();
     cache.visitorCount = count;

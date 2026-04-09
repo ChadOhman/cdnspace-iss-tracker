@@ -435,6 +435,45 @@ export async function getSnapshotAt(timestamp: number): Promise<Snapshot> {
 }
 
 /**
+ * Transition scheduled → active and active → completed based on wall-clock time.
+ * Returns the total number of rows updated across both statements.
+ */
+export async function activateScheduledEvents(): Promise<number> {
+  const db = getPool();
+  let total = 0;
+
+  const [activateResult] = await db.execute(
+    `UPDATE events
+     SET status = 'active', actual_start = NOW()
+     WHERE status = 'scheduled' AND scheduled_start <= NOW()`
+  );
+  total += (activateResult as { affectedRows?: number }).affectedRows ?? 0;
+
+  const [completeResult] = await db.execute(
+    `UPDATE events
+     SET status = 'completed', actual_end = NOW()
+     WHERE status = 'active' AND scheduled_end <= NOW()`
+  );
+  total += (completeResult as { affectedRows?: number }).affectedRows ?? 0;
+
+  return total;
+}
+
+/**
+ * Return the single currently active ISS event, or null if none.
+ */
+export async function getCurrentActiveEvent(): Promise<ISSEvent | null> {
+  const db = getPool();
+  const [rows] = await db.execute<RowDataPacket[]>(
+    `SELECT * FROM events
+     WHERE status = 'active'
+     ORDER BY scheduled_start
+     LIMIT 1`
+  );
+  return rows.length > 0 ? rowToEvent(rows[0]) : null;
+}
+
+/**
  * Delete rows older than `retentionDays` from all time-series tables.
  * Returns the total number of rows deleted.
  */
