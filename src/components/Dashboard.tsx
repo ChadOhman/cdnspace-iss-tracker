@@ -236,61 +236,61 @@ export function Dashboard() {
         </div>
       )}
 
-      {/* Left column */}
+      {/* Left column — Where is the ISS? (navigation & environment) */}
       <div className="col-left">
+        {show("eventBanner", "left") && <EventBannerPanel event={stream.activeEvent ?? activeEvent} />}
         {show("groundTrack", "left") && <GroundTrackPanel orbital={stream.orbital} />}
         {show("orbitalParams", "left") && <OrbitalParamsPanel orbital={stream.orbital} />}
-        {show("spaceWeather", "left") && <SpaceWeatherPanel solar={stream.solar} />}
+        {show("dayNight", "left") && <DayNightPanel orbital={stream.orbital} />}
         {show("passPrediction", "left") && <PassPredictionPanel />}
         {show("liveVideo", "left") && <LiveVideoPanel />}
+        {show("crew", "left") && <CrewRosterPanel />}
+        {show("upcomingEvents", "left") && <UpcomingEventsPanel />}
+        {show("spaceWeather", "left") && <SpaceWeatherPanel solar={stream.solar} />}
         {show("solarArrays", "left") && <SolarArrayPanel telemetry={stream.telemetry} />}
         {show("eclss", "left") && <EclssPanel telemetry={stream.telemetry} />}
-        {show("eventBanner", "left") && <EventBannerPanel event={stream.activeEvent ?? activeEvent} />}
-        {show("crew", "left") && <CrewRosterPanel />}
         {show("attitude", "left") && <AttitudePanel telemetry={stream.telemetry} />}
-        {show("tdrs", "left") && <TdrsPanel orbital={stream.orbital} />}
         {show("moduleTemps", "left") && <ModuleTempsPanel telemetry={stream.telemetry} />}
+        {show("tdrs", "left") && <TdrsPanel orbital={stream.orbital} />}
         {show("airlock", "left") && <AirlockPanel telemetry={stream.telemetry} />}
-        {show("upcomingEvents", "left") && <UpcomingEventsPanel />}
-        {show("dayNight", "left") && <DayNightPanel orbital={stream.orbital} />}
       </div>
 
-      {/* Center column */}
+      {/* Center column — What's happening? (crew & media) */}
       <div className="col-center">
+        {show("eventBanner", "center") && <EventBannerPanel event={stream.activeEvent ?? activeEvent} />}
+        {show("liveVideo", "center") && <LiveVideoPanel />}
+        {show("crew", "center") && <CrewRosterPanel />}
+        {show("upcomingEvents", "center") && <UpcomingEventsPanel />}
+        {show("spaceWeather", "center") && <SpaceWeatherPanel solar={stream.solar} />}
         {show("groundTrack", "center") && <GroundTrackPanel orbital={stream.orbital} />}
         {show("orbitalParams", "center") && <OrbitalParamsPanel orbital={stream.orbital} />}
-        {show("spaceWeather", "center") && <SpaceWeatherPanel solar={stream.solar} />}
+        {show("dayNight", "center") && <DayNightPanel orbital={stream.orbital} />}
         {show("passPrediction", "center") && <PassPredictionPanel />}
-        {show("liveVideo", "center") && <LiveVideoPanel />}
         {show("solarArrays", "center") && <SolarArrayPanel telemetry={stream.telemetry} />}
         {show("eclss", "center") && <EclssPanel telemetry={stream.telemetry} />}
-        {show("eventBanner", "center") && <EventBannerPanel event={stream.activeEvent ?? activeEvent} />}
-        {show("crew", "center") && <CrewRosterPanel />}
         {show("attitude", "center") && <AttitudePanel telemetry={stream.telemetry} />}
-        {show("tdrs", "center") && <TdrsPanel orbital={stream.orbital} />}
         {show("moduleTemps", "center") && <ModuleTempsPanel telemetry={stream.telemetry} />}
+        {show("tdrs", "center") && <TdrsPanel orbital={stream.orbital} />}
         {show("airlock", "center") && <AirlockPanel telemetry={stream.telemetry} />}
-        {show("upcomingEvents", "center") && <UpcomingEventsPanel />}
-        {show("dayNight", "center") && <DayNightPanel orbital={stream.orbital} />}
       </div>
 
-      {/* Right column */}
+      {/* Right column — How are the systems? (engineering telemetry) */}
       <div className="col-right">
-        {show("groundTrack", "right") && <GroundTrackPanel orbital={stream.orbital} />}
-        {show("orbitalParams", "right") && <OrbitalParamsPanel orbital={stream.orbital} />}
-        {show("spaceWeather", "right") && <SpaceWeatherPanel solar={stream.solar} />}
-        {show("passPrediction", "right") && <PassPredictionPanel />}
-        {show("liveVideo", "right") && <LiveVideoPanel />}
+        {show("eventBanner", "right") && <EventBannerPanel event={stream.activeEvent ?? activeEvent} />}
         {show("solarArrays", "right") && <SolarArrayPanel telemetry={stream.telemetry} />}
         {show("eclss", "right") && <EclssPanel telemetry={stream.telemetry} />}
-        {show("eventBanner", "right") && <EventBannerPanel event={stream.activeEvent ?? activeEvent} />}
-        {show("crew", "right") && <CrewRosterPanel />}
         {show("attitude", "right") && <AttitudePanel telemetry={stream.telemetry} />}
-        {show("tdrs", "right") && <TdrsPanel orbital={stream.orbital} />}
         {show("moduleTemps", "right") && <ModuleTempsPanel telemetry={stream.telemetry} />}
+        {show("tdrs", "right") && <TdrsPanel orbital={stream.orbital} />}
         {show("airlock", "right") && <AirlockPanel telemetry={stream.telemetry} />}
-        {show("upcomingEvents", "right") && <UpcomingEventsPanel />}
+        {show("groundTrack", "right") && <GroundTrackPanel orbital={stream.orbital} />}
+        {show("orbitalParams", "right") && <OrbitalParamsPanel orbital={stream.orbital} />}
         {show("dayNight", "right") && <DayNightPanel orbital={stream.orbital} />}
+        {show("passPrediction", "right") && <PassPredictionPanel />}
+        {show("liveVideo", "right") && <LiveVideoPanel />}
+        {show("crew", "right") && <CrewRosterPanel />}
+        {show("upcomingEvents", "right") && <UpcomingEventsPanel />}
+        {show("spaceWeather", "right") && <SpaceWeatherPanel solar={stream.solar} />}
       </div>
 
       {/* Bottom bar */}
