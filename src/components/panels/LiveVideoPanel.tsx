@@ -4,11 +4,11 @@ import { useState, useEffect } from "react";
 import PanelFrame from "@/components/shared/PanelFrame";
 import { useLocale } from "@/context/LocaleContext";
 
-// NASA ISS external camera streams
+// NASA ISS live streams (verified active)
 const STREAMS = [
   { id: "xAieE-QtOeM", label: "Live Earth" },
-  { id: "Y1qQFGrgRFo", label: "HD Views" },
-  { id: "KGMpMn3bgxw", label: "NASA TV" },
+  { id: "P9C25Un7xaM", label: "HD Views" },
+  { id: "21X5lGlDOfg", label: "NASA TV" },
 ] as const;
 
 export default function LiveVideoPanel() {
