@@ -286,6 +286,18 @@ function BottomBarInner() {
         >
           Credits
         </button>
+        <a
+          href="mailto:cdnspace@chadohman.ca?subject=ISS%20Tracker%20Feedback"
+          style={{
+            color: "var(--color-text-muted)",
+            fontSize: 10,
+            fontFamily: "inherit",
+            letterSpacing: "0.02em",
+            textDecoration: "none",
+          }}
+        >
+          Feedback
+        </a>
         <span style={{ color: "var(--color-text-muted)", letterSpacing: "0.02em" }}>
           iss.cdnspace.ca
         </span>
