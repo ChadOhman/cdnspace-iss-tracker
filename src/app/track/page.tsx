@@ -116,7 +116,7 @@ export default function TrackPage() {
           </span>
           {orbital && (
             <span style={{ color: "var(--color-text-muted, #8892a4)", fontSize: 10, fontFamily: "var(--font-jetbrains-mono)", marginLeft: 8 }}>
-              {orbital.lat.toFixed(2)}&deg;N &nbsp; {orbital.lon.toFixed(2)}&deg;E &nbsp; ALT {Math.round(orbital.alt)} km
+              {orbital.lat.toFixed(2)}&deg;N &nbsp; {orbital.lon.toFixed(2)}&deg;E &nbsp; ALT {Math.round(orbital.altitude)} km
             </span>
           )}
         </div>

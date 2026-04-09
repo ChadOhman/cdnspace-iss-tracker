@@ -122,10 +122,10 @@ export default function Globe3D({ orbital, width, height }: Globe3DProps) {
   useEffect(() => {
     if (!issMarkerRef.current || !orbital) return;
 
-    const { lat, lon, alt } = orbital;
+    const { lat, lon, altitude } = orbital;
     const latRad = (lat * Math.PI) / 180;
     const lonRad = (lon * Math.PI) / 180;
-    const scale = 1 + alt / EARTH_RADIUS_KM;
+    const scale = 1 + altitude / EARTH_RADIUS_KM;
 
     issMarkerRef.current.position.set(
       scale * Math.cos(latRad) * Math.sin(lonRad),
