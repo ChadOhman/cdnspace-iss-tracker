@@ -109,19 +109,43 @@ function co2Color(mmhg: number): string {
   return "var(--color-accent-red)";
 }
 
+// NASA enumerated status codes
+const OGS_STATUS: Record<string, string> = {
+  "0": "Process", "1": "Standby", "2": "Shutdown", "3": "Stop",
+  "4": "Vent Dome", "5": "Inert Dome", "6": "Fast Shutdown", "7": "N₂ Purge Shutdown",
+};
+const UPA_STATUS: Record<string, string> = {
+  "0": "Stop", "1": "Shutdown", "2": "Maintenance", "3": "Normal",
+  "4": "Standby", "5": "Idle", "6": "System Init",
+};
+const WPA_STATUS: Record<string, string> = {
+  "0": "Stop", "1": "Shutdown", "2": "Standby", "3": "Process",
+  "4": "Hot Service", "5": "Flush", "6": "Warm Shutdown",
+};
+const ECLSS_DECODE: Record<string, Record<string, string>> = {
+  OGS: OGS_STATUS, UPA: UPA_STATUS, WPA: WPA_STATUS,
+};
+const NOMINAL_STATES = new Set(["Process", "Normal", "On"]);
+
 function StatusRow({ label, value }: { label: string; value: string }) {
-  const isNominal = value.toLowerCase().includes("nominal") || value.toLowerCase().includes("ok") || value === "ON";
+  const decoded = ECLSS_DECODE[label]?.[value.trim()] ?? value;
+  const isNominal = NOMINAL_STATES.has(decoded);
+  const isStandby = decoded === "Standby" || decoded === "Idle";
   return (
     <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}>
       <span style={{ color: "var(--color-text-muted)", fontSize: 9 }}>{label}</span>
       <span
         style={{
-          color: isNominal ? "var(--color-accent-green)" : "var(--color-accent-orange)",
+          color: isNominal
+            ? "var(--color-accent-green)"
+            : isStandby
+              ? "var(--color-accent-cyan)"
+              : "var(--color-accent-orange)",
           fontSize: 9,
           fontWeight: 600,
         }}
       >
-        {value || "—"}
+        {decoded || "—"}
       </span>
     </div>
   );
