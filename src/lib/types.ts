@@ -100,6 +100,10 @@ export interface ISSTelemetry {
     n2Mmhg: number;
     /** Node 3 CO₂ partial pressure (mmHg) */
     co2Mmhg: number;
+    /** Total cabin pressure (mmHg), derived from partials */
+    totalMmhg: number;
+    /** Total cabin pressure (kPa), derived from partials */
+    totalKpa: number;
     /** Destiny O₂ partial pressure (mmHg) */
     uslabO2Mmhg: number;
     /** Destiny N₂ partial pressure (mmHg) */

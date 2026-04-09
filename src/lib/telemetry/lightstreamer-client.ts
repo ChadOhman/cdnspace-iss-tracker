@@ -447,24 +447,35 @@ export function deriveTelemetry(
   };
 
   // ── Atmosphere / ECLSS ─────────────────────────────────────────────────────
-  const co2Percent    = num("NODE3000007");
-  const oxygenPercent = num("NODE3000008");
-  const pressurePsi   = num("NODE3000009");
+  // Partial pressures from NODE3000001-003 (mmHg)
+  const o2Mmhg  = num("NODE3000001");
+  const n2Mmhg  = num("NODE3000002");
+  const co2Mmhg = num("NODE3000003");
+
+  // Derive total pressure and percentages from partial pressures
+  const totalMmhg = o2Mmhg + n2Mmhg + co2Mmhg;
+  const totalKpa = totalMmhg * 0.133322;
+  const oxygenPercent = totalMmhg > 0 ? (o2Mmhg / totalMmhg) * 100 : 0;
+  const co2Percent    = totalMmhg > 0 ? (co2Mmhg / totalMmhg) * 100 : 0;
+  // Keep pressurePsi for backward compat (derived from mmHg)
+  const pressurePsi   = totalMmhg * 0.0193368;
 
   const eclss = {
-    o2Mmhg:            num("NODE3000001"),
-    n2Mmhg:            num("NODE3000002"),
-    co2Mmhg:           num("NODE3000003"),
+    o2Mmhg,
+    n2Mmhg,
+    co2Mmhg,
+    totalMmhg,
+    totalKpa,
     uslabO2Mmhg:       num("USLAB000053"),
     uslabN2Mmhg:       num("USLAB000054"),
     uslabCo2Mmhg:      num("USLAB000055"),
-    cleanWaterPercent: num("NODE3000008"), // NOTE: dual channel — recheck NASA mapping
-    wasteWaterPercent: num("NODE3000009"),
-    urinePercent:      num("NODE3000005"),
-    upaStatus:         str("NODE3000004"),
-    wpaStatus:         str("NODE3000006"),
-    ogsStatus:         str("NODE3000010"),
-    o2GenRate:         num("NODE3000011"),
+    cleanWaterPercent:  num("NODE3000008"),
+    wasteWaterPercent:  num("NODE3000009"),
+    urinePercent:       num("NODE3000005"),
+    upaStatus:          str("NODE3000004"),
+    wpaStatus:          str("NODE3000006"),
+    ogsStatus:          str("NODE3000010"),
+    o2GenRate:          num("NODE3000011"),
   };
 
   // ── Attitude / CMG ─────────────────────────────────────────────────────────

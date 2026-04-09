@@ -201,8 +201,11 @@ export default function EclssPanel({ telemetry }: EclssPanelProps) {
                   fontVariantNumeric: "tabular-nums",
                 }}
               >
-                {telemetry.pressurePsi.toFixed(2)}
-                <span style={{ fontSize: 8, color: "var(--color-text-muted)", marginLeft: 2 }}>psi</span>
+                {telemetry.eclss.totalMmhg.toFixed(1)}
+                <span style={{ fontSize: 8, color: "var(--color-text-muted)", marginLeft: 2 }}>mmHg</span>
+                <span style={{ fontSize: 8, color: "var(--color-text-muted)", marginLeft: 6 }}>
+                  ({telemetry.eclss.totalKpa.toFixed(1)} kPa)
+                </span>
               </span>
             </div>
           </div>
