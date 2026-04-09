@@ -75,7 +75,69 @@ npm run dev
 
 ## Deploy to Proxmox LXC
 
-One-liner to create a Debian 12 container and deploy:
+### Option A: External MySQL (recommended)
+
+If you already have a MySQL/MariaDB server on your network, the LXC only needs Node.js:
+
+```bash
+CTID=201 bash -c '
+pct create $CTID local:vztmpl/debian-12-standard_12.12-1_amd64.tar.zst \
+  --hostname iss-tracker \
+  --memory 2048 --cores 4 --swap 512 \
+  --rootfs local-lvm:8 \
+  --net0 name=eth0,bridge=vmbr0,ip=dhcp \
+  --unprivileged 1 --features nesting=1 \
+  --start 1 && sleep 5 && \
+pct exec $CTID -- bash -c "
+  apt-get update && apt-get install -y curl git ca-certificates && \
+  curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
+  apt-get install -y nodejs && \
+
+  # Clone and build
+  git clone https://github.com/ChadOhman/cdnspace-iss-tracker.git /opt/iss-tracker && \
+  cd /opt/iss-tracker && \
+  npm ci && npm run build && \
+
+  # Systemd service
+  cat > /etc/systemd/system/iss-tracker.service <<EOF
+[Unit]
+Description=ISS Tracker
+After=network.target
+
+[Service]
+WorkingDirectory=/opt/iss-tracker
+ExecStart=/usr/bin/node .next/standalone/server.js
+Restart=always
+Environment=NODE_ENV=production
+Environment=PORT=3000
+Environment=HOSTNAME=0.0.0.0
+Environment=MYSQL_URL=mysql://iss:changeme@10.0.0.X:3306/iss_tracker
+Environment=ADMIN_TOKEN=$(openssl rand -hex 16)
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+  systemctl daemon-reload && \
+  systemctl enable --now iss-tracker
+"
+'
+```
+
+On your external MySQL server, create the database and user:
+
+```sql
+CREATE DATABASE iss_tracker;
+CREATE USER 'iss'@'%' IDENTIFIED BY 'changeme';
+GRANT ALL ON iss_tracker.* TO 'iss'@'%';
+FLUSH PRIVILEGES;
+```
+
+Replace `10.0.0.X` in the `MYSQL_URL` with your database server's IP. Make sure MySQL is listening on the network interface (not just localhost) — check `bind-address` in your MySQL config.
+
+### Option B: Self-contained (MySQL inside the LXC)
+
+If you prefer everything in one container:
 
 ```bash
 CTID=201 bash -c '
