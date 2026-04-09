@@ -1,16 +1,12 @@
 /**
  * Lightstreamer Client for NASA ISS Live telemetry.
  *
- * Connects to the NASA ISS Live Lightstreamer server and subscribes to a set
- * of telemetry channels.  The lightstreamer-client npm package is a CommonJS
- * bundle; it is imported dynamically so the module can be loaded in both the
- * Next.js edge/node runtime and in tests without breaking the build.
+ * Uses a two-phase subscription strategy matching NASA's reference implementation:
+ *   1. Subscribe to TIME_000001 as a heartbeat
+ *   2. When Status.Class === '24' (feed is live), subscribe to all channels
+ *   3. Unsubscribe (with grace period) when status leaves '24'
  *
- * Key design decisions:
- *   - Graceful degradation: if the Lightstreamer package cannot be loaded
- *     (e.g. during SSR in environments that don't support TCP sockets), all
- *     exported functions return safe fallback values without throwing.
- *   - The `deriveTelemetry` function is pure and always available.
+ * Reference: github.com/sensedata/space-telemetry/blob/develop/server/lightstreamer.js
  */
 
 import {
@@ -21,8 +17,7 @@ import type { ISSTelemetry, LightstreamerChannel } from "@/lib/types";
 
 // ─── Channel catalogue ───────────────────────────────────────────────────────
 
-/** All Lightstreamer item names we subscribe to. */
-export const CHANNEL_IDS = [
+const TELEMETRY_IDS = [
   // Power
   "USLAB000058", // Total power generation (kW)
   "S0000005",    // Solar array current
@@ -46,85 +41,91 @@ export const CHANNEL_IDS = [
   "USLAB000020", // CMG 2 speed
   "USLAB000021", // CMG 3 speed
   "USLAB000022", // CMG 4 speed
-  // Time
-  "TIME_000001", // MET (Mission Elapsed Time)
-] as const;
+];
 
+export const CHANNEL_IDS = ["TIME_000001", ...TELEMETRY_IDS] as const;
 export type ChannelId = (typeof CHANNEL_IDS)[number];
 
-/** Callback invoked on every Lightstreamer field update. */
 export type TelemetryUpdateCallback = (channels: Record<string, LightstreamerChannel>) => void;
 
 // ─── Module state ────────────────────────────────────────────────────────────
 
-let lsClient: unknown = null;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let lsClient: any = null;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let telemetrySub: any = null;
 let latestChannels: Record<string, LightstreamerChannel> = {};
+let isLive = false;
+let gracePeriodTimer: ReturnType<typeof setTimeout> | null = null;
+
+const GRACE_PERIOD_MS = 10_000;
 
 // ─── Connect / Disconnect ────────────────────────────────────────────────────
 
-/**
- * Create a Lightstreamer connection and subscribe to all ISS telemetry
- * channels.  `onUpdate` is called after every field change with the full
- * current channel map.
- *
- * Returns false if the Lightstreamer client package could not be loaded.
- */
 export async function connectLightstreamer(
   onUpdate: TelemetryUpdateCallback
 ): Promise<boolean> {
   try {
-    // Dynamic import avoids build-time errors when the CJS package cannot be
-    // statically analysed by the bundler.
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { LightstreamerClient, Subscription } = require("lightstreamer-client") as {
-      LightstreamerClient: new (server: string, adapter: string) => {
-        connect(): void;
-        disconnect(): void;
-        subscribe(sub: unknown): void;
-        unsubscribe(sub: unknown): void;
-      };
-      Subscription: new (
-        mode: string,
-        items: string[],
-        fields: string[]
-      ) => {
-        addListener(listener: Record<string, unknown>): void;
-      };
-    };
+    const LS = require("lightstreamer-client");
+    const { LightstreamerClient, Subscription } = LS;
 
     const client = new LightstreamerClient(LIGHTSTREAMER_SERVER, LIGHTSTREAMER_ADAPTER);
+    // Prevent Lightstreamer from throttling rapid updates
+    if (client.connectionOptions?.setSlowingEnabled) {
+      client.connectionOptions.setSlowingEnabled(false);
+    }
     lsClient = client;
 
-    const subscription = new Subscription(
+    // Phase 1: Subscribe to TIME_000001 heartbeat to detect live status
+    const heartbeatSub = new Subscription(
       "MERGE",
-      [...CHANNEL_IDS],
-      ["TimeStamp", "Value", "Status.Class", "CalibratedData"]
+      ["TIME_000001"],
+      ["TimeStamp", "Value", "Status.Class"]
     );
 
-    subscription.addListener({
-      onItemUpdate(update: {
-        getItemName(): string;
-        getValue(field: string): string | null;
-      }) {
-        const item = update.getItemName();
-        const value = update.getValue("Value") ?? update.getValue("CalibratedData") ?? "";
-        const status = update.getValue("Status.Class") ?? "OK";
+    heartbeatSub.addListener({
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      onItemUpdate(update: any) {
+        const statusClass = update.getValue("Status.Class");
+        console.log(`[lightstreamer] TIME_000001 Status.Class = ${statusClass}`);
+
+        if (statusClass === "24" && !isLive) {
+          // Feed went live — subscribe to all telemetry
+          if (gracePeriodTimer) {
+            clearTimeout(gracePeriodTimer);
+            gracePeriodTimer = null;
+          }
+          isLive = true;
+          subscribeTelemetry(client, Subscription, onUpdate);
+        } else if (statusClass !== "24" && isLive) {
+          // Feed went offline — unsubscribe after grace period
+          if (!gracePeriodTimer) {
+            gracePeriodTimer = setTimeout(() => {
+              console.log("[lightstreamer] Feed offline, unsubscribing telemetry");
+              unsubscribeTelemetry(client);
+              isLive = false;
+              gracePeriodTimer = null;
+            }, GRACE_PERIOD_MS);
+          }
+        }
+
+        // Also update the TIME channel in our data
+        const value = update.getValue("Value") ?? "";
         const tsStr = update.getValue("TimeStamp");
         const timestamp = tsStr ? parseFloat(tsStr) * 1000 : Date.now();
-
         latestChannels = {
           ...latestChannels,
-          [item]: { value, status, timestamp },
+          TIME_000001: { value, status: statusClass ?? "OK", timestamp },
         };
-
         onUpdate({ ...latestChannels });
       },
     });
 
-    client.subscribe(subscription);
+    client.subscribe(heartbeatSub);
     client.connect();
     console.log("[lightstreamer] Connected to", LIGHTSTREAMER_SERVER, "adapter:", LIGHTSTREAMER_ADAPTER);
-    console.log("[lightstreamer] Subscribed to", CHANNEL_IDS.length, "channels");
+    console.log("[lightstreamer] Waiting for TIME_000001 Status.Class = 24 (feed live)...");
     return true;
   } catch (err) {
     console.error("[lightstreamer] Failed to connect:", err instanceof Error ? err.message : err);
@@ -132,31 +133,75 @@ export async function connectLightstreamer(
   }
 }
 
-/** Disconnect from Lightstreamer and clear the cached channel data. */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function subscribeTelemetry(client: any, Subscription: any, onUpdate: TelemetryUpdateCallback) {
+  if (telemetrySub) return; // already subscribed
+
+  telemetrySub = new Subscription(
+    "MERGE",
+    [...TELEMETRY_IDS],
+    ["TimeStamp", "Value", "Status.Class", "CalibratedData"]
+  );
+
+  let updateCount = 0;
+  telemetrySub.addListener({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    onItemUpdate(update: any) {
+      const item = update.getItemName();
+      const value = update.getValue("Value") ?? update.getValue("CalibratedData") ?? "";
+      const status = update.getValue("Status.Class") ?? "OK";
+      const tsStr = update.getValue("TimeStamp");
+      const timestamp = tsStr ? parseFloat(tsStr) * 1000 : Date.now();
+
+      latestChannels = {
+        ...latestChannels,
+        [item]: { value, status, timestamp },
+      };
+
+      onUpdate({ ...latestChannels });
+
+      updateCount++;
+      if (updateCount <= 3 || updateCount % 100 === 0) {
+        console.log(`[lightstreamer] Telemetry update #${updateCount}: ${item} = ${value}`);
+      }
+    },
+  });
+
+  client.subscribe(telemetrySub);
+  console.log(`[lightstreamer] Feed is LIVE — subscribed to ${TELEMETRY_IDS.length} telemetry channels`);
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function unsubscribeTelemetry(client: any) {
+  if (!telemetrySub) return;
+  try {
+    client.unsubscribe(telemetrySub);
+  } catch { /* best effort */ }
+  telemetrySub = null;
+}
+
 export function disconnectLightstreamer(): void {
   try {
     if (lsClient) {
-      (lsClient as { disconnect(): void }).disconnect();
+      lsClient.disconnect();
       lsClient = null;
     }
-  } catch {
-    // swallow — best effort cleanup
-  }
+  } catch { /* best effort */ }
+  telemetrySub = null;
   latestChannels = {};
+  isLive = false;
+  if (gracePeriodTimer) {
+    clearTimeout(gracePeriodTimer);
+    gracePeriodTimer = null;
+  }
 }
 
-/** Return a shallow copy of the current channel snapshot. */
 export function getLatestChannels(): Record<string, LightstreamerChannel> {
   return { ...latestChannels };
 }
 
 // ─── Telemetry derivation ────────────────────────────────────────────────────
 
-/**
- * Convert a raw Lightstreamer channel map into a structured ISSTelemetry
- * object.  All numeric conversions fall back to 0 on missing or non-numeric
- * values so downstream code never receives NaN.
- */
 export function deriveTelemetry(
   channels: Record<string, LightstreamerChannel>
 ): ISSTelemetry {
@@ -167,15 +212,12 @@ export function deriveTelemetry(
     return isNaN(parsed) ? 0 : parsed;
   }
 
-  // Power: USLAB000058 is total power generation in kW
   const powerKw = num("USLAB000058");
 
-  // Atmosphere: Node 3 channels
   const co2Percent = num("NODE3000007");
   const oxygenPercent = num("NODE3000008");
   const pressurePsi = num("NODE3000009");
 
-  // Temperature: average of available temperature sensors
   const tempValues = [
     num("NODE1000001"),
     num("NODE2000001"),
@@ -187,7 +229,6 @@ export function deriveTelemetry(
       ? tempValues.reduce((a, b) => a + b, 0) / tempValues.length
       : 0;
 
-  // Attitude: derive mode label from CMG speeds
   const cmgSpeeds = [
     num("USLAB000019"),
     num("USLAB000020"),
