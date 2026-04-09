@@ -216,44 +216,54 @@ export default function AttitudePanel({ telemetry }: AttitudePanelProps) {
                 borderTop: "1px solid var(--color-border-subtle)",
               }}
             >
-              <div style={{ color: "var(--color-text-muted)", fontSize: 8, marginBottom: 3 }}>
+              <div style={{ color: "var(--color-text-muted)", fontSize: 8, marginBottom: 3, cursor: "help" }} title="Total CMG momentum as percentage of ~14,000 Nms capacity. High saturation requires thruster desaturation.">
                 {t("attitude.momentum").toUpperCase()}
               </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                <div
-                  style={{
-                    flex: 1,
-                    height: 4,
-                    borderRadius: 2,
-                    background: "var(--color-border-subtle)",
-                    overflow: "hidden",
-                  }}
-                >
-                  <div
-                    style={{
-                      height: "100%",
-                      width: `${Math.min(100, telemetry.attitude.momentumSaturation)}%`,
-                      background:
-                        telemetry.attitude.momentumSaturation > 80
-                          ? "var(--color-accent-red)"
-                          : telemetry.attitude.momentumSaturation > 50
-                          ? "var(--color-accent-orange)"
-                          : "var(--color-accent-green)",
-                      transition: "width 0.5s ease",
-                      borderRadius: 2,
-                    }}
-                  />
-                </div>
-                <span
-                  style={{
-                    color: "var(--color-text-secondary)",
-                    fontSize: 9,
-                    fontVariantNumeric: "tabular-nums",
-                  }}
-                >
-                  {telemetry.attitude.momentumSaturation.toFixed(1)}%
-                </span>
-              </div>
+              {(() => {
+                const CMG_MAX_NMS = 14000;
+                const rawNms = telemetry.attitude.momentumSaturation;
+                const pct = (rawNms / CMG_MAX_NMS) * 100;
+                return (
+                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <div
+                      style={{
+                        flex: 1,
+                        height: 4,
+                        borderRadius: 2,
+                        background: "var(--color-border-subtle)",
+                        overflow: "hidden",
+                      }}
+                    >
+                      <div
+                        style={{
+                          height: "100%",
+                          width: `${Math.min(100, pct)}%`,
+                          background:
+                            pct > 80
+                              ? "var(--color-accent-red)"
+                              : pct > 50
+                              ? "var(--color-accent-orange)"
+                              : "var(--color-accent-green)",
+                          transition: "width 0.5s ease",
+                          borderRadius: 2,
+                        }}
+                      />
+                    </div>
+                    <span
+                      style={{
+                        color: "var(--color-text-secondary)",
+                        fontSize: 9,
+                        fontVariantNumeric: "tabular-nums",
+                      }}
+                    >
+                      {pct.toFixed(1)}%
+                    </span>
+                    <span style={{ color: "var(--color-text-muted)", fontSize: 8 }}>
+                      ({rawNms.toFixed(0)} Nms)
+                    </span>
+                  </div>
+                );
+              })()}
             </div>
 
             <div
