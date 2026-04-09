@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState, useEffect } from "react";
 import PanelFrame from "@/components/shared/PanelFrame";
 import type { ActivityType, TimelineActivity } from "@/lib/types";
 
@@ -41,14 +41,22 @@ export default function TimelinePanel() {
   const activities = useMemo(() => makeSampleActivities(), []);
 
   const DAY_MS = 24 * 60 * 60 * 1000;
-  const today = new Date();
-  const dayStart = new Date(
-    today.getFullYear(),
-    today.getMonth(),
-    today.getDate()
-  ).getTime();
-  const nowMs = today.getTime();
-  const nowFrac = Math.max(0, Math.min(1, (nowMs - dayStart) / DAY_MS));
+  const dayStart = useMemo(() => {
+    const d = new Date();
+    return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  }, []);
+  const [nowFrac, setNowFrac] = useState<number | null>(null);
+
+  useEffect(() => {
+    const update = () => {
+      const now = new Date();
+      const dayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+      setNowFrac(Math.max(0, Math.min(1, (now.getTime() - dayStart) / DAY_MS)));
+    };
+    update();
+    const id = setInterval(update, 30_000);
+    return () => clearInterval(id);
+  }, []);
 
   // hour labels
   const hourLabels = [0, 4, 8, 12, 16, 20, 24];
@@ -110,19 +118,21 @@ export default function TimelinePanel() {
           );
         })}
 
-        {/* NOW marker */}
-        <div
-          style={{
-            position: "absolute",
-            top: 0,
-            bottom: 0,
-            left: `${nowFrac * 100}%`,
-            width: 2,
-            background: "#fff",
-            boxShadow: "0 0 4px rgba(255,255,255,0.8)",
-            zIndex: 2,
-          }}
-        />
+        {/* NOW marker (client-only to avoid hydration mismatch) */}
+        {nowFrac !== null && (
+          <div
+            style={{
+              position: "absolute",
+              top: 0,
+              bottom: 0,
+              left: `${nowFrac * 100}%`,
+              width: 2,
+              background: "#fff",
+              boxShadow: "0 0 4px rgba(255,255,255,0.8)",
+              zIndex: 2,
+            }}
+          />
+        )}
       </div>
 
       {/* Legend */}
