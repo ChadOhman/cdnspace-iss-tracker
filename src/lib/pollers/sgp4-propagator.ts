@@ -74,8 +74,11 @@ export function propagateFromTle(tle: TleData, date: Date): OrbitalState | null 
   const eccentricity = parseFloat("0." + tle.line2.substring(26, 33).trim());
   const meanMotionRevPerDay = parseFloat(tle.line2.substring(52, 63).trim());
 
-  // Revolution number (column 63–67)
-  const revolutionNumber = parseInt(tle.line2.substring(63, 68).trim(), 10) || 0;
+  // Revolution number — compute from ISS launch date (Nov 20, 1998) since
+  // the TLE field is only 5 digits and wraps at 99999.
+  const ISS_LAUNCH_MS = Date.UTC(1998, 10, 20, 6, 40, 0); // Nov 20, 1998 06:40 UTC
+  const daysSinceLaunch = (date.getTime() - ISS_LAUNCH_MS) / 86_400_000;
+  const revolutionNumber = Math.floor(daysSinceLaunch * meanMotionRevPerDay);
 
   // ── Period & semi-major axis ──────────────────────────────────────────────
   const periodSeconds = 86400 / meanMotionRevPerDay;
