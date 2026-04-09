@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTime } from "@/context/TimeContext";
 import { useLocale } from "@/context/LocaleContext";
+import { useUnits } from "@/context/UnitsContext";
 import { PLAYBACK_SPEEDS } from "@/lib/constants";
 import type { PlaybackSpeed } from "@/lib/types";
 
@@ -18,6 +19,7 @@ const NAV_LINKS = [
 function BottomBarInner() {
   const { mode, setMode, playbackSpeed, setPlaybackSpeed } = useTime();
   const { locale, setLocale } = useLocale();
+  const { units, setUnits } = useUnits();
   const pathname = usePathname();
 
   const isLive = mode === "LIVE";
@@ -172,6 +174,47 @@ function BottomBarInner() {
 
       {/* Right side: language toggle + site name */}
       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        {/* Unit system toggle */}
+        <div style={{ display: "flex", gap: 2 }}>
+          <button
+            onClick={() => setUnits("metric")}
+            style={{
+              padding: "2px 6px",
+              borderRadius: "3px 0 0 3px",
+              border: units === "metric"
+                ? "1px solid var(--color-accent-cyan)"
+                : "1px solid var(--color-border-accent)",
+              background: units === "metric" ? "rgba(0,229,255,0.15)" : "transparent",
+              color: units === "metric" ? "var(--color-accent-cyan)" : "var(--color-text-muted)",
+              cursor: "pointer",
+              fontSize: 10,
+              fontFamily: "inherit",
+              fontWeight: units === "metric" ? 700 : 400,
+            }}
+          >
+            METRIC
+          </button>
+          <button
+            onClick={() => setUnits("imperial")}
+            style={{
+              padding: "2px 6px",
+              borderRadius: "0 3px 3px 0",
+              border: units === "imperial"
+                ? "1px solid var(--color-accent-orange)"
+                : "1px solid var(--color-border-accent)",
+              borderLeft: "none",
+              background: units === "imperial" ? "rgba(255,140,0,0.15)" : "transparent",
+              color: units === "imperial" ? "var(--color-accent-orange)" : "var(--color-text-muted)",
+              cursor: "pointer",
+              fontSize: 10,
+              fontFamily: "inherit",
+              fontWeight: units === "imperial" ? 700 : 400,
+            }}
+          >
+            IMPERIAL
+          </button>
+        </div>
+        {/* Language toggle */}
         <button
           onClick={() => setLocale(locale === "en" ? "fr" : "en")}
           style={{
