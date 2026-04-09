@@ -141,16 +141,16 @@ export default function GroundTrackPanel({ orbital }: GroundTrackPanelProps) {
       // Past ground track polyline (solid cyan)
       const pastPolyline = L.polyline([], {
         color: "#00e5ff",
-        weight: 2,
-        opacity: 0.6,
+        weight: 2.5,
+        opacity: 0.8,
       }).addTo(map);
 
-      // Future predicted track (dashed cyan)
+      // Future predicted track (dashed yellow)
       const futurePolyline = L.polyline([], {
-        color: "#00e5ff",
-        weight: 1.5,
-        opacity: 0.35,
-        dashArray: "6, 6",
+        color: "#ffd600",
+        weight: 2,
+        opacity: 0.6,
+        dashArray: "8, 6",
       }).addTo(map);
 
       // ISS marker

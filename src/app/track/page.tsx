@@ -370,14 +370,14 @@ export default function TrackPage() {
       const popup = L.popup({ closeButton: true, className: "iss-popup" });
       marker.bindPopup(popup);
 
-      // Ground track polyline
+      // Past ground track polyline (solid cyan)
       const polyline = L.polyline([], {
-        color: "#00e5ff", weight: 1.5, opacity: 0.7,
+        color: "#00e5ff", weight: 2.5, opacity: 0.8,
       }).addTo(map);
 
-      // Future track
+      // Future predicted track (dashed yellow)
       const futurePolyline = L.polyline([], {
-        color: "#00e5ff", weight: 1.5, opacity: 0.5, dashArray: "6 6",
+        color: "#ffd600", weight: 2, opacity: 0.6, dashArray: "8 6",
       }).addTo(map);
 
       // TDRS footprints
@@ -940,15 +940,15 @@ export default function TrackPage() {
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
               <svg width="20" height="6">
-                <line x1="0" y1="3" x2="20" y2="3" stroke="#00e5ff" strokeWidth="1.5" strokeOpacity="0.7" />
+                <line x1="0" y1="3" x2="20" y2="3" stroke="#00e5ff" strokeWidth="2.5" strokeOpacity="0.8" />
               </svg>
-              <span>Ground track</span>
+              <span>Past track</span>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
               <svg width="20" height="6">
-                <line x1="0" y1="3" x2="20" y2="3" stroke="#00e5ff" strokeWidth="1.5" strokeOpacity="0.5" strokeDasharray="4 3" />
+                <line x1="0" y1="3" x2="20" y2="3" stroke="#ffd600" strokeWidth="2" strokeOpacity="0.6" strokeDasharray="4 3" />
               </svg>
-              <span>Predicted (~90 min)</span>
+              <span>Future track (~90 min)</span>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
               <svg width="20" height="12">
