@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import dynamic from "next/dynamic";
+import Link from "next/link";
 import PanelFrame from "@/components/shared/PanelFrame";
 import type { OrbitalState } from "@/lib/types";
 import { useLocale } from "@/context/LocaleContext";
@@ -125,7 +126,7 @@ export default function GroundTrackPanel({ orbital }: GroundTrackPanelProps) {
 
       const map = L.map(mapRef.current, {
         center: [20, 0],
-        zoom: 2,
+        zoom: 1,
         zoomControl: true,
         attributionControl: false,
         scrollWheelZoom: true,
@@ -202,7 +203,7 @@ export default function GroundTrackPanel({ orbital }: GroundTrackPanelProps) {
 
     // Center map only on first fix
     if (!initialCenteredRef.current) {
-      mapInstanceRef.current.setView(latlng, 3);
+      mapInstanceRef.current.setView(latlng, 2);
       initialCenteredRef.current = true;
     }
 
@@ -232,8 +233,8 @@ export default function GroundTrackPanel({ orbital }: GroundTrackPanelProps) {
     }
   }, [orbital, computeFutureTrack]);
 
-  const toggle = (
-    <div style={{ display: "flex", gap: 4 }}>
+  const headerRight = (
+    <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
       {(["2D", "3D"] as const).map((m) => (
         <button
           key={m}
@@ -261,6 +262,23 @@ export default function GroundTrackPanel({ orbital }: GroundTrackPanelProps) {
           {m}
         </button>
       ))}
+      <Link
+        href="/track"
+        style={{
+          padding: "1px 7px",
+          borderRadius: 3,
+          border: "1px solid rgba(0,229,255,0.3)",
+          background: "rgba(0,229,255,0.08)",
+          color: "var(--color-accent-cyan)",
+          fontSize: 9,
+          fontFamily: "inherit",
+          textDecoration: "none",
+          fontWeight: 600,
+          letterSpacing: "0.05em",
+        }}
+      >
+        TRACK ↗
+      </Link>
     </div>
   );
 
@@ -269,7 +287,7 @@ export default function GroundTrackPanel({ orbital }: GroundTrackPanelProps) {
       title={t("panels.groundTrack").toUpperCase()}
       icon="🗺️"
       accentColor="var(--color-accent-cyan)"
-      headerRight={toggle}
+      headerRight={headerRight}
       bodyClassName=""
     >
       {mode3D ? (
