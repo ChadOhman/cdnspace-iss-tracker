@@ -157,6 +157,72 @@ function StatusRow({ label, value }: { label: string; value: string }) {
   );
 }
 
+/** Mini atmosphere column shared by Node 3 and Destiny sections */
+interface AtmoColumnProps {
+  title: string;
+  o2Mmhg: number;
+  n2Mmhg: number;
+  co2Mmhg: number;
+  totalMmhg?: number;
+  pressurePsi?: number;
+  pressureConv?: (psi: number) => { value: number; unit: string };
+}
+
+function AtmoColumn({ title, o2Mmhg, n2Mmhg, co2Mmhg, totalMmhg, pressurePsi, pressureConv }: AtmoColumnProps) {
+  return (
+    <div
+      style={{
+        background: "var(--color-bg-secondary)",
+        border: "1px solid var(--color-border-subtle)",
+        borderRadius: 4,
+        padding: "6px 8px",
+      }}
+    >
+      <div
+        style={{
+          color: "var(--color-accent-cyan)",
+          fontSize: 8,
+          fontWeight: 700,
+          marginBottom: 6,
+          letterSpacing: "0.06em",
+          textAlign: "center",
+        }}
+      >
+        {title}
+      </div>
+      <GaugeBar label="O₂" value={o2Mmhg} max={200} color="var(--color-accent-green)" unit=" mmHg" />
+      <GaugeBar label="CO₂" value={co2Mmhg} max={10} color={co2Color(co2Mmhg)} unit=" mmHg" />
+      <GaugeBar label="N₂" value={n2Mmhg} max={600} color="var(--color-accent-cyan)" unit=" mmHg" />
+      {totalMmhg !== undefined && (
+        <div
+          style={{
+            marginTop: 5,
+            paddingTop: 4,
+            borderTop: "1px solid var(--color-border-subtle)",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "baseline",
+          }}
+        >
+          <span style={{ color: "var(--color-text-muted)", fontSize: 8 }}>TOTAL</span>
+          <span style={{ color: "var(--color-text-primary)", fontSize: 10, fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>
+            {totalMmhg.toFixed(1)}
+            <span style={{ fontSize: 7, color: "var(--color-text-muted)", marginLeft: 2 }}>mmHg</span>
+            {pressureConv && pressurePsi !== undefined && (() => {
+              const p = pressureConv(pressurePsi);
+              return (
+                <span style={{ fontSize: 7, color: "var(--color-text-muted)", marginLeft: 4 }}>
+                  ({p.value.toFixed(1)} {p.unit})
+                </span>
+              );
+            })()}
+          </span>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function EclssPanel({ telemetry }: EclssPanelProps) {
   const { t } = useLocale();
   const { pressure } = useUnits();
@@ -180,7 +246,7 @@ export default function EclssPanel({ telemetry }: EclssPanelProps) {
         </div>
       ) : (
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
-          {/* Atmosphere column */}
+          {/* Atmosphere column — Node 3 and Destiny side by side */}
           <div>
             <div
               style={{
@@ -193,56 +259,22 @@ export default function EclssPanel({ telemetry }: EclssPanelProps) {
             >
               {t("eclss.atmosphere").toUpperCase()}
             </div>
-            <GaugeBar
-              label="O₂"
-              value={telemetry.eclss.o2Mmhg}
-              max={200}
-              color="var(--color-accent-green)"
-              unit=" mmHg"
-            />
-            <GaugeBar
-              label="CO₂"
-              value={telemetry.eclss.co2Mmhg}
-              max={10}
-              color={co2Color(telemetry.eclss.co2Mmhg)}
-              unit=" mmHg"
-            />
-            <GaugeBar
-              label="N₂"
-              value={telemetry.eclss.n2Mmhg}
-              max={600}
-              color="var(--color-accent-cyan)"
-              unit=" mmHg"
-            />
-            <div
-              style={{
-                marginTop: 8,
-                paddingTop: 6,
-                borderTop: "1px solid var(--color-border-subtle)",
-                display: "flex",
-                justifyContent: "space-between",
-              }}
-            >
-              <span style={{ color: "var(--color-text-muted)", fontSize: 9 }}>TOTAL</span>
-              <span
-                style={{
-                  color: "var(--color-text-primary)",
-                  fontSize: 11,
-                  fontWeight: 700,
-                  fontVariantNumeric: "tabular-nums",
-                }}
-              >
-                {telemetry.eclss.totalMmhg.toFixed(1)}
-                <span style={{ fontSize: 8, color: "var(--color-text-muted)", marginLeft: 2 }}>mmHg</span>
-                {(() => {
-                  const p = pressure(telemetry.pressurePsi);
-                  return (
-                    <span style={{ fontSize: 8, color: "var(--color-text-muted)", marginLeft: 6 }}>
-                      ({p.value.toFixed(1)} {p.unit})
-                    </span>
-                  );
-                })()}
-              </span>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 5 }}>
+              <AtmoColumn
+                title="NODE 3"
+                o2Mmhg={telemetry.eclss.o2Mmhg}
+                n2Mmhg={telemetry.eclss.n2Mmhg}
+                co2Mmhg={telemetry.eclss.co2Mmhg}
+                totalMmhg={telemetry.eclss.totalMmhg}
+                pressurePsi={telemetry.pressurePsi}
+                pressureConv={pressure}
+              />
+              <AtmoColumn
+                title="DESTINY"
+                o2Mmhg={telemetry.eclss.uslabO2Mmhg}
+                n2Mmhg={telemetry.eclss.uslabN2Mmhg}
+                co2Mmhg={telemetry.eclss.uslabCo2Mmhg}
+              />
             </div>
           </div>
 
@@ -327,26 +359,6 @@ export default function EclssPanel({ telemetry }: EclssPanelProps) {
               )}
             </div>
             <StatusRow label="Oxygen Generation System" value={telemetry.eclss.ogsStatus} />
-            <div
-              style={{
-                marginTop: 8,
-                paddingTop: 6,
-                borderTop: "1px solid var(--color-border-subtle)",
-              }}
-            >
-              <div style={{ color: "var(--color-text-muted)", fontSize: 8, marginBottom: 3 }}>DESTINY CO₂</div>
-              <div
-                style={{
-                  color: co2Color(telemetry.eclss.uslabCo2Mmhg),
-                  fontSize: 11,
-                  fontWeight: 700,
-                  fontVariantNumeric: "tabular-nums",
-                }}
-              >
-                {telemetry.eclss.uslabCo2Mmhg.toFixed(1)}
-                <span style={{ fontSize: 8, color: "var(--color-text-muted)", marginLeft: 2 }}>mmHg</span>
-              </div>
-            </div>
           </div>
         </div>
       )}

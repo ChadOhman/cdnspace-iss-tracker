@@ -72,15 +72,21 @@ function PressureGauge({ label, value, maxPsi, color = "var(--color-accent-orang
 
 interface EmuCardProps {
   index: number;
-  /** Raw o2 pressure in psi */
+  /** Raw o2 primary pressure in psi */
   o2Pressure: number;
   o2Current: number;
   standby: boolean;
   pressureConv: PressureConverter;
+  /** Secondary O₂ supply pressure (psi) — optional, only EMU 1 & 2 */
+  secO2Pressure?: number;
+  /** Secondary O₂ supply current (A) — optional, only EMU 1 & 2 */
+  secO2Current?: number;
 }
 
-function EmuCard({ index, o2Pressure, o2Current, standby, pressureConv }: EmuCardProps) {
+function EmuCard({ index, o2Pressure, o2Current, standby, pressureConv, secO2Pressure, secO2Current }: EmuCardProps) {
   const converted = pressureConv(o2Pressure);
+  const hasSecondary = secO2Pressure !== undefined && secO2Current !== undefined;
+  const secConverted = hasSecondary ? pressureConv(secO2Pressure!) : null;
   return (
     <div
       style={{
@@ -96,6 +102,8 @@ function EmuCard({ index, o2Pressure, o2Current, standby, pressureConv }: EmuCar
         <div style={{ color: "var(--color-text-muted)", fontSize: 9, textAlign: "center" }}>Standby</div>
       ) : (
         <>
+          {/* Primary O₂ */}
+          <div style={{ color: "var(--color-text-muted)", fontSize: 7, marginBottom: 1 }}>PRI O₂</div>
           <div
             style={{
               color: "var(--color-accent-orange)",
@@ -107,9 +115,36 @@ function EmuCard({ index, o2Pressure, o2Current, standby, pressureConv }: EmuCar
             {converted.value.toFixed(0)}
             <span style={{ fontSize: 8, color: "var(--color-text-muted)", marginLeft: 1 }}>{converted.unit}</span>
           </div>
-          <div style={{ color: "var(--color-text-muted)", fontSize: 8, marginTop: 1 }}>
+          <div style={{ color: "var(--color-text-muted)", fontSize: 8, marginTop: 1, marginBottom: 4 }}>
             {o2Current.toFixed(2)} A
           </div>
+          {/* Secondary O₂ — only shown for EMU 1 & 2 */}
+          {hasSecondary && secConverted && (
+            <>
+              <div
+                style={{
+                  height: 1,
+                  background: "var(--color-border-subtle)",
+                  marginBottom: 4,
+                }}
+              />
+              <div style={{ color: "var(--color-text-muted)", fontSize: 7, marginBottom: 1 }}>SEC O₂</div>
+              <div
+                style={{
+                  color: "var(--color-text-secondary)",
+                  fontSize: 11,
+                  fontWeight: 700,
+                  fontVariantNumeric: "tabular-nums",
+                }}
+              >
+                {secConverted.value.toFixed(0)}
+                <span style={{ fontSize: 8, color: "var(--color-text-muted)", marginLeft: 1 }}>{secConverted.unit}</span>
+              </div>
+              <div style={{ color: "var(--color-text-muted)", fontSize: 8, marginTop: 1 }}>
+                {secO2Current!.toFixed(2)} A
+              </div>
+            </>
+          )}
         </>
       )}
     </div>
@@ -253,6 +288,8 @@ export default function AirlockPanel({ telemetry }: AirlockPanelProps) {
                 o2Current={telemetry.airlock.emu1O2Current}
                 standby={isEmuStandby(telemetry.airlock.emu1O2Pressure, telemetry.airlock.emu1O2Current)}
                 pressureConv={pressure}
+                secO2Pressure={telemetry.airlock.emu1SecO2Pressure}
+                secO2Current={telemetry.airlock.emu1SecO2Current}
               />
               <EmuCard
                 index={2}
@@ -260,6 +297,8 @@ export default function AirlockPanel({ telemetry }: AirlockPanelProps) {
                 o2Current={telemetry.airlock.emu2O2Current}
                 standby={isEmuStandby(telemetry.airlock.emu2O2Pressure, telemetry.airlock.emu2O2Current)}
                 pressureConv={pressure}
+                secO2Pressure={telemetry.airlock.emu2SecO2Pressure}
+                secO2Current={telemetry.airlock.emu2SecO2Current}
               />
               <EmuCard
                 index={3}

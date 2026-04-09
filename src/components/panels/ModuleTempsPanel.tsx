@@ -274,6 +274,59 @@ export default function ModuleTempsPanel({ telemetry }: ModuleTempsPanelProps) {
             />
           </div>
 
+          {/* Destiny coolant loop fill levels */}
+          <div
+            style={{
+              marginBottom: 8,
+              paddingTop: 6,
+              borderTop: "1px solid var(--color-border-subtle)",
+            }}
+          >
+            <div style={{ color: "var(--color-text-muted)", fontSize: 8, marginBottom: 4 }}>
+              DESTINY ITCS COOLANT
+            </div>
+            {[
+              { label: "LTL %", value: telemetry.moduleTemps.destinyLtlPercent },
+              { label: "MTL %", value: telemetry.moduleTemps.destinyMtlPercent },
+            ].map(({ label, value }) => {
+              const pct = Math.max(0, Math.min(100, value));
+              const barColor =
+                pct < 30
+                  ? "var(--color-accent-red)"
+                  : pct < 60
+                    ? "var(--color-accent-orange)"
+                    : "var(--color-accent-cyan)";
+              return (
+                <div key={label} style={{ marginBottom: 5 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 2 }}>
+                    <span style={{ color: "var(--color-text-muted)", fontSize: 8 }}>{label}</span>
+                    <span style={{ color: barColor, fontSize: 9, fontVariantNumeric: "tabular-nums" }}>
+                      {value.toFixed(1)}%
+                    </span>
+                  </div>
+                  <div
+                    style={{
+                      height: 4,
+                      borderRadius: 2,
+                      background: "var(--color-border-subtle)",
+                      overflow: "hidden",
+                    }}
+                  >
+                    <div
+                      style={{
+                        height: "100%",
+                        width: `${pct}%`,
+                        background: barColor,
+                        borderRadius: 2,
+                        transition: "width 0.5s ease",
+                      }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
           {/* CCAA status */}
           <div style={{ paddingTop: 6, borderTop: "1px solid var(--color-border-subtle)" }}>
             <div style={{ color: "var(--color-text-muted)", fontSize: 8, marginBottom: 4 }}>

@@ -171,6 +171,7 @@ function rowToOrbitalState(row: RowDataPacket): OrbitalState {
     isInSunlight: Boolean(row.is_in_sunlight),
     sunriseIn: null,
     sunsetIn: null,
+    betaAngle: row.beta_angle as number ?? 0,
   };
 }
 
