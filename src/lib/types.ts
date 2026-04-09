@@ -35,6 +35,12 @@ export interface OrbitalState {
   sunriseIn: number | null;
   /** Seconds until next orbital sunset (null if currently in shadow) */
   sunsetIn: number | null;
+  /**
+   * Beta angle in degrees — the angle between the ISS orbital plane and the
+   * Sun-Earth vector.  Ranges roughly -75° to +75° for the ISS.
+   * Positive values mean the Sun is north of the orbital plane.
+   */
+  betaAngle: number;
 }
 
 export interface LightstreamerChannel {
@@ -74,6 +80,10 @@ export interface ISSTelemetry {
     node2Cabin: number; node2Avionics: number; node2MtlCoolant: number; node2LtlCoolant: number; node2Ccaa: string;
     node3Cabin: number; node3Avionics: number; node3MtlCoolant: number; node3LtlCoolant: number; node3Ccaa: string;
     uslabCabin: number; uslabAvionics: number; uslabCabinAir: number; uslabCcaa1: string; uslabCcaa2: string;
+    /** Destiny ITCS Low Temperature Loop coolant fill (%) */
+    destinyLtlPercent: number;
+    /** Destiny ITCS Medium Temperature Loop coolant fill (%) */
+    destinyMtlPercent: number;
   };
   /** External thermal control system data */
   externalThermal: {
@@ -168,6 +178,14 @@ export interface ISSTelemetry {
     emu1O2Pressure: number; emu1O2Current: number;
     emu2O2Pressure: number; emu2O2Current: number;
     emu3O2Pressure: number; emu3O2Current: number;
+    /** EMU 1 secondary O₂ supply pressure (psi) */
+    emu1SecO2Pressure: number;
+    /** EMU 1 secondary O₂ supply current (A) */
+    emu1SecO2Current: number;
+    /** EMU 2 secondary O₂ supply pressure (psi) */
+    emu2SecO2Pressure: number;
+    /** EMU 2 secondary O₂ supply current (A) */
+    emu2SecO2Current: number;
   };
 
   /** Raw Lightstreamer channel values keyed by channel name */

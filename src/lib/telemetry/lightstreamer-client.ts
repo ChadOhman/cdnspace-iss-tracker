@@ -150,12 +150,52 @@ const TELEMETRY_IDS = [
   "AIRLOCK000004", // EMU 2 O₂ supply current (A)
   "AIRLOCK000005", // EMU 3 O₂ supply pressure (psi)
   "AIRLOCK000006", // EMU 3 O₂ supply current (A)
+  // EMU secondary O₂ supply (per data dictionary)
+  "AIRLOCK000007", // EMU 1 secondary O₂ supply pressure (psi)
+  "AIRLOCK000008", // EMU 1 secondary O₂ supply current (A)
+  "AIRLOCK000009", // EMU 2 secondary O₂ supply pressure (psi)
+  "AIRLOCK000010", // EMU 2 secondary O₂ supply current (A)
+  // NOTE: AIRLOCK000011-046 are NOT documented — excluded from UI, not subscribed
   "AIRLOCK000047", // Crew lock pump status (enumerated)
   "AIRLOCK000049", // Airlock O₂ supply pressure A (psi)
   "AIRLOCK000054", // Airlock O₂ supply pressure B (psi)
   "AIRLOCK000055", // O₂ high pressure tank (psi)
   "AIRLOCK000056", // O₂ low pressure tank (psi)
   "AIRLOCK000057", // N₂ tank pressure (psi)
+
+  // ── Destiny Lab Coolant Loops ──────────────────────────────────────────────
+  "USLAB000056", // Destiny ITCS Low Temperature Loop coolant fill (%)
+  "USLAB000057", // Destiny ITCS Medium Temperature Loop coolant fill (%)
+
+  // ── Russian Segment (EXPLORATORY — no known descriptions) ─────────────────
+  // These channels are subscribed to observe what data comes back.
+  // DO NOT build UI until channel definitions are confirmed.
+  // Reference: no entries in sensedata/space-telemetry data dictionary.
+  "RUSSEG000001", // Russian Segment — undocumented
+  "RUSSEG000002", // Russian Segment — undocumented
+  "RUSSEG000003", // Russian Segment — undocumented
+  "RUSSEG000004", // Russian Segment — undocumented
+  "RUSSEG000005", // Russian Segment — undocumented
+  "RUSSEG000006", // Russian Segment — undocumented
+  "RUSSEG000007", // Russian Segment — undocumented
+  "RUSSEG000008", // Russian Segment — undocumented
+  "RUSSEG000009", // Russian Segment — undocumented
+  "RUSSEG000010", // Russian Segment — undocumented
+  "RUSSEG000011", // Russian Segment — undocumented
+  "RUSSEG000012", // Russian Segment — undocumented
+  "RUSSEG000013", // Russian Segment — undocumented
+  "RUSSEG000014", // Russian Segment — undocumented
+  "RUSSEG000015", // Russian Segment — undocumented
+  "RUSSEG000016", // Russian Segment — undocumented
+  "RUSSEG000017", // Russian Segment — undocumented
+  "RUSSEG000018", // Russian Segment — undocumented
+  "RUSSEG000019", // Russian Segment — undocumented
+  "RUSSEG000020", // Russian Segment — undocumented
+  "RUSSEG000021", // Russian Segment — undocumented
+  "RUSSEG000022", // Russian Segment — undocumented
+  "RUSSEG000023", // Russian Segment — undocumented
+  "RUSSEG000024", // Russian Segment — undocumented
+  "RUSSEG000025", // Russian Segment — undocumented
 
   // ── Time ──────────────────────────────────────────────────────────────────
   "TIME_000001", // Station time
@@ -421,6 +461,8 @@ export function deriveTelemetry(
     uslabCabinAir:  num("USLAB000061"),
     uslabCcaa1:     str("USLAB000064"),
     uslabCcaa2:     str("USLAB000065"),
+    destinyLtlPercent: num("USLAB000056"),
+    destinyMtlPercent: num("USLAB000057"),
   };
 
   // Derive average cabin temperature from available module readings
@@ -574,6 +616,10 @@ export function deriveTelemetry(
     emu2O2Current:    num("AIRLOCK000004"),
     emu3O2Pressure:   num("AIRLOCK000005"),
     emu3O2Current:    num("AIRLOCK000006"),
+    emu1SecO2Pressure: num("AIRLOCK000007"),
+    emu1SecO2Current:  num("AIRLOCK000008"),
+    emu2SecO2Pressure: num("AIRLOCK000009"),
+    emu2SecO2Current:  num("AIRLOCK000010"),
     crewLockPump:     str("AIRLOCK000047"),
     o2SupplyPressureA: num("AIRLOCK000049"),
     o2SupplyPressureB: num("AIRLOCK000054"),

@@ -97,6 +97,25 @@ export function propagateFromTle(tle: TleData, date: Date): OrbitalState | null 
   const fraction = shadowFraction(rsun, position);
   const isInSunlight = fraction < 0.5;
 
+  // ── Beta angle ────────────────────────────────────────────────────────────
+  // Beta angle = angle between the orbital plane and the Sun-Earth vector.
+  // Formula: β = arcsin(cos(sunDec) * sin(RAAN - sunRA) * sin(inc) + sin(sunDec) * cos(inc))
+  //
+  // We derive RAAN from TLE line 2 (columns 17–24, 0-indexed) and inclination
+  // is already parsed above. Sun position comes from satellite.js sunPos().
+  //
+  // rsun is in ECI (km). Convert to unit vector to get RA/Dec.
+  const raan = parseFloat(tle.line2.substring(17, 25).trim()) * (Math.PI / 180);
+  const incRad = inclination * (Math.PI / 180);
+  const sunMag = Math.sqrt(rsun.x ** 2 + rsun.y ** 2 + rsun.z ** 2);
+  const sunDec = Math.asin(rsun.z / sunMag);          // radians
+  const sunRA  = Math.atan2(rsun.y, rsun.x);           // radians
+  const betaRad = Math.asin(
+    Math.cos(sunDec) * Math.sin(raan - sunRA) * Math.sin(incRad) +
+    Math.sin(sunDec) * Math.cos(incRad)
+  );
+  const betaAngle = betaRad * (180 / Math.PI);
+
   return {
     timestamp: date.getTime(),
     lat,
@@ -113,6 +132,7 @@ export function propagateFromTle(tle: TleData, date: Date): OrbitalState | null 
     isInSunlight,
     sunriseIn: isInSunlight ? null : null, // computed by orbit manager if needed
     sunsetIn: isInSunlight ? null : null,
+    betaAngle,
   };
 }
 
