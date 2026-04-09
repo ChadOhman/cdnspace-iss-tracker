@@ -19,12 +19,32 @@ export function getPool(): Pool {
   if (!pool) {
     const url =
       process.env.MYSQL_URL ?? "mysql://root@localhost:3306/iss_tracker";
-    pool = mysql.createPool({
-      uri: url,
-      connectionLimit: 10,
-      timezone: "Z",
-      waitForConnections: true,
-    });
+
+    // mysql2 supports URI strings directly in createPool
+    // but some versions need it parsed. Try URI first, fall back to parsed.
+    try {
+      const parsed = new URL(url);
+      pool = mysql.createPool({
+        host: parsed.hostname,
+        port: parseInt(parsed.port || "3306", 10),
+        user: decodeURIComponent(parsed.username),
+        password: decodeURIComponent(parsed.password),
+        database: parsed.pathname.replace(/^\//, ""),
+        connectionLimit: 10,
+        timezone: "Z",
+        waitForConnections: true,
+      });
+    } catch {
+      // Fallback: pass URI directly
+      pool = mysql.createPool({
+        uri: url,
+        connectionLimit: 10,
+        timezone: "Z",
+        waitForConnections: true,
+      });
+    }
+
+    console.log("[db] Pool created for:", url.replace(/\/\/.*@/, "//<credentials>@"));
   }
   return pool;
 }

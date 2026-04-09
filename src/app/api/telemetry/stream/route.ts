@@ -24,10 +24,13 @@ function ensurePollers() {
   if (pollersStarted) return;
   pollersStarted = true;
 
-  // 1. Initialize DB schema (best-effort)
-  initializeSchema().catch((err) => {
-    console.error("[stream] DB schema init failed:", err);
-  });
+  // 1. Initialize DB schema
+  initializeSchema()
+    .then(() => console.log("[stream] DB schema initialized successfully"))
+    .catch((err) => {
+      console.error("[stream] DB schema init failed:", err.message ?? err);
+      console.error("[stream] MYSQL_URL:", process.env.MYSQL_URL ? "(set)" : "(not set, using default)");
+    });
 
   // 2. TLE poller: fetch immediately, then on interval
   pollTle().catch((err) => {
