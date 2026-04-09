@@ -17,6 +17,10 @@ export const metadata: Metadata = {
   title: "ISS Tracker — Live Dashboard",
   description:
     "Real-time International Space Station tracking dashboard. Live telemetry, crew schedules, and orbital data.",
+  icons: {
+    icon: "/ISS_emblem.png",
+    apple: "/ISS_emblem.png",
+  },
   openGraph: {
     title: "ISS Tracker — Live Dashboard",
     description:
