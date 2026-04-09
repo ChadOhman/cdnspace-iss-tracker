@@ -1,14 +1,24 @@
 "use client";
 
 import { memo } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useTime } from "@/context/TimeContext";
 import { useLocale } from "@/context/LocaleContext";
 import { PLAYBACK_SPEEDS } from "@/lib/constants";
 import type { PlaybackSpeed } from "@/lib/types";
 
+const NAV_LINKS = [
+  { href: "/track", label: "TRACK" },
+  { href: "/live", label: "LIVE" },
+  { href: "/stats", label: "STATS" },
+  { href: "/api-docs", label: "API" },
+] as const;
+
 function BottomBarInner() {
   const { mode, setMode, playbackSpeed, setPlaybackSpeed } = useTime();
   const { locale, setLocale } = useLocale();
+  const pathname = usePathname();
 
   const isLive = mode === "LIVE";
   const isSim = mode === "SIM";
@@ -119,6 +129,45 @@ function BottomBarInner() {
             ))}
           </div>
         )}
+      </div>
+
+      {/* Center: page navigation links */}
+      <div style={{ display: "flex", alignItems: "center", gap: 2 }}>
+        {NAV_LINKS.map(({ href, label }) => {
+          const active = pathname === href;
+          return (
+            <Link
+              key={href}
+              href={href}
+              style={{
+                padding: "2px 7px",
+                borderRadius: 3,
+                border: active
+                  ? "1px solid rgba(0,229,255,0.35)"
+                  : "1px solid transparent",
+                background: active ? "rgba(0,229,255,0.08)" : "transparent",
+                color: active ? "var(--color-accent-cyan)" : "var(--color-text-muted)",
+                fontSize: 10,
+                fontFamily: "inherit",
+                letterSpacing: "0.05em",
+                textDecoration: "none",
+                transition: "color 0.15s, border-color 0.15s",
+              }}
+              onMouseEnter={(e) => {
+                if (!active) {
+                  (e.currentTarget as HTMLAnchorElement).style.color = "var(--color-accent-cyan)";
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!active) {
+                  (e.currentTarget as HTMLAnchorElement).style.color = "var(--color-text-muted)";
+                }
+              }}
+            >
+              {label}
+            </Link>
+          );
+        })}
       </div>
 
       {/* Right side: language toggle + site name */}
