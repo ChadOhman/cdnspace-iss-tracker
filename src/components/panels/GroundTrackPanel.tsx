@@ -35,8 +35,10 @@ interface GroundTrackPanelProps {
 
 // ISS orbital parameters for future track prediction
 const ISS_INCLINATION_DEG = 51.64;
-const ORBITAL_PERIOD_SEC = 92 * 60 + 34;
-const LON_SHIFT_PER_ORBIT_DEG = 22.9;
+const ORBITAL_PERIOD_SEC = 92 * 60 + 34; // ~5554 seconds
+// Earth rotates 360°/86400s = 0.00417°/s. ISS ground track longitude
+// shifts westward at this rate as Earth rotates beneath the orbit.
+const EARTH_ROTATION_DEG_PER_SEC = 360 / 86400;
 const FUTURE_STEPS = 180; // 180 steps × 30s = 90 minutes
 const FUTURE_STEP_SEC = 30;
 const MAX_PATH_POINTS = 5400; // 90 minutes at 1 point/sec
@@ -60,10 +62,9 @@ export default function GroundTrackPanel({ orbital }: GroundTrackPanelProps) {
   const computeFutureTrack = useCallback(
     (lat: number, lon: number): [number, number][] => {
       const incRad = (ISS_INCLINATION_DEG * Math.PI) / 180;
-      const omega = (2 * Math.PI) / ORBITAL_PERIOD_SEC;
-      const lonRate = LON_SHIFT_PER_ORBIT_DEG / ORBITAL_PERIOD_SEC;
+      const omega = (2 * Math.PI) / ORBITAL_PERIOD_SEC; // orbital angular velocity
 
-      // Solve for initial phase from current latitude
+      // Solve for initial orbital phase from current latitude
       const sinLat = Math.sin((lat * Math.PI) / 180);
       const clampedSin = Math.max(-1, Math.min(1, sinLat / Math.sin(incRad)));
       let phase = Math.asin(clampedSin);
@@ -73,13 +74,34 @@ export default function GroundTrackPanel({ orbital }: GroundTrackPanelProps) {
         if (prev[0] > lat) phase = Math.PI - phase;
       }
 
+      // Compute the longitude of the ascending node from current position
+      // The ground track longitude at any phase is:
+      //   lon = ascending_node_lon + atan2(cos(inc)*sin(phase), cos(phase))
+      // So ascending_node_lon = lon - atan2(cos(inc)*sin(phase), cos(phase))
+      const lonOffset = Math.atan2(
+        Math.cos(incRad) * Math.sin(phase),
+        Math.cos(phase)
+      ) * (180 / Math.PI);
+      const ascendingNodeLon = lon - lonOffset;
+
       const points: [number, number][] = [];
       for (let i = 1; i <= FUTURE_STEPS; i++) {
         const dt = i * FUTURE_STEP_SEC;
+        const futurePhase = phase + omega * dt;
+
+        // Latitude from orbital phase
         const futureLat =
-          Math.asin(Math.sin(incRad) * Math.sin(phase + omega * dt)) *
+          Math.asin(Math.sin(incRad) * Math.sin(futurePhase)) *
           (180 / Math.PI);
-        let futureLon = lon - lonRate * dt;
+
+        // Longitude: ascending node drifts west due to Earth rotation
+        const futureNodeLon = ascendingNodeLon - EARTH_ROTATION_DEG_PER_SEC * dt;
+        const futureLonOffset = Math.atan2(
+          Math.cos(incRad) * Math.sin(futurePhase),
+          Math.cos(futurePhase)
+        ) * (180 / Math.PI);
+        let futureLon = futureNodeLon + futureLonOffset;
+
         // Normalize to -180..180
         futureLon = ((futureLon + 540) % 360) - 180;
         points.push([futureLat, futureLon]);
