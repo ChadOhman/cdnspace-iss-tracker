@@ -101,6 +101,46 @@ function issElevationDeg(
   return toDeg(elev);
 }
 
+// ── Sub-solar point & terminator helpers ─────────────────────────────────────
+
+function getSubSolarPoint(date: Date): { lat: number; lon: number } {
+  const jd = date.getTime() / 86400000 + 2440587.5;
+  const T = (jd - 2451545.0) / 36525;
+  const L = (280.46646 + 36000.76983 * T) % 360;
+  const M = (357.52911 + 35999.05029 * T) % 360;
+  const Mrad = M * Math.PI / 180;
+  const C = 1.9146 * Math.sin(Mrad) + 0.02 * Math.sin(2 * Mrad);
+  const sunLon = (L + C) * Math.PI / 180;
+  const obliq = (23.439 - 0.013 * T) * Math.PI / 180;
+  const lat = Math.asin(Math.sin(obliq) * Math.sin(sunLon)) * 180 / Math.PI;
+  const JD0 = Math.floor(jd - 0.5) + 0.5;
+  const UT = (jd - JD0) * 24;
+  const GMST = (6.697375 + 0.0657098242 * (JD0 - 2451545) + 1.00273791 * UT) % 24;
+  const sunRA = Math.atan2(Math.cos(obliq) * Math.sin(sunLon), Math.cos(sunLon)) * 180 / Math.PI;
+  const lon = sunRA - GMST * 15;
+  return { lat, lon: ((lon + 540) % 360) - 180 };
+}
+
+function getTerminatorPolygon(subSolar: { lat: number; lon: number }): [number, number][] {
+  const points: [number, number][] = [];
+  const latRad = subSolar.lat * Math.PI / 180;
+  const lonRad = subSolar.lon * Math.PI / 180;
+  for (let i = 0; i <= 360; i += 2) {
+    const bearing = i * Math.PI / 180;
+    const angDist = Math.PI / 2;
+    const lat2 = Math.asin(
+      Math.sin(latRad) * Math.cos(angDist) +
+      Math.cos(latRad) * Math.sin(angDist) * Math.cos(bearing)
+    );
+    const lon2 = lonRad + Math.atan2(
+      Math.sin(bearing) * Math.sin(angDist) * Math.cos(latRad),
+      Math.cos(angDist) - Math.sin(latRad) * Math.sin(lat2)
+    );
+    points.push([lat2 * 180 / Math.PI, ((lon2 * 180 / Math.PI) + 540) % 360 - 180]);
+  }
+  return points;
+}
+
 function computeFutureTrack(
   lat: number, lon: number, steps: number, stepSec: number,
   pathHistory?: [number, number][]
@@ -326,6 +366,11 @@ export default function TrackPage() {
   const obsMarkerRef = useRef<any>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const obsLineRef = useRef<any>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const nightPolygonRef = useRef<any>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const sunMarkerRef = useRef<any>(null);
+  const terminatorIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const pathHistoryRef = useRef<[number, number][]>([]);
   const initialCenteredRef = useRef(false);
 
@@ -347,12 +392,52 @@ export default function TrackPage() {
         scrollWheelZoom: true,
       });
 
+      // Satellite imagery basemap
       L.tileLayer(
-        "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
-        { maxZoom: 18, attribution: "&copy; OpenStreetMap &copy; CARTO" }
+        "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+        { maxZoom: 18, attribution: "Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community" }
       ).addTo(map);
 
-      // ISS marker
+      // Dark labels overlay (place names)
+      L.tileLayer(
+        "https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png",
+        { maxZoom: 18, opacity: 0.8 }
+      ).addTo(map);
+
+      // Night-side terminator overlay
+      const subSolar = getSubSolarPoint(new Date());
+      const nightPoints = getTerminatorPolygon(subSolar);
+      const nightPolygon = L.polygon(nightPoints as [number, number][], {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        color: "none" as any,
+        fillColor: "#000",
+        fillOpacity: 0.35,
+        interactive: false,
+      }).addTo(map);
+
+      // Sun marker
+      const sunIcon = L.divIcon({
+        className: "",
+        html: `<div style="font-size:18px;line-height:1;text-shadow:0 0 8px rgba(255,220,0,0.9);">☀️</div>`,
+        iconSize: [22, 22],
+        iconAnchor: [11, 11],
+      });
+      const sunMarker = L.marker([subSolar.lat, subSolar.lon], {
+        icon: sunIcon,
+        interactive: false,
+      }).addTo(map);
+
+      // Update terminator every 60 seconds
+      const terminatorInterval = setInterval(() => {
+        if (!mapInstanceRef.current) return;
+        const ss = getSubSolarPoint(new Date());
+        const np = getTerminatorPolygon(ss);
+        nightPolygonRef.current?.setLatLngs(np as [number, number][]);
+        sunMarkerRef.current?.setLatLng([ss.lat, ss.lon]);
+      }, 60_000);
+      terminatorIntervalRef.current = terminatorInterval;
+
+      // ISS marker (18px with glow)
       const issIcon = L.divIcon({
         className: "",
         html: `<div style="
@@ -370,14 +455,14 @@ export default function TrackPage() {
       const popup = L.popup({ closeButton: true, className: "iss-popup" });
       marker.bindPopup(popup);
 
-      // Past ground track polyline (solid cyan)
+      // Past ground track polyline (solid yellow)
       const polyline = L.polyline([], {
-        color: "#00e5ff", weight: 2.5, opacity: 0.8,
+        color: "#ffd600", weight: 3, opacity: 0.9,
       }).addTo(map);
 
       // Future predicted track (dashed yellow)
       const futurePolyline = L.polyline([], {
-        color: "#ffd600", weight: 2, opacity: 0.6, dashArray: "8 6",
+        color: "#ffd600", weight: 2, opacity: 0.5, dashArray: "8 6",
       }).addTo(map);
 
       // TDRS footprints
@@ -399,6 +484,8 @@ export default function TrackPage() {
       futurePolylineRef.current = futurePolyline;
       tdrsLayerRef.current = tdrsGroup;
       popupRef.current = popup;
+      nightPolygonRef.current = nightPolygon;
+      sunMarkerRef.current = sunMarker;
     });
 
     return () => { cancelled = true; };
@@ -407,6 +494,10 @@ export default function TrackPage() {
   // Cleanup on unmount
   useEffect(() => {
     return () => {
+      if (terminatorIntervalRef.current) {
+        clearInterval(terminatorIntervalRef.current);
+        terminatorIntervalRef.current = null;
+      }
       if (mapInstanceRef.current) {
         mapInstanceRef.current.remove();
         mapInstanceRef.current = null;
@@ -417,6 +508,8 @@ export default function TrackPage() {
         popupRef.current = null;
         obsMarkerRef.current = null;
         obsLineRef.current = null;
+        nightPolygonRef.current = null;
+        sunMarkerRef.current = null;
       }
     };
   }, []);
