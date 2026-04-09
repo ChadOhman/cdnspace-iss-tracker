@@ -42,10 +42,9 @@ function ProgressBar({ value, max, color = "var(--color-accent-green)" }: Progre
 interface WingPairProps {
   label: string;
   voltage: number;
-  current: number;
 }
 
-function WingPair({ label, voltage, current }: WingPairProps) {
+function WingPair({ label, voltage }: WingPairProps) {
   return (
     <div
       style={{
@@ -57,14 +56,10 @@ function WingPair({ label, voltage, current }: WingPairProps) {
       }}
     >
       <div style={{ color: "var(--color-text-muted)", fontSize: 8, marginBottom: 2 }}>{label}</div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+      <div>
         <span style={{ color: "var(--color-accent-green)", fontSize: 11, fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>
           {voltage.toFixed(1)}
           <span style={{ fontSize: 8, color: "var(--color-text-muted)", marginLeft: 2 }}>V</span>
-        </span>
-        <span style={{ color: "var(--color-text-secondary)", fontSize: 10, fontVariantNumeric: "tabular-nums" }}>
-          {current.toFixed(1)}
-          <span style={{ fontSize: 8, color: "var(--color-text-muted)", marginLeft: 1 }}>A</span>
         </span>
       </div>
       <ProgressBar value={voltage} max={160} color="var(--color-accent-green)" />
@@ -76,18 +71,16 @@ interface SideBlockProps {
   label: string;
   wing1Label: string;
   wing1Voltage: number;
-  wing1Current: number;
   wing2Label: string;
   wing2Voltage: number;
-  wing2Current: number;
   bgaRotation: number;
   bgaIncidence: number;
 }
 
 function SideBlock({
   label,
-  wing1Label, wing1Voltage, wing1Current,
-  wing2Label, wing2Voltage, wing2Current,
+  wing1Label, wing1Voltage,
+  wing2Label, wing2Voltage,
   bgaRotation, bgaIncidence,
 }: SideBlockProps) {
   return (
@@ -110,8 +103,8 @@ function SideBlock({
       >
         {label}
       </div>
-      <WingPair label={wing1Label} voltage={wing1Voltage} current={wing1Current} />
-      <WingPair label={wing2Label} voltage={wing2Voltage} current={wing2Current} />
+      <WingPair label={wing1Label} voltage={wing1Voltage} />
+      <WingPair label={wing2Label} voltage={wing2Voltage} />
       <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4 }}>
         <div>
           <div style={{ color: "var(--color-text-muted)", fontSize: 8, cursor: "help" }} title="Beta Gimbal Assembly Rotation — angle of the solar array drive mechanism">BGA ROT</div>
@@ -183,10 +176,8 @@ export default function SolarArrayPanel({ telemetry }: SolarArrayPanelProps) {
               label={t("solarArrays.portSide").toUpperCase()}
               wing1Label="P4 — 2B"
               wing1Voltage={telemetry.solarArrays.p4.voltage2B}
-              wing1Current={telemetry.solarArrays.p4.current2B}
               wing2Label="P6 — 2B"
               wing2Voltage={telemetry.solarArrays.p6.voltage2B}
-              wing2Current={telemetry.solarArrays.p6.current2B}
               bgaRotation={telemetry.solarArrays.p4.bgaRotation}
               bgaIncidence={telemetry.solarArrays.p4.bgaIncidence}
             />
@@ -194,10 +185,8 @@ export default function SolarArrayPanel({ telemetry }: SolarArrayPanelProps) {
               label={t("solarArrays.starboardSide").toUpperCase()}
               wing1Label="S4 — 2A"
               wing1Voltage={telemetry.solarArrays.s4.voltage2A}
-              wing1Current={telemetry.solarArrays.s4.current2A}
               wing2Label="S6 — 2A"
               wing2Voltage={telemetry.solarArrays.s6.voltage2A}
-              wing2Current={telemetry.solarArrays.s6.current2A}
               bgaRotation={telemetry.solarArrays.s4.bgaRotation}
               bgaIncidence={telemetry.solarArrays.s4.bgaIncidence}
             />
