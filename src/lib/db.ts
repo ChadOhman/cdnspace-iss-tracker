@@ -1,0 +1,425 @@
+/**
+ * MySQL database layer for the ISS Tracker application.
+ * Uses mysql2/promise with a lazy singleton connection pool.
+ */
+
+import mysql, { Pool, RowDataPacket } from "mysql2/promise";
+import type {
+  OrbitalState,
+  SolarActivity,
+  ISSEvent,
+  Snapshot,
+} from "@/lib/types";
+
+// ─── Connection Pool ─────────────────────────────────────────────────────────
+
+let pool: Pool | null = null;
+
+export function getPool(): Pool {
+  if (!pool) {
+    const url =
+      process.env.MYSQL_URL ?? "mysql://root@localhost:3306/iss_tracker";
+    pool = mysql.createPool({
+      uri: url,
+      connectionLimit: 10,
+      timezone: "Z",
+      waitForConnections: true,
+    });
+  }
+  return pool;
+}
+
+// ─── Schema Initialization ───────────────────────────────────────────────────
+
+export async function initializeSchema(): Promise<void> {
+  const db = getPool();
+
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS orbital_state (
+      id                BIGINT AUTO_INCREMENT PRIMARY KEY,
+      timestamp         DATETIME(3)  NOT NULL,
+      latitude          DOUBLE       NOT NULL,
+      longitude         DOUBLE       NOT NULL,
+      altitude          DOUBLE       NOT NULL,
+      velocity          DOUBLE       NOT NULL,
+      speed_kmh         DOUBLE       NOT NULL,
+      period_s          DOUBLE,
+      inclination       DOUBLE,
+      eccentricity      DOUBLE,
+      apoapsis          DOUBLE,
+      periapsis         DOUBLE,
+      revolution_number INT          NOT NULL,
+      is_in_sunlight    BOOLEAN      NOT NULL,
+      INDEX idx_orbital_timestamp (timestamp)
+    )
+  `);
+
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS tle_history (
+      id         BIGINT AUTO_INCREMENT PRIMARY KEY,
+      fetched_at DATETIME(3) NOT NULL,
+      line1      VARCHAR(80) NOT NULL,
+      line2      VARCHAR(80) NOT NULL,
+      epoch      DATETIME(3) NOT NULL,
+      INDEX idx_tle_fetched_at (fetched_at)
+    )
+  `);
+
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS space_weather (
+      id                  BIGINT AUTO_INCREMENT PRIMARY KEY,
+      timestamp           DATETIME(3)  NOT NULL,
+      kp_index            DOUBLE       NOT NULL,
+      kp_label            VARCHAR(32)  NOT NULL,
+      xray_flux           DOUBLE       NOT NULL,
+      xray_class          VARCHAR(8)   NOT NULL,
+      proton_flux_1mev    DOUBLE       NOT NULL,
+      proton_flux_10mev   DOUBLE       NOT NULL,
+      proton_flux_100mev  DOUBLE       NOT NULL,
+      radiation_risk      VARCHAR(16)  NOT NULL,
+      INDEX idx_space_weather_timestamp (timestamp)
+    )
+  `);
+
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS iss_telemetry (
+      id         BIGINT AUTO_INCREMENT PRIMARY KEY,
+      timestamp  DATETIME(3)  NOT NULL,
+      channel_id VARCHAR(32)  NOT NULL,
+      value      VARCHAR(255) NOT NULL,
+      status     VARCHAR(32)  NOT NULL,
+      INDEX idx_iss_telemetry_ts_channel (timestamp, channel_id)
+    )
+  `);
+
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS events (
+      id               VARCHAR(64)  NOT NULL PRIMARY KEY,
+      type             VARCHAR(16)  NOT NULL,
+      title            VARCHAR(255) NOT NULL,
+      description      TEXT         NOT NULL,
+      status           VARCHAR(16)  NOT NULL DEFAULT 'scheduled',
+      scheduled_start  DATETIME(3)  NOT NULL,
+      scheduled_end    DATETIME(3)  NOT NULL,
+      actual_start     DATETIME(3),
+      actual_end       DATETIME(3),
+      metadata         JSON         NOT NULL,
+      INDEX idx_events_status (status),
+      INDEX idx_events_scheduled_start (scheduled_start)
+    )
+  `);
+
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS timeline_activities (
+      id         BIGINT AUTO_INCREMENT PRIMARY KEY,
+      name       VARCHAR(255) NOT NULL,
+      type       VARCHAR(16)  NOT NULL,
+      start_time DATETIME(3)  NOT NULL,
+      end_time   DATETIME(3)  NOT NULL,
+      notes      TEXT,
+      INDEX idx_timeline_start_end (start_time, end_time)
+    )
+  `);
+
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS page_views (
+      id    INT    NOT NULL PRIMARY KEY DEFAULT 1,
+      count BIGINT NOT NULL DEFAULT 0
+    )
+  `);
+
+  // Seed the single page_views row if it doesn't exist
+  await db.execute(`INSERT IGNORE INTO page_views (id, count) VALUES (1, 0)`);
+}
+
+// ─── Row Mappers ─────────────────────────────────────────────────────────────
+
+function rowToOrbitalState(row: RowDataPacket): OrbitalState {
+  return {
+    timestamp: new Date(row.timestamp as string).getTime(),
+    lat: row.latitude as number,
+    lon: row.longitude as number,
+    altitude: row.altitude as number,
+    velocity: row.velocity as number,
+    speedKmH: row.speed_kmh as number,
+    period: row.period_s != null ? (row.period_s as number) / 60 : 0,
+    inclination: row.inclination as number ?? 0,
+    eccentricity: row.eccentricity as number ?? 0,
+    apoapsis: row.apoapsis as number ?? 0,
+    periapsis: row.periapsis as number ?? 0,
+    revolutionNumber: row.revolution_number as number,
+    isInSunlight: Boolean(row.is_in_sunlight),
+    sunriseIn: null,
+    sunsetIn: null,
+  };
+}
+
+function rowToSolar(row: RowDataPacket): SolarActivity {
+  return {
+    timestamp: new Date(row.timestamp as string).getTime(),
+    kpIndex: row.kp_index as number,
+    kpLabel: row.kp_label as string,
+    xrayFlux: row.xray_flux as number,
+    xrayClass: row.xray_class as string,
+    protonFlux1MeV: row.proton_flux_1mev as number,
+    protonFlux10MeV: row.proton_flux_10mev as number,
+    protonFlux100MeV: row.proton_flux_100mev as number,
+    radiationRisk: row.radiation_risk as SolarActivity["radiationRisk"],
+  };
+}
+
+function rowToEvent(row: RowDataPacket): ISSEvent {
+  return {
+    id: row.id as string,
+    type: row.type as ISSEvent["type"],
+    title: row.title as string,
+    description: row.description as string,
+    status: row.status as ISSEvent["status"],
+    scheduledStart: new Date(row.scheduled_start as string).getTime(),
+    scheduledEnd: new Date(row.scheduled_end as string).getTime(),
+    actualStart:
+      row.actual_start != null
+        ? new Date(row.actual_start as string).getTime()
+        : null,
+    actualEnd:
+      row.actual_end != null
+        ? new Date(row.actual_end as string).getTime()
+        : null,
+    metadata:
+      typeof row.metadata === "string"
+        ? (JSON.parse(row.metadata) as Record<string, string>)
+        : (row.metadata as Record<string, string>) ?? {},
+  };
+}
+
+// ─── Archive Functions ────────────────────────────────────────────────────────
+
+export async function archiveOrbitalState(
+  state: Partial<OrbitalState>
+): Promise<void> {
+  const db = getPool();
+  const ts = state.timestamp != null ? new Date(state.timestamp) : new Date();
+  await db.execute(
+    `INSERT INTO orbital_state
+       (timestamp, latitude, longitude, altitude, velocity, speed_kmh,
+        period_s, inclination, eccentricity, apoapsis, periapsis,
+        revolution_number, is_in_sunlight)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      ts,
+      state.lat ?? 0,
+      state.lon ?? 0,
+      state.altitude ?? 0,
+      state.velocity ?? 0,
+      state.speedKmH ?? 0,
+      state.period != null ? state.period * 60 : null,
+      state.inclination ?? null,
+      state.eccentricity ?? null,
+      state.apoapsis ?? null,
+      state.periapsis ?? null,
+      state.revolutionNumber ?? 0,
+      state.isInSunlight ? 1 : 0,
+    ]
+  );
+}
+
+export async function archiveSolar(solar: SolarActivity): Promise<void> {
+  const db = getPool();
+  await db.execute(
+    `INSERT INTO space_weather
+       (timestamp, kp_index, kp_label, xray_flux, xray_class,
+        proton_flux_1mev, proton_flux_10mev, proton_flux_100mev,
+        radiation_risk)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      new Date(solar.timestamp),
+      solar.kpIndex,
+      solar.kpLabel,
+      solar.xrayFlux,
+      solar.xrayClass,
+      solar.protonFlux1MeV,
+      solar.protonFlux10MeV,
+      solar.protonFlux100MeV,
+      solar.radiationRisk,
+    ]
+  );
+}
+
+export async function archiveTelemetryChannel(
+  timestamp: number,
+  channelId: string,
+  value: string,
+  status: string
+): Promise<void> {
+  const db = getPool();
+  await db.execute(
+    `INSERT INTO iss_telemetry (timestamp, channel_id, value, status)
+     VALUES (?, ?, ?, ?)`,
+    [new Date(timestamp), channelId, value, status]
+  );
+}
+
+export async function upsertEvent(event: ISSEvent): Promise<void> {
+  const db = getPool();
+  await db.execute(
+    `INSERT INTO events
+       (id, type, title, description, status,
+        scheduled_start, scheduled_end,
+        actual_start, actual_end, metadata)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+     ON DUPLICATE KEY UPDATE
+       status       = VALUES(status),
+       actual_start = VALUES(actual_start),
+       actual_end   = VALUES(actual_end),
+       metadata     = VALUES(metadata)`,
+    [
+      event.id,
+      event.type,
+      event.title,
+      event.description,
+      event.status,
+      new Date(event.scheduledStart),
+      new Date(event.scheduledEnd),
+      event.actualStart != null ? new Date(event.actualStart) : null,
+      event.actualEnd != null ? new Date(event.actualEnd) : null,
+      JSON.stringify(event.metadata),
+    ]
+  );
+}
+
+// ─── Query Functions ──────────────────────────────────────────────────────────
+
+const METRIC_COLUMN_ALLOWLIST = new Set([
+  "altitude",
+  "velocity",
+  "speed_kmh",
+  "latitude",
+  "longitude",
+  "inclination",
+]);
+
+export async function getMetricHistory(
+  column: string,
+  hours: number,
+  maxPoints: number
+): Promise<{ timestamp: number; value: number }[]> {
+  if (!METRIC_COLUMN_ALLOWLIST.has(column)) {
+    throw new Error(`Column "${column}" is not allowed`);
+  }
+
+  const db = getPool();
+
+  // Count total rows in the window first
+  const [countRows] = await db.execute<RowDataPacket[]>(
+    `SELECT COUNT(*) AS total
+     FROM orbital_state
+     WHERE timestamp >= DATE_SUB(NOW(), INTERVAL ? HOUR)`,
+    [hours]
+  );
+  const total = (countRows[0]?.total as number) ?? 0;
+
+  if (total === 0) return [];
+
+  // Downsample using modulo row numbering when we have more rows than maxPoints
+  const step = total > maxPoints ? Math.floor(total / maxPoints) : 1;
+
+  // Use a safe column name (already validated above via allowlist)
+  const safeColumn = column as string;
+
+  const [rows] = await db.execute<RowDataPacket[]>(
+    `SELECT timestamp, ${safeColumn} AS value
+     FROM (
+       SELECT timestamp, ${safeColumn},
+              ROW_NUMBER() OVER (ORDER BY timestamp) AS rn
+       FROM orbital_state
+       WHERE timestamp >= DATE_SUB(NOW(), INTERVAL ? HOUR)
+     ) ranked
+     WHERE rn % ? = 1
+     ORDER BY timestamp`,
+    [hours, step]
+  );
+
+  return rows.map((r) => ({
+    timestamp: new Date(r.timestamp as string).getTime(),
+    value: r.value as number,
+  }));
+}
+
+export async function getActiveEvents(): Promise<ISSEvent[]> {
+  const db = getPool();
+  const [rows] = await db.execute<RowDataPacket[]>(
+    `SELECT * FROM events
+     WHERE status IN ('scheduled', 'active')
+     ORDER BY scheduled_start`
+  );
+  return rows.map(rowToEvent);
+}
+
+export async function getUpcomingEvents(limit = 5): Promise<ISSEvent[]> {
+  const db = getPool();
+  const [rows] = await db.execute<RowDataPacket[]>(
+    `SELECT * FROM events
+     WHERE scheduled_start >= NOW()
+       AND status = 'scheduled'
+     ORDER BY scheduled_start
+     LIMIT ?`,
+    [limit]
+  );
+  return rows.map(rowToEvent);
+}
+
+export async function getSnapshotAt(timestamp: number): Promise<Snapshot> {
+  const db = getPool();
+  const ts = new Date(timestamp);
+
+  const [orbitalRows] = await db.execute<RowDataPacket[]>(
+    `SELECT * FROM orbital_state
+     WHERE timestamp <= ?
+     ORDER BY timestamp DESC
+     LIMIT 1`,
+    [ts]
+  );
+
+  const [solarRows] = await db.execute<RowDataPacket[]>(
+    `SELECT * FROM space_weather
+     WHERE timestamp <= ?
+     ORDER BY timestamp DESC
+     LIMIT 1`,
+    [ts]
+  );
+
+  const [eventRows] = await db.execute<RowDataPacket[]>(
+    `SELECT * FROM events
+     WHERE scheduled_start <= ?
+       AND status IN ('scheduled', 'active', 'completed')
+     ORDER BY scheduled_start DESC
+     LIMIT 1`,
+    [ts]
+  );
+
+  const orbital =
+    orbitalRows.length > 0 ? rowToOrbitalState(orbitalRows[0]) : null;
+
+  if (!orbital) {
+    throw new Error(`No orbital state found at or before ${ts.toISOString()}`);
+  }
+
+  return {
+    timestamp,
+    orbital,
+    telemetry: null,
+    solar: solarRows.length > 0 ? rowToSolar(solarRows[0]) : null,
+    activeEvent: eventRows.length > 0 ? rowToEvent(eventRows[0]) : null,
+  };
+}
+
+export async function incrementPageViews(): Promise<number> {
+  const db = getPool();
+  await db.execute(
+    `UPDATE page_views SET count = count + 1 WHERE id = 1`
+  );
+  const [rows] = await db.execute<RowDataPacket[]>(
+    `SELECT count FROM page_views WHERE id = 1`
+  );
+  return rows[0]?.count as number ?? 0;
+}
