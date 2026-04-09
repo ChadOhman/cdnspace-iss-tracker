@@ -319,7 +319,8 @@ export function Dashboard() {
           fontSize: "0.9rem",
           lineHeight: 1,
           padding: 0,
-          transition: "color 0.15s, border-color 0.15s",
+          transition: "color 0.15s, border-color 0.15s, box-shadow 0.15s",
+          boxShadow: "0 0 12px 3px rgba(0, 229, 255, 0.25), 0 2px 8px rgba(0, 0, 0, 0.5)",
         }}
         onMouseEnter={(e) => {
           (e.currentTarget as HTMLButtonElement).style.color = "var(--color-text-primary, #e0e0e0)";
