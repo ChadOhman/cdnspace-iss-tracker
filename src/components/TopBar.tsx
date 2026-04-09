@@ -97,6 +97,18 @@ function TopBarInner({
         <span style={{ color: "var(--color-text-primary)", fontWeight: 600 }}>
           🛰️ International Space Station
         </span>
+        <span style={{
+          padding: "1px 5px",
+          borderRadius: 3,
+          background: "rgba(255,140,0,0.15)",
+          border: "1px solid rgba(255,140,0,0.4)",
+          color: "var(--color-accent-orange)",
+          fontSize: 8,
+          fontWeight: 700,
+          letterSpacing: "0.1em",
+        }}>
+          ALPHA
+        </span>
         {visitorCount > 0 && (
           <span style={{ color: "var(--color-text-muted)" }}>
             {visitorCount} online
