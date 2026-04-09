@@ -1,8 +1,27 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import dynamic from "next/dynamic";
 import PanelFrame from "@/components/shared/PanelFrame";
 import type { OrbitalState } from "@/lib/types";
+
+const Globe3D = dynamic(() => import("@/components/panels/Globe3D"), {
+  ssr: false,
+  loading: () => (
+    <div
+      style={{
+        height: 240,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        color: "var(--color-text-muted)",
+        fontSize: 11,
+      }}
+    >
+      Loading 3D Globe...
+    </div>
+  ),
+});
 
 interface GroundTrackPanelProps {
   orbital: OrbitalState | null;
@@ -126,18 +145,7 @@ export default function GroundTrackPanel({ orbital }: GroundTrackPanelProps) {
       bodyClassName=""
     >
       {mode3D ? (
-        <div
-          style={{
-            height: 240,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            color: "var(--color-text-muted)",
-            fontSize: 11,
-          }}
-        >
-          3D Globe — Coming in Task 19
-        </div>
+        <Globe3D orbital={orbital} width={560} height={240} />
       ) : (
         <div
           ref={mapRef}
