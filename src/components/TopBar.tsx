@@ -156,6 +156,34 @@ function TopBarInner({
         </div>
       )}
 
+      {/* TDRS signal status */}
+      {orbital && (() => {
+        const TDRS = [
+          { name: "W", lon: -171 },
+          { name: "E", lon: -41 },
+          { name: "P", lon: -150 },
+        ];
+        const inView = TDRS.filter(({ lon }) => {
+          const delta = Math.abs(orbital.lon - lon);
+          return (delta > 180 ? 360 - delta : delta) < 70;
+        }).length;
+        const hasSignal = inView > 0;
+        return (
+          <span
+            style={{ display: "flex", alignItems: "center", gap: 4, cursor: "help" }}
+            title={`TDRS Relay: ${inView} of 3 satellites in view. ${hasSignal ? "Signal active." : "Loss of signal."}`}
+          >
+            <span style={{ color: "var(--color-text-muted)" }}>📡</span>
+            <span style={{
+              color: hasSignal ? "var(--color-accent-green)" : "var(--color-accent-red)",
+              fontWeight: 600,
+            }}>
+              {hasSignal ? `${inView}/3` : "LOS"}
+            </span>
+          </span>
+        );
+      })()}
+
       {/* Right side */}
       <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
         {orbital && (
