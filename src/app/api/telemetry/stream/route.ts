@@ -6,8 +6,8 @@ import { SseManager } from "@/lib/telemetry/sse-manager";
 import { pollTle, getCurrentTle } from "@/lib/pollers/tle-poller";
 import { propagateFromTle } from "@/lib/pollers/sgp4-propagator";
 import { pollSolarActivity } from "@/lib/pollers/solar";
-import { archiveOrbitalState, archiveSolar } from "@/lib/db";
-import { connectLightstreamer, deriveTelemetry } from "@/lib/telemetry/lightstreamer-client";
+import { archiveOrbitalState, archiveSolar, archiveTelemetryChannel, pruneOldData } from "@/lib/db";
+import { connectLightstreamer, deriveTelemetry, getLatestChannels } from "@/lib/telemetry/lightstreamer-client";
 import {
   TLE_POLL_INTERVAL_MS,
   SGP4_TICK_INTERVAL_MS,
@@ -15,6 +15,10 @@ import {
   SSE_BROADCAST_INTERVAL_MS,
   VISITOR_COUNT_INTERVAL_MS,
 } from "@/lib/constants";
+
+const TELEMETRY_ARCHIVE_INTERVAL_MS = 10_000; // Archive Lightstreamer data every 10s
+const PRUNE_INTERVAL_MS = 24 * 60 * 60 * 1000; // Run prune daily
+const PRUNE_RETENTION_DAYS = 30;
 
 const cache = new TelemetryCache();
 const sseManager = new SseManager();
@@ -111,12 +115,37 @@ function ensurePollers() {
       });
   }, SOLAR_POLL_INTERVAL_MS);
 
-  // 6. Broadcast full telemetry payload on interval
+  // 6. Archive Lightstreamer telemetry every 10 seconds
+  setInterval(() => {
+    const channels = getLatestChannels();
+    const keys = Object.keys(channels);
+    if (keys.length === 0) return;
+
+    const ts = Date.now();
+    for (const channelId of keys) {
+      const ch = channels[channelId];
+      archiveTelemetryChannel(ts, channelId, ch.value, ch.status).catch(() => {});
+    }
+  }, TELEMETRY_ARCHIVE_INTERVAL_MS);
+
+  // 7. Prune old data daily (keep 30 days)
+  const runPrune = () => {
+    pruneOldData(PRUNE_RETENTION_DAYS)
+      .then((deleted) => {
+        if (deleted > 0) console.log(`[prune] Removed ${deleted} old rows (>${PRUNE_RETENTION_DAYS}d)`);
+      })
+      .catch((err) => console.error("[prune] Failed:", err.message ?? err));
+  };
+  // Run once on startup (delayed 30s to let schema init finish), then daily
+  setTimeout(runPrune, 30_000);
+  setInterval(runPrune, PRUNE_INTERVAL_MS);
+
+  // 8. Broadcast full telemetry payload on interval
   setInterval(() => {
     sseManager.broadcast("telemetry", cache.getPayload());
   }, SSE_BROADCAST_INTERVAL_MS);
 
-  // 7. Visitor count broadcast
+  // 9. Visitor count broadcast
   setInterval(() => {
     const count = sseManager.getClientCount();
     cache.visitorCount = count;

@@ -433,6 +433,32 @@ export async function getSnapshotAt(timestamp: number): Promise<Snapshot> {
   };
 }
 
+/**
+ * Delete rows older than `retentionDays` from all time-series tables.
+ * Returns the total number of rows deleted.
+ */
+export async function pruneOldData(retentionDays: number): Promise<number> {
+  const db = getPool();
+  let total = 0;
+
+  const tables = [
+    { name: "orbital_state", col: "timestamp" },
+    { name: "space_weather", col: "timestamp" },
+    { name: "iss_telemetry", col: "timestamp" },
+  ];
+
+  for (const { name, col } of tables) {
+    const [result] = await db.execute(
+      `DELETE FROM ${name} WHERE ${col} < DATE_SUB(NOW(), INTERVAL ? DAY)`,
+      [retentionDays]
+    );
+    const affected = (result as { affectedRows?: number }).affectedRows ?? 0;
+    total += affected;
+  }
+
+  return total;
+}
+
 export async function incrementPageViews(): Promise<number> {
   const db = getPool();
   await db.execute(
