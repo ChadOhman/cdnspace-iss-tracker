@@ -53,8 +53,8 @@ export const TRANSLATIONS: Record<Locale, Record<string, Record<string, string>>
       urine: "Urine",
     },
     attitude: {
-      cmgStatus: "CMG Status",
-      gnc: "GNC / Attitude",
+      cmgStatus: "Control Moment Gyroscopes",
+      gnc: "Guidance, Navigation & Control",
       roll: "Roll",
       pitch: "Pitch",
       yaw: "Yaw",
@@ -322,8 +322,8 @@ export const TRANSLATIONS: Record<Locale, Record<string, Record<string, string>>
       urine: "Urine",
     },
     attitude: {
-      cmgStatus: "État CMG",
-      gnc: "GNC / Attitude",
+      cmgStatus: "Gyroscopes de contrôle de moment",
+      gnc: "Guidance, Navigation & Control",
       roll: "Roulis",
       pitch: "Tangage",
       yaw: "Lacet",
