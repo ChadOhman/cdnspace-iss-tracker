@@ -93,7 +93,7 @@ function TopBarInner({
       <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
         {connectionEl}
         <span style={{ color: "var(--color-text-primary)", fontWeight: 600 }}>
-          🛰️ ISS
+          🛰️ International Space Station
         </span>
         {visitorCount > 0 && (
           <span style={{ color: "var(--color-text-muted)" }}>
