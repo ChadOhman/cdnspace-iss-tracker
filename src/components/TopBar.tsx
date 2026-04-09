@@ -4,6 +4,7 @@ import { useEffect, useState, memo } from "react";
 import type { OrbitalState } from "@/lib/types";
 import { useLocale } from "@/context/LocaleContext";
 import { useUnits } from "@/context/UnitsContext";
+import { useTime } from "@/context/TimeContext";
 
 interface TopBarProps {
   orbital: OrbitalState | null;
@@ -22,20 +23,17 @@ function TopBarInner({
 }: TopBarProps) {
   const { t } = useLocale();
   const { distance, speed } = useUnits();
-  const [utc, setUtc] = useState("");
+  const { formatTime, clockFormat, setClockFormat, clockLabel } = useTime();
+  const [timeStr, setTimeStr] = useState("");
 
   useEffect(() => {
     function tick() {
-      const now = new Date();
-      const hh = String(now.getUTCHours()).padStart(2, "0");
-      const mm = String(now.getUTCMinutes()).padStart(2, "0");
-      const ss = String(now.getUTCSeconds()).padStart(2, "0");
-      setUtc(`${hh}:${mm}:${ss}`);
+      setTimeStr(formatTime(new Date()));
     }
     tick();
     const id = setInterval(tick, 1000);
     return () => clearInterval(id);
-  }, []);
+  }, [formatTime]);
 
   const isDelayed =
     lastUpdate !== null && Date.now() - lastUpdate > 10 * 60 * 1000;
@@ -199,8 +197,17 @@ function TopBarInner({
             DELAYED
           </span>
         )}
-        <span style={{ color: "var(--color-accent-cyan)", letterSpacing: "0.05em" }}>
-          {utc} UTC
+        <span
+          onClick={() => setClockFormat(clockFormat === "utc" ? "local" : "utc")}
+          style={{
+            color: "var(--color-accent-cyan)",
+            letterSpacing: "0.05em",
+            cursor: "pointer",
+            userSelect: "none",
+          }}
+          title={`Click to switch to ${clockFormat === "utc" ? "local" : "UTC"} time`}
+        >
+          {timeStr} {clockLabel}
         </span>
       </div>
     </div>

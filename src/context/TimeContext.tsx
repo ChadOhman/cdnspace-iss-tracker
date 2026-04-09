@@ -12,6 +12,7 @@ import {
 import type { PlaybackSpeed } from "@/lib/types";
 
 type TimeMode = "LIVE" | "SIM";
+export type ClockFormat = "utc" | "local";
 
 interface TimeContextValue {
   mode: TimeMode;
@@ -22,6 +23,14 @@ interface TimeContextValue {
   playbackSpeed: PlaybackSpeed;
   setPlaybackSpeed: (speed: PlaybackSpeed) => void;
   jumpTo: (time: Date) => void;
+  clockFormat: ClockFormat;
+  setClockFormat: (fmt: ClockFormat) => void;
+  /** Format a Date to a time string based on current clockFormat */
+  formatTime: (date: Date) => string;
+  /** Format a Date to a date+time string based on current clockFormat */
+  formatDateTime: (date: Date) => string;
+  /** Label for the current clock format ("UTC" or timezone abbreviation) */
+  clockLabel: string;
 }
 
 const TimeContext = createContext<TimeContextValue | null>(null);
@@ -104,6 +113,29 @@ export function TimeProvider({ children }: { children: ReactNode }) {
     setMode(newMode);
   }, []);
 
+  // Clock format (UTC vs local)
+  const [clockFormat, setClockFormat] = useState<ClockFormat>("utc");
+
+  const pad2 = (n: number) => String(n).padStart(2, "0");
+
+  const formatTime = useCallback((date: Date): string => {
+    if (clockFormat === "utc") {
+      return `${pad2(date.getUTCHours())}:${pad2(date.getUTCMinutes())}:${pad2(date.getUTCSeconds())}`;
+    }
+    return `${pad2(date.getHours())}:${pad2(date.getMinutes())}:${pad2(date.getSeconds())}`;
+  }, [clockFormat]);
+
+  const formatDateTime = useCallback((date: Date): string => {
+    if (clockFormat === "utc") {
+      return `${date.getUTCFullYear()}-${pad2(date.getUTCMonth() + 1)}-${pad2(date.getUTCDate())} ${formatTime(date)}`;
+    }
+    return `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())} ${formatTime(date)}`;
+  }, [clockFormat, formatTime]);
+
+  const clockLabel = clockFormat === "utc"
+    ? "UTC"
+    : Intl.DateTimeFormat().resolvedOptions().timeZone.split("/").pop()?.replace(/_/g, " ") ?? "Local";
+
   return (
     <TimeContext.Provider
       value={{
@@ -115,6 +147,11 @@ export function TimeProvider({ children }: { children: ReactNode }) {
         playbackSpeed,
         setPlaybackSpeed,
         jumpTo,
+        clockFormat,
+        setClockFormat,
+        formatTime,
+        formatDateTime,
+        clockLabel,
       }}
     >
       {children}
