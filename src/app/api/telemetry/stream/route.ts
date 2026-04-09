@@ -64,6 +64,12 @@ function ensurePollers() {
   // 4. Lightstreamer: connect and update cache on callback
   connectLightstreamer((channels) => {
     cache.telemetry = deriveTelemetry(channels);
+  }).then((connected) => {
+    if (connected) {
+      console.log("[stream] Lightstreamer connected successfully");
+    } else {
+      console.warn("[stream] Lightstreamer could not connect — ISS Systems panel will show 'Awaiting telemetry'");
+    }
   }).catch((err) => {
     console.error("[stream] Lightstreamer connect failed:", err);
   });

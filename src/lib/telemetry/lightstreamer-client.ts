@@ -98,25 +98,23 @@ export async function connectLightstreamer(
     const subscription = new Subscription(
       "MERGE",
       [...CHANNEL_IDS],
-      ["Value", "Status.Quality"]
+      ["TimeStamp", "Value", "Status.Class", "CalibratedData"]
     );
 
     subscription.addListener({
       onItemUpdate(update: {
         getItemName(): string;
-        getValue(field: string): string;
+        getValue(field: string): string | null;
       }) {
         const item = update.getItemName();
-        const value = update.getValue("Value") ?? "";
-        const status = update.getValue("Status.Quality") ?? "OK";
+        const value = update.getValue("Value") ?? update.getValue("CalibratedData") ?? "";
+        const status = update.getValue("Status.Class") ?? "OK";
+        const tsStr = update.getValue("TimeStamp");
+        const timestamp = tsStr ? parseFloat(tsStr) * 1000 : Date.now();
 
         latestChannels = {
           ...latestChannels,
-          [item]: {
-            value,
-            status,
-            timestamp: Date.now(),
-          },
+          [item]: { value, status, timestamp },
         };
 
         onUpdate({ ...latestChannels });
@@ -125,8 +123,11 @@ export async function connectLightstreamer(
 
     client.subscribe(subscription);
     client.connect();
+    console.log("[lightstreamer] Connected to", LIGHTSTREAMER_SERVER, "adapter:", LIGHTSTREAMER_ADAPTER);
+    console.log("[lightstreamer] Subscribed to", CHANNEL_IDS.length, "channels");
     return true;
-  } catch {
+  } catch (err) {
+    console.error("[lightstreamer] Failed to connect:", err instanceof Error ? err.message : err);
     return false;
   }
 }
