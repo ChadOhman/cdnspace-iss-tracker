@@ -270,17 +270,25 @@ export default function EclssPanel({ telemetry }: EclssPanelProps) {
               <div style={{ color: "var(--color-text-muted)", fontSize: 8, marginBottom: 3 }}>
                 {t("eclss.genRate").toUpperCase()}
               </div>
-              <div
-                style={{
-                  color: "var(--color-accent-green)",
-                  fontSize: 18,
-                  fontWeight: 700,
-                  fontVariantNumeric: "tabular-nums",
-                }}
-              >
-                {telemetry.eclss.o2GenRate.toFixed(2)}
-              </div>
-              <div style={{ color: "var(--color-text-muted)", fontSize: 8 }}>mg/sec</div>
+              {telemetry.eclss.o2GenRate > 0 ? (
+                <>
+                  <div
+                    style={{
+                      color: "var(--color-accent-green)",
+                      fontSize: 18,
+                      fontWeight: 700,
+                      fontVariantNumeric: "tabular-nums",
+                    }}
+                  >
+                    {telemetry.eclss.o2GenRate.toFixed(2)}
+                  </div>
+                  <div style={{ color: "var(--color-text-muted)", fontSize: 8 }}>mg/sec</div>
+                </>
+              ) : (
+                <div style={{ color: "var(--color-text-muted)", fontSize: 11, marginTop: 4 }}>
+                  Standby
+                </div>
+              )}
             </div>
             <StatusRow label="OGS" value={telemetry.eclss.ogsStatus} />
             <div
