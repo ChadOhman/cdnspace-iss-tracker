@@ -144,12 +144,87 @@ export default function AttitudePanel({ telemetry }: AttitudePanelProps) {
   const { t } = useLocale();
   const { temperature } = useUnits();
 
+  const stationAlarmActive = (telemetry?.attitude.stationAlarm ?? 0) !== 0;
+  const gyroAlarmActive    = (telemetry?.attitude.gyroAlarm    ?? 0) !== 0;
+  const anyAlarm           = stationAlarmActive || gyroAlarmActive;
+
   return (
     <PanelFrame
       title={t("panels.attitudeControl").toUpperCase()}
       icon="🔄"
       accentColor="var(--color-accent-orange)"
     >
+      {/* ── Alarm banners ──────────────────────────────────────────────────── */}
+      {stationAlarmActive && (
+        <div
+          style={{
+            marginBottom: 6,
+            padding: "5px 8px",
+            borderRadius: 4,
+            background: "rgba(255, 51, 51, 0.15)",
+            border: "1px solid var(--color-accent-red)",
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
+            animation: "attitudeAlarmPulse 1s ease-in-out infinite",
+          }}
+        >
+          <span style={{ fontSize: 11 }}>⚠</span>
+          <span
+            style={{
+              color: "var(--color-accent-red)",
+              fontSize: 10,
+              fontWeight: 700,
+              letterSpacing: "0.08em",
+            }}
+          >
+            ATTITUDE ALARM
+          </span>
+          <span style={{ color: "var(--color-text-muted)", fontSize: 9, marginLeft: "auto" }}>
+            Code {telemetry!.attitude.stationAlarm}
+          </span>
+        </div>
+      )}
+      {gyroAlarmActive && (
+        <div
+          style={{
+            marginBottom: 6,
+            padding: "5px 8px",
+            borderRadius: 4,
+            background: "rgba(255, 51, 51, 0.15)",
+            border: "1px solid var(--color-accent-red)",
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
+            animation: "attitudeAlarmPulse 1s ease-in-out infinite",
+          }}
+        >
+          <span style={{ fontSize: 11 }}>⚠</span>
+          <span
+            style={{
+              color: "var(--color-accent-red)",
+              fontSize: 10,
+              fontWeight: 700,
+              letterSpacing: "0.08em",
+            }}
+          >
+            GYRO ALARM
+          </span>
+          <span style={{ color: "var(--color-text-muted)", fontSize: 9, marginLeft: "auto" }}>
+            Code {telemetry!.attitude.gyroAlarm}
+          </span>
+        </div>
+      )}
+      {/* Keyframe for alarm pulse — injected inline via a style tag */}
+      {anyAlarm && (
+        <style>{`
+          @keyframes attitudeAlarmPulse {
+            0%, 100% { opacity: 1; }
+            50%       { opacity: 0.5; }
+          }
+        `}</style>
+      )}
+
       {!telemetry ? (
         <div
           style={{
