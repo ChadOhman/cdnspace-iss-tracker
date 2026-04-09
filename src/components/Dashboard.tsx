@@ -17,9 +17,13 @@ import SpaceWeatherPanel from "@/components/panels/SpaceWeatherPanel";
 import PassPredictionPanel from "@/components/panels/PassPredictionPanel";
 import LiveVideoPanel from "@/components/panels/LiveVideoPanel";
 import TimelinePanel from "@/components/panels/TimelinePanel";
-import ISSSystemsPanel from "@/components/panels/ISSSystemsPanel";
+import SolarArrayPanel from "@/components/panels/SolarArrayPanel";
+import EclssPanel from "@/components/panels/EclssPanel";
 import EventBannerPanel from "@/components/panels/EventBannerPanel";
 import CrewRosterPanel from "@/components/panels/CrewRosterPanel";
+import AttitudePanel from "@/components/panels/AttitudePanel";
+import ModuleTempsPanel from "@/components/panels/ModuleTempsPanel";
+import AirlockPanel from "@/components/panels/AirlockPanel";
 import UpcomingEventsPanel from "@/components/panels/UpcomingEventsPanel";
 import DayNightPanel from "@/components/panels/DayNightPanel";
 
@@ -63,13 +67,17 @@ export function Dashboard() {
       {/* Center column */}
       <div className="col-center">
         <LiveVideoPanel />
-        <ISSSystemsPanel telemetry={stream.telemetry} />
+        <SolarArrayPanel telemetry={stream.telemetry} />
+        <EclssPanel telemetry={stream.telemetry} />
       </div>
 
       {/* Right column */}
       <div className="col-right">
         <EventBannerPanel event={stream.activeEvent ?? activeEvent} />
         <CrewRosterPanel />
+        <AttitudePanel telemetry={stream.telemetry} />
+        <ModuleTempsPanel telemetry={stream.telemetry} />
+        <AirlockPanel telemetry={stream.telemetry} />
         <UpcomingEventsPanel />
         <DayNightPanel orbital={stream.orbital} />
       </div>
