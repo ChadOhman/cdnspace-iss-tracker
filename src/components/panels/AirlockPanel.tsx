@@ -146,15 +146,15 @@ export default function AirlockPanel({ telemetry }: AirlockPanelProps) {
               {t("airlock.pressures").toUpperCase()}
             </div>
             <PressureGauge
-              label={t("airlock.crewLock").toUpperCase()}
-              value={telemetry.airlock.crewLockPressure}
-              max={15}
+              label="O₂ SUPPLY A"
+              value={telemetry.airlock.o2SupplyPressureA}
+              max={1000}
               color="var(--color-accent-orange)"
             />
             <PressureGauge
-              label={t("airlock.equipLock").toUpperCase()}
-              value={telemetry.airlock.equipLockPressure}
-              max={15}
+              label="O₂ SUPPLY B"
+              value={telemetry.airlock.o2SupplyPressureB}
+              max={1000}
               color="var(--color-accent-orange)"
             />
             <div
@@ -199,21 +199,21 @@ export default function AirlockPanel({ telemetry }: AirlockPanelProps) {
             <PressureGauge
               label="O₂ HIGH"
               value={telemetry.airlock.o2HighTank}
-              max={3000}
+              max={14000}
               unit="psi"
               color="var(--color-accent-green)"
             />
             <PressureGauge
               label="O₂ LOW"
               value={telemetry.airlock.o2LowTank}
-              max={3000}
+              max={5000}
               unit="psi"
               color="var(--color-accent-cyan)"
             />
             <PressureGauge
               label="N₂"
               value={telemetry.airlock.n2Tank}
-              max={3000}
+              max={10000}
               unit="psi"
               color="var(--color-accent-orange)"
             />

@@ -151,8 +151,8 @@ const TELEMETRY_IDS = [
   "AIRLOCK000005", // EMU 3 O₂ supply pressure (psi)
   "AIRLOCK000006", // EMU 3 O₂ supply current (A)
   "AIRLOCK000047", // Crew lock pump status (enumerated)
-  "AIRLOCK000049", // Crew lock pressure (psi)
-  "AIRLOCK000054", // Equipment lock pressure (psi)
+  "AIRLOCK000049", // Airlock O₂ supply pressure A (psi)
+  "AIRLOCK000054", // Airlock O₂ supply pressure B (psi)
   "AIRLOCK000055", // O₂ high pressure tank (psi)
   "AIRLOCK000056", // O₂ low pressure tank (psi)
   "AIRLOCK000057", // N₂ tank pressure (psi)
@@ -547,8 +547,8 @@ export function deriveTelemetry(
     emu3O2Pressure:   num("AIRLOCK000005"),
     emu3O2Current:    num("AIRLOCK000006"),
     crewLockPump:     str("AIRLOCK000047"),
-    crewLockPressure: num("AIRLOCK000049"),
-    equipLockPressure: num("AIRLOCK000054"),
+    o2SupplyPressureA: num("AIRLOCK000049"),
+    o2SupplyPressureB: num("AIRLOCK000054"),
     o2HighTank:       num("AIRLOCK000055"),
     o2LowTank:        num("AIRLOCK000056"),
     n2Tank:           num("AIRLOCK000057"),

@@ -155,8 +155,8 @@ export interface ISSTelemetry {
   // ── Airlock / EVA ──────────────────────────────────────────────────────────
   /** Airlock and EMU data */
   airlock: {
-    crewLockPressure: number;
-    equipLockPressure: number;
+    o2SupplyPressureA: number;
+    o2SupplyPressureB: number;
     o2HighTank: number;
     o2LowTank: number;
     n2Tank: number;
