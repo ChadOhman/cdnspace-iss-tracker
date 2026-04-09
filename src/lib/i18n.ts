@@ -63,7 +63,7 @@ export const TRANSLATIONS: Record<Locale, Record<string, Record<string, string>>
     moduleTemps: {
       schematic: "Module Schematic",
       externalLoops: "External Thermal Loops",
-      ccaa: "CCAA Status",
+      ccaa: "Common Cabin Air Assembly (CCAA) Status",
     },
     airlock: {
       pressures: "Pressures",
@@ -332,7 +332,7 @@ export const TRANSLATIONS: Record<Locale, Record<string, Record<string, string>>
     moduleTemps: {
       schematic: "Schéma des modules",
       externalLoops: "Boucles thermiques externes",
-      ccaa: "État CCAA",
+      ccaa: "Assemblage d'air commun de cabine (CCAA)",
     },
     airlock: {
       pressures: "Pressions",
