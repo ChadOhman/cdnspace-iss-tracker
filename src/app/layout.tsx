@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { JetBrains_Mono } from "next/font/google";
+import { LocaleProvider } from "@/context/LocaleContext";
 import "./globals.css";
 
 const jetbrainsMono = JetBrains_Mono({
@@ -48,7 +49,7 @@ export default function RootLayout({
         >
           Skip to main content
         </a>
-        <main id="main">{children}</main>
+        <LocaleProvider><main id="main">{children}</main></LocaleProvider>
       </body>
     </html>
   );
