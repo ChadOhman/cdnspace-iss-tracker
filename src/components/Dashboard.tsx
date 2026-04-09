@@ -72,6 +72,7 @@ import ModuleTempsPanel from "@/components/panels/ModuleTempsPanel";
 import AirlockPanel from "@/components/panels/AirlockPanel";
 import UpcomingEventsPanel from "@/components/panels/UpcomingEventsPanel";
 import DayNightPanel from "@/components/panels/DayNightPanel";
+import TdrsPanel from "@/components/panels/TdrsPanel";
 
 export function Dashboard() {
   useBuildCheck();
@@ -123,6 +124,7 @@ export function Dashboard() {
         <EventBannerPanel event={stream.activeEvent ?? activeEvent} />
         <CrewRosterPanel />
         <AttitudePanel telemetry={stream.telemetry} />
+        <TdrsPanel orbital={stream.orbital} />
         <ModuleTempsPanel telemetry={stream.telemetry} />
         <AirlockPanel telemetry={stream.telemetry} />
         <UpcomingEventsPanel />
