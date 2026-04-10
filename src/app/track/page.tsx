@@ -6,6 +6,16 @@ import { useTelemetryStream } from "@/hooks/useTelemetryStream";
 import { useLocale } from "@/context/LocaleContext";
 import { useUnits } from "@/context/UnitsContext";
 import type { PassPrediction } from "@/lib/types";
+import {
+  connectTelescope,
+  disconnectTelescope,
+  getTelescopeState,
+  slewToCoordinates,
+  setTracking,
+  abortSlew,
+  type AlpacaState,
+} from "@/lib/alpaca";
+import { computeTopocentric, formatRA, formatDec, type TopocentricResult } from "@/lib/topocentric";
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
@@ -356,6 +366,90 @@ export default function TrackPage() {
     const visible = aboveHorizon && orbital.isInSunlight;
     return { distKm, elevDeg, aboveHorizon, visible };
   })();
+
+  // ── Topocentric RA/Dec for telescope pointing ─────────────────────────────
+  const topo: TopocentricResult | null = (() => {
+    if (!observer || !orbital) return null;
+    return computeTopocentric(
+      { lat: orbital.lat, lon: orbital.lon, altitudeKm: orbital.altitude },
+      { lat: observer.lat, lon: observer.lon },
+      Date.now()
+    );
+  })();
+
+  // ── Telescope (ASCOM Alpaca) ───────────────────────────────────────────────
+  const [telescopeHost, setTelescopeHost] = useState("192.168.1.100:11111");
+  const [alpacaState, setAlpacaState] = useState<AlpacaState | null>(null);
+  const [telescopeStatus, setTelescopeStatus] = useState<
+    "disconnected" | "connecting" | "connected" | "slewing"
+  >("disconnected");
+  const [telescopeError, setTelescopeError] = useState<string | null>(null);
+  const [isTracking, setIsTracking] = useState(false);
+
+  useEffect(() => {
+    const stored = localStorage.getItem("alpaca_host");
+    if (stored) setTelescopeHost(stored);
+  }, []);
+
+  const handleTelescopeConnect = useCallback(async () => {
+    setTelescopeStatus("connecting");
+    setTelescopeError(null);
+    try {
+      localStorage.setItem("alpaca_host", telescopeHost);
+    } catch { /* ignore */ }
+    try {
+      await connectTelescope(telescopeHost);
+      const state = await getTelescopeState(telescopeHost);
+      setAlpacaState(state);
+      setTelescopeStatus("connected");
+      setIsTracking(state.tracking);
+    } catch (err) {
+      setTelescopeError(err instanceof Error ? err.message : String(err));
+      setTelescopeStatus("disconnected");
+    }
+  }, [telescopeHost]);
+
+  const handleTelescopeDisconnect = useCallback(async () => {
+    try {
+      await disconnectTelescope(telescopeHost);
+    } catch { /* ignore */ }
+    setAlpacaState(null);
+    setTelescopeStatus("disconnected");
+    setIsTracking(false);
+  }, [telescopeHost]);
+
+  const handleGoto = useCallback(async () => {
+    if (telescopeStatus !== "connected" || !topo) return;
+    setTelescopeStatus("slewing");
+    setTelescopeError(null);
+    try {
+      await slewToCoordinates(telescopeHost, topo.ra, topo.dec);
+      setTelescopeStatus("connected");
+    } catch (err) {
+      setTelescopeError(err instanceof Error ? err.message : String(err));
+      setTelescopeStatus("connected");
+    }
+  }, [telescopeStatus, topo, telescopeHost]);
+
+  const handleTrackToggle = useCallback(async () => {
+    if (telescopeStatus !== "connected") return;
+    const next = !isTracking;
+    try {
+      await setTracking(telescopeHost, next);
+      setIsTracking(next);
+    } catch (err) {
+      setTelescopeError(err instanceof Error ? err.message : String(err));
+    }
+  }, [telescopeStatus, isTracking, telescopeHost]);
+
+  const handleAbort = useCallback(async () => {
+    try {
+      await abortSlew(telescopeHost);
+      setTelescopeStatus("connected");
+    } catch (err) {
+      setTelescopeError(err instanceof Error ? err.message : String(err));
+    }
+  }, [telescopeHost]);
 
   // ── Leaflet refs ───────────────────────────────────────────────────────────
   const mapRef = useRef<HTMLDivElement>(null);
@@ -928,6 +1022,222 @@ export default function TrackPage() {
                   )}
                 </>
               )}
+            </CardBody>
+          </Card>
+
+          {/* Telescope Control Card (ASCOM Alpaca) */}
+          <Card>
+            <CardHeader title="TELESCOPE CONTROL" badge={
+              <span style={{ fontSize: 8, color: "var(--color-text-muted)" }}>ASCOM ALPACA</span>
+            } />
+            <CardBody>
+              <p style={{ fontSize: 10, color: "var(--color-text-muted)", marginBottom: 10, lineHeight: 1.5 }}>
+                Point any ASCOM Alpaca-compatible telescope at the ISS. Works with the ASCOM Platform (Windows), INDIGO (macOS/Linux), or direct Alpaca servers (Celestron, Sky-Watcher, iOptron, SeeStar, etc.).
+              </p>
+
+              {/* Connection form */}
+              <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
+                <input
+                  type="text"
+                  value={telescopeHost}
+                  onChange={(e) => setTelescopeHost(e.target.value)}
+                  placeholder="host:port (e.g. 192.168.1.100:11111)"
+                  disabled={telescopeStatus !== "disconnected"}
+                  style={{
+                    flex: 1,
+                    padding: "5px 8px",
+                    background: "var(--color-bg-secondary)",
+                    border: "1px solid var(--color-border-subtle)",
+                    borderRadius: 3,
+                    color: "var(--color-text-primary)",
+                    fontFamily: "var(--font-jetbrains-mono, monospace)",
+                    fontSize: 10,
+                  }}
+                />
+                {telescopeStatus === "disconnected" ? (
+                  <button
+                    onClick={handleTelescopeConnect}
+                    style={{
+                      padding: "5px 12px",
+                      background: "rgba(0,229,255,0.15)",
+                      border: "1px solid var(--color-accent-cyan)",
+                      borderRadius: 3,
+                      color: "var(--color-accent-cyan)",
+                      fontSize: 10,
+                      fontWeight: 700,
+                      letterSpacing: "0.05em",
+                      cursor: "pointer",
+                      fontFamily: "inherit",
+                    }}
+                  >
+                    CONNECT
+                  </button>
+                ) : (
+                  <button
+                    onClick={handleTelescopeDisconnect}
+                    style={{
+                      padding: "5px 12px",
+                      background: "rgba(255,61,61,0.15)",
+                      border: "1px solid var(--color-accent-red)",
+                      borderRadius: 3,
+                      color: "var(--color-accent-red)",
+                      fontSize: 10,
+                      fontWeight: 700,
+                      letterSpacing: "0.05em",
+                      cursor: "pointer",
+                      fontFamily: "inherit",
+                    }}
+                  >
+                    DISCONNECT
+                  </button>
+                )}
+              </div>
+
+              {/* Status indicator */}
+              <div style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                padding: "5px 8px",
+                background: "var(--color-bg-secondary)",
+                border: "1px solid var(--color-border-subtle)",
+                borderRadius: 3,
+                marginBottom: 8,
+              }}>
+                <div
+                  style={{
+                    width: 8,
+                    height: 8,
+                    borderRadius: "50%",
+                    background:
+                      telescopeStatus === "connected" ? "#00ff88" :
+                      telescopeStatus === "slewing"   ? "#00e5ff" :
+                      telescopeStatus === "connecting" ? "#ffaa00" :
+                      "#444",
+                    boxShadow: telescopeStatus !== "disconnected"
+                      ? `0 0 6px 1px ${
+                          telescopeStatus === "connected" ? "#00ff88" :
+                          telescopeStatus === "slewing" ? "#00e5ff" :
+                          "#ffaa00"
+                        }`
+                      : "none",
+                  }}
+                />
+                <span style={{ fontSize: 10, color: "var(--color-text-primary)", fontWeight: 600, letterSpacing: "0.1em" }}>
+                  {telescopeStatus.toUpperCase()}
+                </span>
+                {alpacaState?.slewing && telescopeStatus !== "slewing" && (
+                  <span style={{ fontSize: 9, color: "var(--color-accent-cyan)", marginLeft: "auto" }}>
+                    SLEWING
+                  </span>
+                )}
+              </div>
+
+              {/* Topocentric position readout */}
+              {topo && telescopeStatus !== "disconnected" && (
+                <div style={{ marginBottom: 8, fontSize: 10, color: "var(--color-text-muted)" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between" }}>
+                    <span>RA</span>
+                    <span style={{ color: "var(--color-accent-cyan)", fontVariantNumeric: "tabular-nums" }}>
+                      {formatRA(topo.ra)}
+                    </span>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between" }}>
+                    <span>Dec</span>
+                    <span style={{ color: "var(--color-accent-cyan)", fontVariantNumeric: "tabular-nums" }}>
+                      {formatDec(topo.dec)}
+                    </span>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between" }}>
+                    <span>Elevation</span>
+                    <span style={{
+                      color: topo.elevation > 10 ? "var(--color-accent-green)" : topo.elevation > 0 ? "var(--color-accent-orange)" : "var(--color-text-muted)",
+                      fontVariantNumeric: "tabular-nums",
+                    }}>
+                      {topo.elevation.toFixed(1)}°
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {/* Error message */}
+              {telescopeError && (
+                <div style={{
+                  padding: "4px 6px",
+                  background: "rgba(255,61,61,0.1)",
+                  border: "1px solid rgba(255,61,61,0.3)",
+                  borderRadius: 3,
+                  color: "var(--color-accent-red)",
+                  fontSize: 9,
+                  marginBottom: 8,
+                  fontFamily: "var(--font-jetbrains-mono, monospace)",
+                }}>
+                  {telescopeError}
+                </div>
+              )}
+
+              {/* Action buttons */}
+              <div style={{ display: "flex", gap: 6 }}>
+                <button
+                  onClick={handleGoto}
+                  disabled={telescopeStatus !== "connected" || !topo}
+                  style={{
+                    flex: 1,
+                    padding: "5px 8px",
+                    background: telescopeStatus === "connected" && topo ? "rgba(0,255,136,0.15)" : "var(--color-bg-secondary)",
+                    border: `1px solid ${telescopeStatus === "connected" && topo ? "var(--color-accent-green)" : "var(--color-border-subtle)"}`,
+                    borderRadius: 3,
+                    color: telescopeStatus === "connected" && topo ? "var(--color-accent-green)" : "var(--color-text-muted)",
+                    fontSize: 10,
+                    fontWeight: 700,
+                    letterSpacing: "0.05em",
+                    cursor: telescopeStatus === "connected" && topo ? "pointer" : "not-allowed",
+                    fontFamily: "inherit",
+                  }}
+                >
+                  GOTO ISS
+                </button>
+                <button
+                  onClick={handleTrackToggle}
+                  disabled={telescopeStatus !== "connected"}
+                  style={{
+                    flex: 1,
+                    padding: "5px 8px",
+                    background: isTracking ? "rgba(255,140,0,0.15)" : "rgba(0,229,255,0.15)",
+                    border: `1px solid ${isTracking ? "var(--color-accent-orange)" : "var(--color-accent-cyan)"}`,
+                    borderRadius: 3,
+                    color: isTracking ? "var(--color-accent-orange)" : "var(--color-accent-cyan)",
+                    fontSize: 10,
+                    fontWeight: 700,
+                    letterSpacing: "0.05em",
+                    cursor: telescopeStatus === "connected" ? "pointer" : "not-allowed",
+                    opacity: telescopeStatus === "connected" ? 1 : 0.4,
+                    fontFamily: "inherit",
+                  }}
+                >
+                  {isTracking ? "STOP TRACK" : "TRACK"}
+                </button>
+                <button
+                  onClick={handleAbort}
+                  disabled={telescopeStatus === "disconnected"}
+                  style={{
+                    flex: 1,
+                    padding: "5px 8px",
+                    background: "rgba(255,61,61,0.15)",
+                    border: "1px solid var(--color-accent-red)",
+                    borderRadius: 3,
+                    color: "var(--color-accent-red)",
+                    fontSize: 10,
+                    fontWeight: 700,
+                    letterSpacing: "0.05em",
+                    cursor: telescopeStatus !== "disconnected" ? "pointer" : "not-allowed",
+                    opacity: telescopeStatus !== "disconnected" ? 1 : 0.4,
+                    fontFamily: "inherit",
+                  }}
+                >
+                  ABORT
+                </button>
+              </div>
             </CardBody>
           </Card>
 
