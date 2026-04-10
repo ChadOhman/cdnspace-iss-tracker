@@ -132,21 +132,64 @@ function getSubSolarPoint(date: Date): { lat: number; lon: number } {
   return { lat, lon: ((lon + 540) % 360) - 180 };
 }
 
-function terminatorLatAtLon(lonDeg: number, subSolar: { lat: number; lon: number }): number {
-  const sunDec = subSolar.lat * Math.PI / 180;
-  const deltaLon = (lonDeg - subSolar.lon) * Math.PI / 180;
-  if (Math.abs(sunDec) < 1e-6) {
-    return Math.cos(deltaLon) > 0 ? 90 : -90;
-  }
-  return Math.atan(-Math.cos(deltaLon) / Math.tan(sunDec)) * 180 / Math.PI;
+// Twilight bands (sun elevation below horizon).
+// -6° civil, -12° nautical, -18° astronomical. Plus 0° (ground sunset).
+const TWILIGHT_BANDS = [
+  { elevDeg: 0, opacity: 0.08 },
+  { elevDeg: -6, opacity: 0.1 },
+  { elevDeg: -12, opacity: 0.12 },
+  { elevDeg: -18, opacity: 0.12 },
+];
+
+/**
+ * Find latitude at a given longitude where solar elevation equals elevRad.
+ * Uses the general solar elevation formula and solves for lat.
+ */
+function terminatorLatAtLonAtElevation(
+  lonDeg: number,
+  subSolar: { lat: number; lon: number },
+  elevRad: number
+): number {
+  const dec = (subSolar.lat * Math.PI) / 180;
+  const H = ((lonDeg - subSolar.lon) * Math.PI) / 180;
+  const a = Math.sin(dec);
+  const b = Math.cos(dec) * Math.cos(H);
+  const c = Math.sin(elevRad);
+  const R = Math.sqrt(a * a + b * b);
+
+  if (R < 1e-9) return 0;
+
+  const ratio = c / R;
+  if (ratio > 1) return -90;
+  if (ratio < -1) return 90;
+
+  const phi = Math.atan2(b, a);
+  const lat1 = Math.asin(ratio) - phi;
+  const lat2 = Math.PI - Math.asin(ratio) - phi;
+  const norm = (x: number) => {
+    while (x > Math.PI) x -= 2 * Math.PI;
+    while (x < -Math.PI) x += 2 * Math.PI;
+    return x;
+  };
+  const l1 = norm(lat1);
+  const l2 = norm(lat2);
+  return (Math.abs(l1) < Math.abs(l2) ? l1 : l2) * (180 / Math.PI);
 }
 
-function getTerminatorPolygon(subSolar: { lat: number; lon: number }): [number, number][] {
+/** Build a night polygon for a given solar elevation threshold. */
+function buildNightPolygonAtElevation(
+  subSolar: { lat: number; lon: number },
+  elevDeg: number
+): [number, number][] {
   const points: [number, number][] = [];
   const STEP = 2;
+  const elevRad = (elevDeg * Math.PI) / 180;
   const terminatorPoints: [number, number][] = [];
   for (let lon = -180; lon <= 180; lon += STEP) {
-    terminatorPoints.push([terminatorLatAtLon(lon, subSolar), lon]);
+    terminatorPoints.push([
+      terminatorLatAtLonAtElevation(lon, subSolar, elevRad),
+      lon,
+    ]);
   }
   const southPoleInShadow = subSolar.lat > 0;
   if (southPoleInShadow) {
@@ -521,8 +564,9 @@ export default function TrackPage() {
   const obsMarkerRef = useRef<any>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const obsLineRef = useRef<any>(null);
+  // Stacked twilight polygons (one per band) for fuzzy terminator
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const nightPolygonRef = useRef<any>(null);
+  const twilightPolygonRefs = useRef<any[]>([]);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const sunMarkerRef = useRef<any>(null);
   const terminatorIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -559,16 +603,20 @@ export default function TrackPage() {
         { maxZoom: 18, opacity: 0.8 }
       ).addTo(map);
 
-      // Night-side terminator overlay
+      // Stacked twilight overlays — fuzzy terminator using multiple elevation bands
       const subSolar = getSubSolarPoint(new Date());
-      const nightPoints = getTerminatorPolygon(subSolar);
-      const nightPolygon = L.polygon(nightPoints as [number, number][], {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        color: "none" as any,
-        fillColor: "#000",
-        fillOpacity: 0.35,
-        interactive: false,
-      }).addTo(map);
+      const twilightPolygons = TWILIGHT_BANDS.map((band) => {
+        const pts = buildNightPolygonAtElevation(subSolar, band.elevDeg);
+        return L.polygon(pts as [number, number][], {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          color: "none" as any,
+          stroke: false,
+          fillColor: "#000",
+          fillOpacity: band.opacity,
+          interactive: false,
+        }).addTo(map);
+      });
+      twilightPolygonRefs.current = twilightPolygons;
 
       // Sun marker
       const sunIcon = L.divIcon({
@@ -586,8 +634,10 @@ export default function TrackPage() {
       const terminatorInterval = setInterval(() => {
         if (!mapInstanceRef.current) return;
         const ss = getSubSolarPoint(new Date());
-        const np = getTerminatorPolygon(ss);
-        nightPolygonRef.current?.setLatLngs(np as [number, number][]);
+        TWILIGHT_BANDS.forEach((band, i) => {
+          const pts = buildNightPolygonAtElevation(ss, band.elevDeg);
+          twilightPolygonRefs.current[i]?.setLatLngs(pts as [number, number][]);
+        });
         sunMarkerRef.current?.setLatLng([ss.lat, ss.lon]);
       }, 60_000);
       terminatorIntervalRef.current = terminatorInterval;
@@ -639,7 +689,6 @@ export default function TrackPage() {
       futurePolylineRef.current = futurePolyline;
       tdrsLayerRef.current = tdrsGroup;
       popupRef.current = popup;
-      nightPolygonRef.current = nightPolygon;
       sunMarkerRef.current = sunMarker;
     });
 
@@ -663,7 +712,7 @@ export default function TrackPage() {
         popupRef.current = null;
         obsMarkerRef.current = null;
         obsLineRef.current = null;
-        nightPolygonRef.current = null;
+        twilightPolygonRefs.current = [];
         sunMarkerRef.current = null;
       }
     };

@@ -27,52 +27,125 @@ function getSubSolarPoint(date: Date): { lat: number; lon: number } {
 }
 
 /**
- * Compute the terminator latitude at a given longitude.
- * Returns the latitude where the sun is at the horizon (elevation = 0).
- * Formula: tan(lat_terminator) = -cos(lon - sunLon) / tan(sunDec)
+ * For a given longitude, find the two latitudes where the solar elevation
+ * equals `elevRad`. Returns the northern and southern intersection or null
+ * if the sun never reaches that elevation at this longitude.
+ *
+ * Equation: sin(elev) = sin(dec)·sin(lat) + cos(dec)·cos(lat)·cos(H)
+ * where H = lon - sunLon (hour angle)
+ *
+ * Rewrite as: a·sin(lat) + b·cos(lat) = c
+ *   a = sin(dec)
+ *   b = cos(dec)·cos(H)
+ *   c = sin(elev)
+ *
+ * Solution: lat = arcsin(c / R) - phi
+ *   R = sqrt(a² + b²)
+ *   phi = atan2(b, a)
+ * gives one solution; the other is π - (arcsin + phi).
  */
-function terminatorLatAtLon(lonDeg: number, subSolar: { lat: number; lon: number }): number {
-  const sunDec = subSolar.lat * Math.PI / 180;
-  const deltaLon = (lonDeg - subSolar.lon) * Math.PI / 180;
-  // Handle the degenerate case of sunDec = 0 (equinox)
-  if (Math.abs(sunDec) < 1e-6) {
-    // At equinox, terminator is at ±90° (poles) for lon = sunLon ± 90°
-    return Math.cos(deltaLon) > 0 ? 90 : -90;
+function terminatorLatAtLonAtElevation(
+  lonDeg: number,
+  subSolar: { lat: number; lon: number },
+  elevRad: number
+): number {
+  const dec = (subSolar.lat * Math.PI) / 180;
+  const H = ((lonDeg - subSolar.lon) * Math.PI) / 180;
+  const a = Math.sin(dec);
+  const b = Math.cos(dec) * Math.cos(H);
+  const c = Math.sin(elevRad);
+  const R = Math.sqrt(a * a + b * b);
+
+  if (R < 1e-9) {
+    // Sun at the horizon at this longitude (shouldn't happen with realistic inputs)
+    return 0;
   }
-  return Math.atan(-Math.cos(deltaLon) / Math.tan(sunDec)) * 180 / Math.PI;
+
+  const ratio = c / R;
+  if (ratio > 1) {
+    // Sun never reaches this high at this longitude → no terminator crossing.
+    // This means the whole meridian is in shadow (return -90 = fully dark).
+    return -90;
+  }
+  if (ratio < -1) {
+    // Sun never falls this low → the whole meridian is in daylight (return +90).
+    return 90;
+  }
+
+  const phi = Math.atan2(b, a);
+  // arcsin returns the principal value; pick whichever branch gives the
+  // terminator on the expected hemisphere based on sun declination sign.
+  const lat1 = Math.asin(ratio) - phi;
+  const lat2 = Math.PI - Math.asin(ratio) - phi;
+
+  // Normalize both to [-π, π]
+  const norm = (x: number) => {
+    while (x > Math.PI) x -= 2 * Math.PI;
+    while (x < -Math.PI) x += 2 * Math.PI;
+    return x;
+  };
+  const l1 = norm(lat1);
+  const l2 = norm(lat2);
+
+  // The "right" terminator latitude is the one closer to the sun's declination
+  // (on the same hemisphere). Actually, for building a continuous polygon that
+  // separates day and night, we want a single-valued curve — pick the solution
+  // whose hemisphere is opposite the pole that's in perpetual shadow.
+  // If sun is in northern hemisphere (dec>0), south pole is in shadow,
+  // so the terminator curve goes through negative (southern) latitudes at
+  // longitudes antipodal to the sun. Pick the latitude that varies smoothly.
+  //
+  // Simplest approach: return the latitude with the smaller absolute value
+  // (i.e., the one between poles), as this traces a continuous curve across
+  // longitudes.
+  return (Math.abs(l1) < Math.abs(l2) ? l1 : l2) * (180 / Math.PI);
 }
 
 /**
- * Build a polygon covering the night side of the Earth for a flat Mercator map.
- * Returns an array of [lat, lon] points forming a closed polygon that covers
- * the dark hemisphere from one edge of the map to the other, properly closing
- * at the appropriate pole.
+ * Twilight bands (deg, negative = sun below horizon):
+ *  0°     : ground sunset — start of dusk glow
+ *  -6°    : civil twilight ends — sky darkening
+ *  -12°   : nautical twilight ends
+ *  -18°   : astronomical twilight ends — true darkness (ISS enters shadow
+ *           cone at roughly this threshold since ground must be ~20° below
+ *           the sun for a 408 km altitude spacecraft to lose illumination)
+ *
+ * For the ISS tracker, we draw stacked polygons so the night side fades
+ * in gradually from the ground sunset terminator out to full darkness at
+ * the ISS-altitude terminator. Day/dusk bands are semi-transparent; the
+ * fully-dark band at -18° reaches full darkness.
  */
-function getTerminatorPolygon(subSolar: { lat: number; lon: number }): [number, number][] {
+const TWILIGHT_BANDS = [
+  { elevDeg: 0, opacity: 0.1 },    // Ground sunset — thin dusk
+  { elevDeg: -6, opacity: 0.1 },   // Civil twilight
+  { elevDeg: -12, opacity: 0.1 },  // Nautical twilight
+  { elevDeg: -18, opacity: 0.15 }, // Astronomical — beyond this ISS is in shadow too
+];
+
+/** Build a single night polygon for a specified solar elevation threshold. */
+function buildNightPolygonAtElevation(
+  subSolar: { lat: number; lon: number },
+  elevDeg: number
+): [number, number][] {
   const points: [number, number][] = [];
   const STEP = 2;
+  const elevRad = (elevDeg * Math.PI) / 180;
 
-  // Trace the terminator from lon = -180 to +180
   const terminatorPoints: [number, number][] = [];
   for (let lon = -180; lon <= 180; lon += STEP) {
-    const lat = terminatorLatAtLon(lon, subSolar);
+    const lat = terminatorLatAtLonAtElevation(lon, subSolar, elevRad);
     terminatorPoints.push([lat, lon]);
   }
 
-  // The sun is south of the equator (winter NH) means northern hemisphere
-  // winter — so the NORTH pole is in shadow.
-  // The sun is north of the equator (summer NH) means the SOUTH pole is in shadow.
-  // If sunDec > 0, south pole is in shadow (close polygon through south pole)
-  // If sunDec < 0, north pole is in shadow (close polygon through north pole)
+  // Sun in northern hemisphere → south pole in shadow (close through south)
+  // Sun in southern hemisphere → north pole in shadow (close through north)
   const southPoleInShadow = subSolar.lat > 0;
 
   if (southPoleInShadow) {
-    // Night polygon wraps around south pole
     points.push(...terminatorPoints);
     points.push([-90, 180]);
     points.push([-90, -180]);
   } else {
-    // Night polygon wraps around north pole
     points.push(...terminatorPoints);
     points.push([90, 180]);
     points.push([90, -180]);
@@ -106,8 +179,9 @@ export default function GroundTrackPanel({ orbital }: GroundTrackPanelProps) {
   const pastPolylineRef = useRef<any>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const futurePolylineRef = useRef<any>(null);
+  // Stacked twilight polygon refs (one per band)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const nightPolygonRef = useRef<any>(null);
+  const twilightPolygonRefs = useRef<any[]>([]);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const sunMarkerRef = useRef<any>(null);
   const terminatorIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -200,16 +274,21 @@ export default function GroundTrackPanel({ orbital }: GroundTrackPanelProps) {
         { maxZoom: 18, opacity: 0.8 }
       ).addTo(map);
 
-      // Night-side terminator overlay
+      // Stacked twilight overlays — create a polygon per band for a gradient
+      // from ground sunset (light dusk) to astronomical night (full dark).
       const subSolar = getSubSolarPoint(new Date());
-      const nightPoints = getTerminatorPolygon(subSolar);
-      const nightPolygon = L.polygon(nightPoints as [number, number][], {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        color: "none" as any,
-        fillColor: "#000",
-        fillOpacity: 0.35,
-        interactive: false,
-      }).addTo(map);
+      const twilightPolygons = TWILIGHT_BANDS.map((band) => {
+        const pts = buildNightPolygonAtElevation(subSolar, band.elevDeg);
+        return L.polygon(pts as [number, number][], {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          color: "none" as any,
+          stroke: false,
+          fillColor: "#000",
+          fillOpacity: band.opacity,
+          interactive: false,
+        }).addTo(map);
+      });
+      twilightPolygonRefs.current = twilightPolygons;
 
       // Sun marker
       const sunIcon = L.divIcon({
@@ -227,8 +306,10 @@ export default function GroundTrackPanel({ orbital }: GroundTrackPanelProps) {
       const terminatorInterval = setInterval(() => {
         if (!mapInstanceRef.current) return;
         const ss = getSubSolarPoint(new Date());
-        const np = getTerminatorPolygon(ss);
-        nightPolygonRef.current?.setLatLngs(np as [number, number][]);
+        TWILIGHT_BANDS.forEach((band, i) => {
+          const pts = buildNightPolygonAtElevation(ss, band.elevDeg);
+          twilightPolygonRefs.current[i]?.setLatLngs(pts as [number, number][]);
+        });
         sunMarkerRef.current?.setLatLng([ss.lat, ss.lon]);
       }, 60_000);
       terminatorIntervalRef.current = terminatorInterval;
@@ -267,7 +348,6 @@ export default function GroundTrackPanel({ orbital }: GroundTrackPanelProps) {
       markerRef.current = marker;
       pastPolylineRef.current = pastPolyline;
       futurePolylineRef.current = futurePolyline;
-      nightPolygonRef.current = nightPolygon;
       sunMarkerRef.current = sunMarker;
       initialCenteredRef.current = false;
       pathHistoryRef.current = [];
@@ -291,7 +371,7 @@ export default function GroundTrackPanel({ orbital }: GroundTrackPanelProps) {
         markerRef.current = null;
         pastPolylineRef.current = null;
         futurePolylineRef.current = null;
-        nightPolygonRef.current = null;
+        twilightPolygonRefs.current = [];
         sunMarkerRef.current = null;
       }
     };
