@@ -282,8 +282,11 @@ export default function AttitudePanel({ telemetry }: AttitudePanelProps) {
             </div>
             <StatusRow label="GNC MODE" value={telemetry.attitude.gncMode} />
             <StatusRow label="NAV SOURCE" value={telemetry.attitude.navSource} />
+            <StatusRow label="RATE SOURCE" value={telemetry.attitude.rateSource} />
+            <StatusRow label="STATE VEC SRC" value={telemetry.attitude.stateVectorSource} />
             <StatusRow label="REF FRAME" value={telemetry.attitude.refFrame} />
             <StatusRow label="STATION MODE" value={telemetry.attitude.stationMode} />
+            <StatusRow label="CMGs ONLINE" value={`${telemetry.attitude.cmgsOnline}/4`} />
 
             <div style={{ marginTop: 8 }}>
               <AngleRow

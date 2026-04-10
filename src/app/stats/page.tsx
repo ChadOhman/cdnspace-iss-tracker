@@ -648,6 +648,41 @@ export default function StatsPage() {
           </div>
         </div>
 
+        {/* 3b. Live C&C Computer Stats (only shown when telemetry connected) */}
+        {telemetry && (telemetry.lab.stdCmdCount > 0 || telemetry.lab.laptopsConnected > 0) && (
+          <div style={{ marginBottom: 32 }}>
+            <SectionLabel>Command & Control Computer</SectionLabel>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(190px, 1fr))", gap: 12 }}>
+              <StatCard
+                label="Standard Commands"
+                value={telemetry.lab.stdCmdCount.toLocaleString()}
+                unit="received by C&C MDM"
+                accent
+              />
+              <StatCard
+                label="Data-Load Commands"
+                value={telemetry.lab.dataLoadCmdCount.toLocaleString()}
+                unit="received by C&C MDM"
+                accent
+              />
+              <StatCard
+                label="Laptops Connected"
+                value={telemetry.lab.laptopsConnected.toString()}
+                unit="on primary C&C network"
+                accent
+              />
+              {telemetry.lab.onboardTimeCourse && telemetry.lab.onboardTimeCourse !== "" && (
+                <StatCard
+                  label="C&C Onboard Time"
+                  value={telemetry.lab.onboardTimeCourse}
+                  unit="station clock"
+                  accent
+                />
+              )}
+            </div>
+          </div>
+        )}
+
         {/* 4. Records & Milestones */}
         <RecordsSection />
 

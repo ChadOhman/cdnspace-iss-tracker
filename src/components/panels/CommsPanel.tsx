@@ -275,16 +275,16 @@ export default function CommsPanel({ telemetry }: CommsPanelProps) {
               </div>
               <div style={{ display: "flex", gap: 6 }}>
                 {[
-                  { idx: 1, active: telemetry.comms.videoChannel1 },
-                  { idx: 2, active: telemetry.comms.videoChannel2 },
-                  { idx: 3, active: telemetry.comms.videoChannel3 },
-                  { idx: 4, active: telemetry.comms.videoChannel4 },
-                ].map(({ idx, active }) => (
+                  { idx: 1, active: telemetry.comms.videoChannel1, source: telemetry.comms.videoSource1 },
+                  { idx: 2, active: telemetry.comms.videoChannel2, source: telemetry.comms.videoSource2 },
+                  { idx: 3, active: telemetry.comms.videoChannel3, source: telemetry.comms.videoSource3 },
+                  { idx: 4, active: telemetry.comms.videoChannel4, source: telemetry.comms.videoSource4 },
+                ].map(({ idx, active, source }) => (
                   <div
                     key={idx}
                     style={{
                       flex: 1,
-                      padding: "4px 0",
+                      padding: "4px 2px",
                       textAlign: "center",
                       borderRadius: 3,
                       background: active ? "rgba(0,255,136,0.15)" : "var(--color-bg-secondary)",
@@ -306,9 +306,12 @@ export default function CommsPanel({ telemetry }: CommsPanelProps) {
                         fontSize: 8,
                         marginTop: 1,
                         opacity: active ? 1 : 0.5,
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
                       }}
                     >
-                      {active ? "● LIVE" : "○ IDLE"}
+                      {active && source && source !== "—" ? source : active ? "LIVE" : "IDLE"}
                     </div>
                   </div>
                 ))}
@@ -341,6 +344,83 @@ export default function CommsPanel({ telemetry }: CommsPanelProps) {
                 <>
                   <OnOffRow label="UHF 1" on={uhf1On} />
                   <OnOffRow label="UHF 2" on={uhf2On} />
+                </>
+              );
+            })()}
+          </div>
+
+          {/* Signal integrity: audio controllers + frame sync */}
+          <div style={{ paddingTop: 6, borderTop: "1px solid var(--color-border-subtle)" }}>
+            <div
+              title="Internal Audio Controllers carry crew/ground voice; frame sync lock indicates the S-band signal is locked for command uplink"
+              style={{
+                color: "var(--color-accent-cyan)",
+                fontSize: 9,
+                fontWeight: 700,
+                letterSpacing: "0.08em",
+                marginBottom: 5,
+                cursor: "help",
+              }}
+            >
+              SIGNAL INTEGRITY
+            </div>
+            {(() => {
+              const iac1Active = telemetry.comms.iac1 === "active";
+              const iac2Active = telemetry.comms.iac2 === "active";
+              const locked = telemetry.comms.frameSyncLock;
+              return (
+                <>
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      padding: "3px 0",
+                      fontSize: 10,
+                    }}
+                  >
+                    <span style={{ color: "var(--color-text-muted)" }}>IAC-1</span>
+                    <span style={{ color: iac1Active ? "var(--color-accent-green)" : "var(--color-text-muted)" }}>
+                      {iac1Active ? "● ACTIVE" : "○ BACKUP"}
+                    </span>
+                  </div>
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      padding: "3px 0",
+                      fontSize: 10,
+                    }}
+                  >
+                    <span style={{ color: "var(--color-text-muted)" }}>IAC-2</span>
+                    <span style={{ color: iac2Active ? "var(--color-accent-green)" : "var(--color-text-muted)" }}>
+                      {iac2Active ? "● ACTIVE" : "○ BACKUP"}
+                    </span>
+                  </div>
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      padding: "3px 0",
+                      fontSize: 10,
+                    }}
+                  >
+                    <span
+                      style={{ color: "var(--color-text-muted)", cursor: "help" }}
+                      title="Space-to-Space radio frame sync — locked means the command uplink is carrier-locked"
+                    >
+                      FRAME SYNC
+                    </span>
+                    <span
+                      style={{
+                        color: locked ? "var(--color-accent-green)" : "var(--color-accent-orange)",
+                      }}
+                    >
+                      {locked ? "● LOCKED" : "○ UNLOCKED"}
+                    </span>
+                  </div>
                 </>
               );
             })()}

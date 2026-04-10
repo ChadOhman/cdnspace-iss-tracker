@@ -199,7 +199,7 @@ export function Dashboard() {
       <div className="col-left">
         {show("eventBanner", "left") && <EventBannerPanel event={stream.activeEvent ?? activeEvent} />}
         {show("groundTrack", "left") && <GroundTrackPanel orbital={stream.orbital} />}
-        {show("orbitalParams", "left") && <OrbitalParamsPanel orbital={stream.orbital} />}
+        {show("orbitalParams", "left") && <OrbitalParamsPanel orbital={stream.orbital} telemetry={stream.telemetry} />}
         {show("dayNight", "left") && <DayNightPanel orbital={stream.orbital} />}
         {show("passPrediction", "left") && <PassPredictionPanel />}
         {show("liveVideo", "left") && <LiveVideoPanel />}
@@ -225,7 +225,7 @@ export function Dashboard() {
         {show("upcomingEvents", "center") && <UpcomingEventsPanel />}
         {show("spaceWeather", "center") && <SpaceWeatherPanel solar={stream.solar} />}
         {show("groundTrack", "center") && <GroundTrackPanel orbital={stream.orbital} />}
-        {show("orbitalParams", "center") && <OrbitalParamsPanel orbital={stream.orbital} />}
+        {show("orbitalParams", "center") && <OrbitalParamsPanel orbital={stream.orbital} telemetry={stream.telemetry} />}
         {show("dayNight", "center") && <DayNightPanel orbital={stream.orbital} />}
         {show("passPrediction", "center") && <PassPredictionPanel />}
         {show("solarArrays", "center") && <SolarArrayPanel telemetry={stream.telemetry} />}
@@ -252,7 +252,7 @@ export function Dashboard() {
         {show("airlock", "right") && <AirlockPanel telemetry={stream.telemetry} />}
         {show("russianSegment", "right") && <RussianSegmentPanel telemetry={stream.telemetry} />}
         {show("groundTrack", "right") && <GroundTrackPanel orbital={stream.orbital} />}
-        {show("orbitalParams", "right") && <OrbitalParamsPanel orbital={stream.orbital} />}
+        {show("orbitalParams", "right") && <OrbitalParamsPanel orbital={stream.orbital} telemetry={stream.telemetry} />}
         {show("dayNight", "right") && <DayNightPanel orbital={stream.orbital} />}
         {show("passPrediction", "right") && <PassPredictionPanel />}
         {show("liveVideo", "right") && <LiveVideoPanel />}
