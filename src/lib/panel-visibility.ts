@@ -32,9 +32,12 @@ export function isColumnAssignable(id: PanelId): boolean {
   return id !== "timeline";
 }
 
+// Panels hidden by default (available via panel customization modal)
+const DEFAULT_HIDDEN: PanelId[] = ["crew"];
+
 export function defaultPanelVisibility(): Record<PanelId, boolean> {
   return Object.fromEntries(
-    PANEL_DEFINITIONS.map((p) => [p.id, true])
+    PANEL_DEFINITIONS.map((p) => [p.id, !DEFAULT_HIDDEN.includes(p.id as PanelId)])
   ) as Record<PanelId, boolean>;
 }
 

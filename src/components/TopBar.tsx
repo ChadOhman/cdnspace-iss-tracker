@@ -5,6 +5,8 @@ import type { OrbitalState } from "@/lib/types";
 import { useLocale } from "@/context/LocaleContext";
 import { useUnits } from "@/context/UnitsContext";
 import { useTime } from "@/context/TimeContext";
+import { CURRENT_CREW, FLAG_EMOJI } from "@/data/iss-modules";
+import CrewModal from "@/components/modals/CrewModal";
 
 interface TopBarProps {
   orbital: OrbitalState | null;
@@ -25,6 +27,12 @@ function TopBarInner({
   const { distance, speed } = useUnits();
   const { formatTime, clockFormat, setClockFormat, clockLabel } = useTime();
   const [timeStr, setTimeStr] = useState("");
+  const [crewOpen, setCrewOpen] = useState(false);
+
+  // Build the flag string from the current crew roster
+  const crewFlags = CURRENT_CREW
+    .map((m) => FLAG_EMOJI[m.nationality] ?? "🏳️")
+    .join("");
 
   useEffect(() => {
     function tick() {
@@ -112,6 +120,40 @@ function TopBarInner({
             {visitorCount} online
           </span>
         )}
+        <button
+          onClick={() => setCrewOpen(true)}
+          title={`${CURRENT_CREW.length} crew members — click for bios`}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 4,
+            padding: "2px 8px",
+            background: "transparent",
+            border: "1px solid var(--color-border-subtle)",
+            borderRadius: 999,
+            color: "var(--color-text-muted)",
+            cursor: "pointer",
+            fontFamily: "inherit",
+            fontSize: 10,
+          }}
+          onMouseEnter={(e) => {
+            (e.currentTarget as HTMLButtonElement).style.borderColor =
+              "var(--color-accent-cyan)";
+            (e.currentTarget as HTMLButtonElement).style.color =
+              "var(--color-accent-cyan)";
+          }}
+          onMouseLeave={(e) => {
+            (e.currentTarget as HTMLButtonElement).style.borderColor =
+              "var(--color-border-subtle)";
+            (e.currentTarget as HTMLButtonElement).style.color =
+              "var(--color-text-muted)";
+          }}
+        >
+          <span style={{ fontSize: 11, letterSpacing: 1 }}>{crewFlags}</span>
+          <span style={{ fontSize: 9, letterSpacing: "0.05em" }}>
+            {t("panels.crew")}
+          </span>
+        </button>
       </div>
 
       {/* Orbital metrics */}
@@ -210,6 +252,8 @@ function TopBarInner({
           {timeStr} {clockLabel}
         </span>
       </div>
+
+      <CrewModal isOpen={crewOpen} onClose={() => setCrewOpen(false)} />
     </div>
   );
 }
