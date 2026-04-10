@@ -167,35 +167,32 @@ const TELEMETRY_IDS = [
   "USLAB000056", // Destiny ITCS Low Temperature Loop coolant fill (%)
   "USLAB000057", // Destiny ITCS Medium Temperature Loop coolant fill (%)
 
-  // ── Russian Segment (EXPLORATORY — no known descriptions) ─────────────────
-  // These channels are subscribed to observe what data comes back.
-  // DO NOT build UI until channel definitions are confirmed.
-  // Reference: no entries in sensedata/space-telemetry data dictionary.
-  "RUSSEG000001", // Russian Segment — undocumented
-  "RUSSEG000002", // Russian Segment — undocumented
-  "RUSSEG000003", // Russian Segment — undocumented
-  "RUSSEG000004", // Russian Segment — undocumented
-  "RUSSEG000005", // Russian Segment — undocumented
-  "RUSSEG000006", // Russian Segment — undocumented
-  "RUSSEG000007", // Russian Segment — undocumented
-  "RUSSEG000008", // Russian Segment — undocumented
-  "RUSSEG000009", // Russian Segment — undocumented
-  "RUSSEG000010", // Russian Segment — undocumented
-  "RUSSEG000011", // Russian Segment — undocumented
-  "RUSSEG000012", // Russian Segment — undocumented
-  "RUSSEG000013", // Russian Segment — undocumented
-  "RUSSEG000014", // Russian Segment — undocumented
-  "RUSSEG000015", // Russian Segment — undocumented
-  "RUSSEG000016", // Russian Segment — undocumented
-  "RUSSEG000017", // Russian Segment — undocumented
-  "RUSSEG000018", // Russian Segment — undocumented
-  "RUSSEG000019", // Russian Segment — undocumented
-  "RUSSEG000020", // Russian Segment — undocumented
-  "RUSSEG000021", // Russian Segment — undocumented
-  "RUSSEG000022", // Russian Segment — undocumented
-  "RUSSEG000023", // Russian Segment — undocumented
-  "RUSSEG000024", // Russian Segment — undocumented
-  "RUSSEG000025", // Russian Segment — undocumented
+  // ── Russian Segment ────────────────────────────────────────────────────────
+  "RUSSEG000001", // RS Station Mode (enum: 1=Crew Rescue … 7=Standard)
+  "RUSSEG000002", // KURS Equipment Set 1 Operating (bool)
+  "RUSSEG000003", // KURS Equipment Set 2 Operating (bool)
+  "RUSSEG000004", // KURS P1/P2 Failure (bool)
+  "RUSSEG000005", // KURS Range (m)
+  "RUSSEG000006", // KURS Range Rate (m/s)
+  "RUSSEG000007", // KURS-P Test Mode (bool)
+  "RUSSEG000008", // KURS-P Capture Signal (bool)
+  "RUSSEG000009", // KURS-P Target Acquisition Signal (bool)
+  "RUSSEG000010", // KURS-P Functional Mode Signal (bool)
+  "RUSSEG000011", // KURS-P Standby Mode (bool)
+  "RUSSEG000012", // SM Docking Flag (bool)
+  "RUSSEG000013", // SM Forward Docking Port (bool)
+  "RUSSEG000014", // SM Aft Docking Port (bool)
+  "RUSSEG000015", // SM Nadir (-Y) Docking Port (bool)
+  "RUSSEG000016", // FGB Nadir (-Y) Docking Port (bool)
+  "RUSSEG000017", // SM Nadir UDM Docking Port (bool)
+  "RUSSEG000018", // MRM1 (Rassvet) Docking Port (bool)
+  "RUSSEG000019", // MRM2 (Poisk) Docking Port (bool)
+  "RUSSEG000020", // Docked Vehicle Hooks Closed (bool)
+  "RUSSEG000021", // Active Attitude Mode (enum: 0=Inertial … 7=X-POP)
+  "RUSSEG000022", // SM SUDN Controls the Motion — RS master (bool)
+  "RUSSEG000023", // SM SUDN Prepared to Free Drift Mode Transition (bool)
+  "RUSSEG000024", // Thruster Operation Mode Terminated (0=Ready, 1=Terminated)
+  "RUSSEG000025", // Current Dynamic Mode (enum: 0=Reserved … 7=Free Drift)
 
   // ── Time ──────────────────────────────────────────────────────────────────
   "TIME_000001", // Station time
@@ -250,29 +247,6 @@ export async function connectLightstreamer(
     );
 
     let updateCount = 0;
-    // Track Russian segment channels: log each one's latest value after 60s
-    const russegSeen: Record<string, { value: string; status: string; count: number }> = {};
-    let russegDumped = false;
-
-    setTimeout(() => {
-      if (russegDumped) return;
-      russegDumped = true;
-      const keys = Object.keys(russegSeen).sort();
-      if (keys.length === 0) {
-        console.log("[russeg] No Russian segment channels received any updates in 60s");
-      } else {
-        console.log(`[russeg] ${keys.length}/25 channels received updates in first 60s:`);
-        for (const k of keys) {
-          const r = russegSeen[k];
-          console.log(`[russeg]   ${k} = ${r.value.padEnd(30)} (status ${r.status}, ${r.count} updates)`);
-        }
-        const missing = Array.from({ length: 25 }, (_, i) => `RUSSEG${String(i + 1).padStart(6, "0")}`)
-          .filter((id) => !(id in russegSeen));
-        if (missing.length > 0) {
-          console.log(`[russeg] Missing (no updates): ${missing.join(", ")}`);
-        }
-      }
-    }, 60_000);
 
     sub.addListener({
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -287,16 +261,6 @@ export async function connectLightstreamer(
           ...latestChannels,
           [item]: { value, status, timestamp },
         };
-
-        // Track Russian segment channels
-        if (item.startsWith("RUSSEG")) {
-          const existing = russegSeen[item];
-          russegSeen[item] = {
-            value,
-            status,
-            count: (existing?.count ?? 0) + 1,
-          };
-        }
 
         onUpdate({ ...latestChannels });
 

@@ -123,6 +123,7 @@ import AirlockPanel from "@/components/panels/AirlockPanel";
 import UpcomingEventsPanel from "@/components/panels/UpcomingEventsPanel";
 import DayNightPanel from "@/components/panels/DayNightPanel";
 import TdrsPanel from "@/components/panels/TdrsPanel";
+import RussianSegmentPanel from "@/components/panels/RussianSegmentPanel";
 
 export function Dashboard() {
   useBuildCheck();
@@ -209,6 +210,7 @@ export function Dashboard() {
         {show("moduleTemps", "left") && <ModuleTempsPanel telemetry={stream.telemetry} />}
         {show("tdrs", "left") && <TdrsPanel orbital={stream.orbital} />}
         {show("airlock", "left") && <AirlockPanel telemetry={stream.telemetry} />}
+        {show("russianSegment", "left") && <RussianSegmentPanel telemetry={stream.telemetry} />}
       </div>
 
       {/* Center column — What's happening? (crew & media) */}
@@ -228,6 +230,7 @@ export function Dashboard() {
         {show("moduleTemps", "center") && <ModuleTempsPanel telemetry={stream.telemetry} />}
         {show("tdrs", "center") && <TdrsPanel orbital={stream.orbital} />}
         {show("airlock", "center") && <AirlockPanel telemetry={stream.telemetry} />}
+        {show("russianSegment", "center") && <RussianSegmentPanel telemetry={stream.telemetry} />}
       </div>
 
       {/* Right column — How are the systems? (engineering telemetry) */}
@@ -239,6 +242,7 @@ export function Dashboard() {
         {show("moduleTemps", "right") && <ModuleTempsPanel telemetry={stream.telemetry} />}
         {show("tdrs", "right") && <TdrsPanel orbital={stream.orbital} />}
         {show("airlock", "right") && <AirlockPanel telemetry={stream.telemetry} />}
+        {show("russianSegment", "right") && <RussianSegmentPanel telemetry={stream.telemetry} />}
         {show("groundTrack", "right") && <GroundTrackPanel orbital={stream.orbital} />}
         {show("orbitalParams", "right") && <OrbitalParamsPanel orbital={stream.orbital} />}
         {show("dayNight", "right") && <DayNightPanel orbital={stream.orbital} />}

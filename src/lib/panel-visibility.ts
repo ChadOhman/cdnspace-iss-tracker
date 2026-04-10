@@ -24,6 +24,7 @@ export const PANEL_DEFINITIONS = [
   { group: "right", id: "moduleTemps", label: "Module Temperatures" },
   { group: "right", id: "tdrs", label: "TDRS Communications" },
   { group: "right", id: "airlock", label: "Airlock — Quest" },
+  { group: "right", id: "russianSegment", label: "Russian Segment" },
 ] as const;
 
 export type PanelId = (typeof PANEL_DEFINITIONS)[number]["id"];
