@@ -299,6 +299,20 @@ function BottomBarInner() {
           Feedback
         </a>
         <span style={{ color: "var(--color-text-muted)", letterSpacing: "0.02em" }}>
+          Created by{" "}
+          <a
+            href="https://cdnspace.ca"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              color: "var(--color-accent-cyan)",
+              textDecoration: "none",
+            }}
+          >
+            Canadian Space
+          </a>
+        </span>
+        <span style={{ color: "var(--color-text-muted)", letterSpacing: "0.02em" }}>
           iss.cdnspace.ca
         </span>
         <span style={{ color: "var(--color-border-accent)", fontSize: 9, letterSpacing: "0.02em", opacity: 0.5 }}>
