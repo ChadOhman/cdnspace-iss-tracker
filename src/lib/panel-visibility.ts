@@ -27,6 +27,8 @@ export const PANEL_DEFINITIONS = [
   { group: "right", id: "airlock", label: "Airlock — Quest" },
   { group: "right", id: "canadarm", label: "Canadarm2 (SSRMS)" },
   { group: "right", id: "russianSegment", label: "Russian Segment" },
+  { group: "right", id: "systemsHealth", label: "Systems Health (MDMs)" },
+  { group: "right", id: "evaBattery", label: "EMU Batteries (EVA)" },
 ] as const;
 
 export type PanelId = (typeof PANEL_DEFINITIONS)[number]["id"];
@@ -36,7 +38,7 @@ export function isColumnAssignable(id: PanelId): boolean {
 }
 
 // Panels hidden by default (available via panel customization modal)
-const DEFAULT_HIDDEN: PanelId[] = ["crew"];
+const DEFAULT_HIDDEN: PanelId[] = ["crew", "systemsHealth", "evaBattery"];
 
 export function defaultPanelVisibility(): Record<PanelId, boolean> {
   return Object.fromEntries(

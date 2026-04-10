@@ -109,6 +109,8 @@ const GroundTrackPanel = dynamic(
   { ssr: false }
 );
 import OrbitalParamsPanel from "@/components/panels/OrbitalParamsPanel";
+import SystemsHealthPanel from "@/components/panels/SystemsHealthPanel";
+import EvaBatteryPanel from "@/components/panels/EvaBatteryPanel";
 import SpaceWeatherPanel from "@/components/panels/SpaceWeatherPanel";
 import PassPredictionPanel from "@/components/panels/PassPredictionPanel";
 import LiveVideoPanel from "@/components/panels/LiveVideoPanel";
@@ -215,6 +217,8 @@ export function Dashboard() {
         {show("canadarm", "left") && <Canadarm2Panel telemetry={stream.telemetry} />}
         {show("airlock", "left") && <AirlockPanel telemetry={stream.telemetry} />}
         {show("russianSegment", "left") && <RussianSegmentPanel telemetry={stream.telemetry} />}
+        {show("systemsHealth", "left") && <SystemsHealthPanel telemetry={stream.telemetry} />}
+        {show("evaBattery", "left") && <EvaBatteryPanel telemetry={stream.telemetry} evaActive={(stream.activeEvent?.type ?? activeEvent?.type) === "eva"} />}
       </div>
 
       {/* Center column — What's happening? (crew & media) */}
@@ -237,6 +241,8 @@ export function Dashboard() {
         {show("canadarm", "center") && <Canadarm2Panel telemetry={stream.telemetry} />}
         {show("airlock", "center") && <AirlockPanel telemetry={stream.telemetry} />}
         {show("russianSegment", "center") && <RussianSegmentPanel telemetry={stream.telemetry} />}
+        {show("systemsHealth", "center") && <SystemsHealthPanel telemetry={stream.telemetry} />}
+        {show("evaBattery", "center") && <EvaBatteryPanel telemetry={stream.telemetry} evaActive={(stream.activeEvent?.type ?? activeEvent?.type) === "eva"} />}
       </div>
 
       {/* Right column — How are the systems? (engineering telemetry) */}
@@ -251,6 +257,8 @@ export function Dashboard() {
         {show("canadarm", "right") && <Canadarm2Panel telemetry={stream.telemetry} />}
         {show("airlock", "right") && <AirlockPanel telemetry={stream.telemetry} />}
         {show("russianSegment", "right") && <RussianSegmentPanel telemetry={stream.telemetry} />}
+        {show("systemsHealth", "right") && <SystemsHealthPanel telemetry={stream.telemetry} />}
+        {show("evaBattery", "right") && <EvaBatteryPanel telemetry={stream.telemetry} evaActive={(stream.activeEvent?.type ?? activeEvent?.type) === "eva"} />}
         {show("groundTrack", "right") && <GroundTrackPanel orbital={stream.orbital} />}
         {show("orbitalParams", "right") && <OrbitalParamsPanel orbital={stream.orbital} telemetry={stream.telemetry} />}
         {show("dayNight", "right") && <DayNightPanel orbital={stream.orbital} />}
