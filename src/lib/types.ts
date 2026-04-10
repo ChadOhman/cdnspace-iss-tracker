@@ -176,6 +176,12 @@ export interface ISSTelemetry {
     gyroAlarm: number;
     gps1Status: string;
     gps2Status: string;
+    /** Number of CMGs currently online 0–4 (USLAB000005) */
+    cmgsOnline: number;
+    /** US rate source: None/RGA1/RGA2/Russian (USLAB000014) */
+    rateSource: string;
+    /** US state vector source (USLAB000015) */
+    stateVectorSource: string;
   };
   /** Per-CMG health data (index 0–3 = CMG 1–4) */
   cmgs: Array<{
@@ -257,14 +263,80 @@ export interface ISSTelemetry {
     videoChannel3: boolean;
     /** Ku-Band video downlink channel 4 active */
     videoChannel4: boolean;
+    /** Human-readable camera source routed to downlink 1 (from USLAB000095) */
+    videoSource1: string;
+    videoSource2: string;
+    videoSource3: string;
+    videoSource4: string;
+    /** Internal Audio Controller 1 state: "active" | "backup" (USLAB000093) */
+    iac1: string;
+    /** Internal Audio Controller 2 state (USLAB000094) */
+    iac2: string;
+    /** Space-to-Space radio frame sync lock (USLAB000101) */
+    frameSyncLock: boolean;
   };
 
-  /** Destiny lab vacuum systems */
+  /** Destiny lab vacuum systems + command/clock state */
   lab: {
     /** Vacuum Resource System valve position (raw enum) */
     vrsValvePosition: string;
     /** Vacuum Exhaust System valve position (raw enum) */
     vesValvePosition: string;
+    /** NASA's GNC J2000 propagated state vector (ground truth for SGP4 comparison) */
+    gncStateVector: {
+      /** Position X in km (USLAB000032) */
+      xKm: number;
+      /** Position Y in km (USLAB000033) */
+      yKm: number;
+      /** Position Z in km (USLAB000034) */
+      zKm: number;
+      /** Velocity X in m/s (USLAB000035) */
+      vxMs: number;
+      /** Velocity Y in m/s (USLAB000036) */
+      vyMs: number;
+      /** Velocity Z in m/s (USLAB000037) */
+      vzMs: number;
+    };
+    /** Standard commands received by C&C computer (USLAB000082) */
+    stdCmdCount: number;
+    /** Data-load commands received by C&C computer (USLAB000083) */
+    dataLoadCmdCount: number;
+    /** C&C MDM onboard time (course, string form like "2026.099T12:34:56") */
+    onboardTimeCourse: string;
+    /** C&C MDM onboard time (fine fractional seconds) */
+    onboardTimeFine: number;
+    /** Number of laptops connected to the primary C&C MDM (USLAB000087) */
+    laptopsConnected: number;
+  };
+
+  /** System health — MDM on/off status etc. */
+  systems: {
+    mdms: Array<{
+      /** Channel ID (e.g. "USLAB000066") */
+      id: string;
+      /** Short human label (e.g. "C&C MDM 1") */
+      label: string;
+      /** Group: "cnc" | "icz" | "payload" | "gnc" | "pmcu" | "lab" | "node" | "airlock" | "truss" | "pvcu" */
+      group: string;
+      /** Status code (0=Off-Ok/Nominal, 1=Not-Off Ok, 3=Failed for most MDMs; 0/1 for PVCU) */
+      status: number;
+      /** Whether this uses PVCU semantics (0=Not Enabled, 1=Enabled) instead of MDM */
+      pvcu: boolean;
+    }>;
+  };
+
+  /** EMU (EVA suit) battery charger assemblies — only populated when an EVA is active */
+  emuBatteries: {
+    /** True if NASA is publishing BCA data (i.e., EVA prep/in progress) */
+    active: boolean;
+    /** Per-BCA data, indices 0–3 = BCA 1–4 */
+    bcas: Array<{
+      voltage: number;
+      current: number;
+      overallStatus: number;
+      /** Status for the 6 charge channels in this BCA (0–17, see README) */
+      channels: number[];
+    }>;
   };
 
   /** Canadarm2 (SSRMS) and Mobile Transporter */

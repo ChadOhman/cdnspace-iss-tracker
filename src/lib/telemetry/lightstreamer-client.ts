@@ -58,6 +58,9 @@ const TELEMETRY_IDS = [
   "USLAB000002", // CMG 2 on/off status
   "USLAB000003", // CMG 3 on/off status
   "USLAB000004", // CMG 4 on/off status
+  "USLAB000005", // Number of CMGs Online
+  "USLAB000014", // US Rate Source (0=None, 1=RGA1, 2=RGA2, 3=Russian)
+  "USLAB000015", // US State Vector Source (0=None, 3=Russian, 4=GPS1 deterministic, 5=GPS2 det., 6=Ground)
   "USLAB000006", // Command torque roll (Nm)
   "USLAB000007", // Command torque pitch (Nm)
   "USLAB000008", // Command torque yaw (Nm)
@@ -95,6 +98,19 @@ const TELEMETRY_IDS = [
   "USLAB000040", // Solar Beta Angle (degrees) — direct from NASA
   "USLAB000081", // Attitude Maneuver In Progress (0/1)
   "USLAB000086", // ISS station mode (enumerated)
+  // NASA GNC J2000 propagated state vector — ground truth for SGP4 comparison
+  "USLAB000032", // GNC J2000 position X (km)
+  "USLAB000033", // GNC J2000 position Y (km)
+  "USLAB000034", // GNC J2000 position Z (km)
+  "USLAB000035", // GNC J2000 velocity X (m/s)
+  "USLAB000036", // GNC J2000 velocity Y (m/s)
+  "USLAB000037", // GNC J2000 velocity Z (m/s)
+  // Command traffic / station clock / connected laptops
+  "USLAB000082", // Standard command counter
+  "USLAB000083", // Data load command counter
+  "USLAB000084", // C&C MDM onboard time (course, string)
+  "USLAB000085", // C&C MDM onboard time (fine, float)
+  "USLAB000087", // Number of laptops connected to primary C&C MDM
   // Z1 CMG vibration, wheel current, spin rate
   "Z1000001",    // CMG 1 vibration (g)
   "Z1000002",    // CMG 2 vibration (g)
@@ -199,6 +215,15 @@ const TELEMETRY_IDS = [
   "USLAB000089", // Ku-Band Video Downlink Channel 2 Activity
   "USLAB000090", // Ku-Band Video Downlink Channel 3 Activity
   "USLAB000091", // Ku-Band Video Downlink Channel 4 Activity
+  "USLAB000095", // Video source routed to downlink 1 (enum, ~80 cameras)
+  "USLAB000096", // Video source routed to downlink 2
+  "USLAB000097", // Video source routed to downlink 3
+  "USLAB000098", // Video source routed to downlink 4
+  // Internal Audio Controllers
+  "USLAB000093", // IAC-1 Active/Backup
+  "USLAB000094", // IAC-2 Active/Backup
+  // S-Band frame sync
+  "USLAB000101", // Space-to-Space Radio Frame Sync Lock (0=unlocked, 1=locked)
   // US active S-Band string
   "USLAB000092", // Active String of S-Band
   // UHF EVA voice radios
@@ -251,6 +276,84 @@ const TELEMETRY_IDS = [
 
   // ── Time ──────────────────────────────────────────────────────────────────
   "TIME_000001", // Station time
+
+  // ── MDM (Multiplexer/Demultiplexer) on/off status ─────────────────────────
+  // All use enum 0=Off-Ok, 1=Not-Off Ok, 3=Not-Off Failed (per node-red README)
+  // Command & Control
+  "USLAB000066", // C&C MDM 1
+  "USLAB000067", // C&C MDM 2
+  "USLAB000068", // C&C MDM 3
+  // Internal Control Zone (inside pressurized modules)
+  "USLAB000069", // ICZ MDM 1
+  "USLAB000070", // ICZ MDM 2
+  // Payload
+  "USLAB000071", // Payload MDM 1
+  "USLAB000072", // Payload MDM 2
+  // GNC
+  "USLAB000073", // GNC MDM 1
+  "USLAB000074", // GNC MDM 2
+  // Power Management Controller Unit
+  "USLAB000075", // PMCU 1 MDM 1
+  "USLAB000076", // PMCU 2 MDM 1
+  // US Lab
+  "USLAB000077", // US Lab MDM 1
+  "USLAB000078", // US Lab MDM 2
+  "USLAB000079", // US Lab MDM 3
+  "USLAB000080", // PMM System Power voltage status
+  // Nodes
+  "NODE1000002", // Node 1 MDM 2
+  "NODE2000004", // Node 2 MDM 2
+  "NODE2000005", // Node 2 MDM 1
+  "NODE3000014", // HCZ MDM 2 (Node 3)
+  "NODE3000015", // Node 3 MDM 2
+  "NODE3000016", // HCZ MDM 1 (Node 3)
+  "NODE3000020", // Node 3 MDM 1
+  // Airlock
+  "AIRLOCK000058", // Airlock MDM
+  // Truss
+  "S0000010", // External Control Zone MDM 1
+  "S0000011", // S0 Truss MDM 1
+  "S0000012", // External Control Zone MDM 2
+  "S0000013", // S0 Truss MDM 2
+  "S1000006", // Starboard Thermal Radiator MDM
+  "S1000007", // S1 Truss MDM 1
+  "S1000008", // S1 Truss MDM 2
+  "S3000001", // S3 Truss MDM 1
+  "S3000002", // S3 Truss MDM 2
+  "P1000006", // P1 Truss MDM 1
+  "P1000008", // Port Thermal Radiator MDM
+  "P1000009", // P1 Truss MDM 2
+  "P3000001", // P3 Truss MDM 1
+  "P3000002", // P3 Truss MDM 2
+  // PVCU (Solar Array) MDM 120V On-Off Status (enum 0=Not Enabled, 1=Enabled)
+  "P4000003", // PVCU 2A MDM 120V
+  "P4000006", // PVCU 4A MDM 120V
+  "P6000003", // PVCU 4B MDM 120V
+  "P6000006", // PVCU 2B MDM 120V
+  "S4000003", // PVCU 1A MDM 120V
+  "S4000006", // PVCU 3A MDM 120V
+  "S6000003", // PVCU 3B MDM 120V
+  "S6000006", // PVCU 1B MDM 120V
+
+  // ── EMU (EVA Suit) Battery Charger Assembly — always subscribed but UI
+  //    only renders when an active EVA is in progress. ────────────────────
+  "AIRLOCK000011", // BCA 1 voltage
+  "AIRLOCK000012", // BCA 1 current
+  "AIRLOCK000013", // BCA 2 voltage
+  "AIRLOCK000014", // BCA 2 current
+  "AIRLOCK000015", // BCA 3 voltage
+  "AIRLOCK000016", // BCA 3 current
+  "AIRLOCK000017", // BCA 4 voltage
+  "AIRLOCK000018", // BCA 4 current
+  "AIRLOCK000019", // BCA 1 overall status (0=Normal, 1=No Data, 2=Missing, 3=Extra)
+  "AIRLOCK000020", // BCA 2 status
+  "AIRLOCK000021", // BCA 3 status
+  "AIRLOCK000022", // BCA 4 status
+  // BCA 1-4 channel 1-6 statuses (24 channels)
+  "AIRLOCK000023", "AIRLOCK000024", "AIRLOCK000025", "AIRLOCK000026", "AIRLOCK000027", "AIRLOCK000028",
+  "AIRLOCK000029", "AIRLOCK000030", "AIRLOCK000031", "AIRLOCK000032", "AIRLOCK000033", "AIRLOCK000034",
+  "AIRLOCK000035", "AIRLOCK000036", "AIRLOCK000037", "AIRLOCK000038", "AIRLOCK000039", "AIRLOCK000040",
+  "AIRLOCK000041", "AIRLOCK000042", "AIRLOCK000043", "AIRLOCK000044", "AIRLOCK000045", "AIRLOCK000046",
 ];
 
 export const CHANNEL_IDS = TELEMETRY_IDS;
@@ -600,6 +703,14 @@ export function deriveTelemetry(
   const NAV_SOURCES: Record<string, string> = {
     "0": "None", "1": "GPS 1", "2": "GPS 2", "3": "Russian", "4": "Ku Band",
   };
+  // Rate source (USLAB000014): 0=None, 1=RGA1, 2=RGA2, 3=Russian
+  const RATE_SOURCES: Record<string, string> = {
+    "0": "None", "1": "RGA 1", "2": "RGA 2", "3": "Russian",
+  };
+  // State vector source (USLAB000015): 0=None, 3=Russian, 4=GPS1 Det., 5=GPS2 Det., 6=Ground
+  const STATE_VECTOR_SOURCES: Record<string, string> = {
+    "0": "None", "3": "Russian", "4": "GPS 1 Det", "5": "GPS 2 Det", "6": "Ground",
+  };
   // Control type (USLAB000016): 0=Attitude Hold, 1=Momentum Management
   const CONTROL_TYPES: Record<string, string> = {
     "0": "Attitude Hold", "1": "Momentum Mgmt",
@@ -610,6 +721,8 @@ export function deriveTelemetry(
   };
 
   const navSourceRaw = str("USLAB000013").trim();
+  const rateSourceRaw = str("USLAB000014").trim();
+  const stateVectorSourceRaw = str("USLAB000015").trim();
   const controlTypeRaw = str("USLAB000016").trim();
   const refFrameRaw = str("USLAB000017").trim();
 
@@ -645,6 +758,9 @@ export function deriveTelemetry(
     gyroAlarm:     num("USLAB000042"),
     gps1Status:    str("USLAB000043"),
     gps2Status:    str("USLAB000044"),
+    cmgsOnline:         num("USLAB000005"),
+    rateSource:         RATE_SOURCES[rateSourceRaw] ?? rateSourceRaw,
+    stateVectorSource:  STATE_VECTOR_SOURCES[stateVectorSourceRaw] ?? stateVectorSourceRaw,
   };
 
   // CMGs 1-4: index maps to CMG number - 1
@@ -713,13 +829,39 @@ export function deriveTelemetry(
     videoChannel2:   num("USLAB000089") > 0,
     videoChannel3:   num("USLAB000090") > 0,
     videoChannel4:   num("USLAB000091") > 0,
+    videoSource1:    videoSourceName(num("USLAB000095")),
+    videoSource2:    videoSourceName(num("USLAB000096")),
+    videoSource3:    videoSourceName(num("USLAB000097")),
+    videoSource4:    videoSourceName(num("USLAB000098")),
+    iac1:            num("USLAB000093") === 1 ? "active" : "backup",
+    iac2:            num("USLAB000094") === 1 ? "active" : "backup",
+    frameSyncLock:   num("USLAB000101") === 1,
   };
 
-  // ── Destiny lab vacuum systems (VRS / VES) ────────────────────────────────
+  // ── Destiny lab vacuum systems (VRS / VES) + NASA GNC state vector ────────
   const lab = {
     vrsValvePosition: str("USLAB000062"),
     vesValvePosition: str("USLAB000063"),
+    gncStateVector: {
+      xKm:  num("USLAB000032"),
+      yKm:  num("USLAB000033"),
+      zKm:  num("USLAB000034"),
+      vxMs: num("USLAB000035"),
+      vyMs: num("USLAB000036"),
+      vzMs: num("USLAB000037"),
+    },
+    stdCmdCount:       num("USLAB000082"),
+    dataLoadCmdCount:  num("USLAB000083"),
+    onboardTimeCourse: str("USLAB000084"),
+    onboardTimeFine:   num("USLAB000085"),
+    laptopsConnected:  num("USLAB000087"),
   };
+
+  // ── Systems health (MDM on/off statuses) ──────────────────────────────────
+  const systems = { mdms: deriveMdms(num) };
+
+  // ── EMU battery chargers (populated only when NASA publishes data) ────────
+  const emuBatteries = deriveEmuBatteries(num);
 
   // ── Canadarm2 (SSRMS) ──────────────────────────────────────────────────────
   const robotics = {
@@ -755,7 +897,128 @@ export function deriveTelemetry(
     airlock,
     comms,
     lab,
+    systems,
+    emuBatteries,
     robotics,
     channels,
   };
+}
+
+// ─── Video source lookup (USLAB000095-098) ───────────────────────────────────
+// Camera IDs from node-red-iss-data-streamer README
+const VIDEO_SOURCES: Record<number, string> = {
+  0: "—", 1: "S3 AFT", 2: "S1 UPOB", 3: "SCU1 Mux", 4: "S1 LOOB",
+  5: "JPM a", 6: "JPM b", 7: "S1 UPIB", 8: "S1 LOIB", 9: "COL 1",
+  10: "COL 2", 11: "P1 UPIB", 12: "SCU2 Mux", 13: "NOD3S", 14: "P1 LOIB",
+  15: "SCU1 Test", 16: "WETA112", 17: "ORB1", 18: "ORB2", 19: "P1 LOOB",
+  20: "SCU2 Test", 21: "P3 AFT", 22: "Payload Rack", 23: "VTR1", 24: "VTR2",
+  25: "NOD2LO", 26: "WETA115", 28: "LAB S", 31: "POA PL3", 32: "POA",
+  33: "SPDMS1", 34: "SPDMS2", 35: "MBS CLPA", 36: "SPDM LEE", 37: "MAST",
+  40: "B LEE", 43: "BELB", 48: "TELB", 50: "MSS PL3", 51: "T LEE",
+  52: "Lab AVU1", 53: "Lab AVU2", 54: "Cup AVU1", 55: "Cup AVU2",
+  56: "OTCM1", 57: "BODY1", 58: "OTCM2", 59: "BODY2",
+  60: "SSRMS PL1", 61: "SSRMS PL2", 62: "SSRMS PL3",
+  63: "MSS PL1", 64: "MSS PL2", 65: "LAB1 D3", 66: "LAB1 P2", 67: "LAB1 P4",
+  68: "LAB CAM", 69: "LAB1 O5", 70: "LAB1 O4", 71: "LAB1 O3", 72: "LAB1 O2",
+  73: "LAB1 O1", 74: "LAB1 S1", 75: "LAB1 S2", 76: "LAB1 S3",
+  77: "A/L CAM", 78: "LAB1 S4", 79: "N1 CAM", 80: "N3 CAM",
+};
+function videoSourceName(n: number): string {
+  if (!Number.isFinite(n)) return "—";
+  return VIDEO_SOURCES[n] ?? `#${n}`;
+}
+
+// ─── MDM / PVCU health derivation ────────────────────────────────────────────
+
+/** Static list of MDM channels with their display metadata. */
+const MDM_DEFS: Array<{ id: string; label: string; group: string; pvcu?: boolean }> = [
+  // Command & Control
+  { id: "USLAB000066", label: "C&C MDM 1", group: "cnc" },
+  { id: "USLAB000067", label: "C&C MDM 2", group: "cnc" },
+  { id: "USLAB000068", label: "C&C MDM 3", group: "cnc" },
+  // Internal Control Zone
+  { id: "USLAB000069", label: "ICZ MDM 1", group: "icz" },
+  { id: "USLAB000070", label: "ICZ MDM 2", group: "icz" },
+  // Payload
+  { id: "USLAB000071", label: "Payload MDM 1", group: "payload" },
+  { id: "USLAB000072", label: "Payload MDM 2", group: "payload" },
+  // GNC
+  { id: "USLAB000073", label: "GNC MDM 1", group: "gnc" },
+  { id: "USLAB000074", label: "GNC MDM 2", group: "gnc" },
+  // Power Management
+  { id: "USLAB000075", label: "PMCU 1 MDM 1", group: "pmcu" },
+  { id: "USLAB000076", label: "PMCU 2 MDM 1", group: "pmcu" },
+  // US Lab
+  { id: "USLAB000077", label: "US Lab MDM 1", group: "lab" },
+  { id: "USLAB000078", label: "US Lab MDM 2", group: "lab" },
+  { id: "USLAB000079", label: "US Lab MDM 3", group: "lab" },
+  { id: "USLAB000080", label: "PMM Power", group: "lab" },
+  // Nodes
+  { id: "NODE1000002", label: "Node 1 MDM 2", group: "node" },
+  { id: "NODE2000004", label: "Node 2 MDM 2", group: "node" },
+  { id: "NODE2000005", label: "Node 2 MDM 1", group: "node" },
+  { id: "NODE3000014", label: "HCZ MDM 2", group: "node" },
+  { id: "NODE3000015", label: "Node 3 MDM 2", group: "node" },
+  { id: "NODE3000016", label: "HCZ MDM 1", group: "node" },
+  { id: "NODE3000020", label: "Node 3 MDM 1", group: "node" },
+  // Airlock
+  { id: "AIRLOCK000058", label: "Airlock MDM", group: "airlock" },
+  // Truss
+  { id: "S0000010", label: "ECZ MDM 1", group: "truss" },
+  { id: "S0000011", label: "S0 MDM 1", group: "truss" },
+  { id: "S0000012", label: "ECZ MDM 2", group: "truss" },
+  { id: "S0000013", label: "S0 MDM 2", group: "truss" },
+  { id: "S1000006", label: "STR MDM", group: "truss" },
+  { id: "S1000007", label: "S1 MDM 1", group: "truss" },
+  { id: "S1000008", label: "S1 MDM 2", group: "truss" },
+  { id: "S3000001", label: "S3 MDM 1", group: "truss" },
+  { id: "S3000002", label: "S3 MDM 2", group: "truss" },
+  { id: "P1000006", label: "P1 MDM 1", group: "truss" },
+  { id: "P1000008", label: "PTR MDM", group: "truss" },
+  { id: "P1000009", label: "P1 MDM 2", group: "truss" },
+  { id: "P3000001", label: "P3 MDM 1", group: "truss" },
+  { id: "P3000002", label: "P3 MDM 2", group: "truss" },
+  // PVCU (Solar Array power bus) — different enum semantics (0=Not Enabled, 1=Enabled)
+  { id: "P4000003", label: "PVCU 2A 120V", group: "pvcu", pvcu: true },
+  { id: "P4000006", label: "PVCU 4A 120V", group: "pvcu", pvcu: true },
+  { id: "P6000003", label: "PVCU 4B 120V", group: "pvcu", pvcu: true },
+  { id: "P6000006", label: "PVCU 2B 120V", group: "pvcu", pvcu: true },
+  { id: "S4000003", label: "PVCU 1A 120V", group: "pvcu", pvcu: true },
+  { id: "S4000006", label: "PVCU 3A 120V", group: "pvcu", pvcu: true },
+  { id: "S6000003", label: "PVCU 3B 120V", group: "pvcu", pvcu: true },
+  { id: "S6000006", label: "PVCU 1B 120V", group: "pvcu", pvcu: true },
+];
+
+function deriveMdms(num: (id: string) => number) {
+  return MDM_DEFS.map((def) => ({
+    id: def.id,
+    label: def.label,
+    group: def.group,
+    status: num(def.id),
+    pvcu: def.pvcu === true,
+  }));
+}
+
+// ─── EMU battery charger derivation ──────────────────────────────────────────
+
+function deriveEmuBatteries(num: (id: string) => number) {
+  const bcas = [1, 2, 3, 4].map((bcaNum) => {
+    const voltId    = `AIRLOCK${String(9 + bcaNum * 2).padStart(6, "0")}`;   // 011,013,015,017
+    const currId    = `AIRLOCK${String(10 + bcaNum * 2).padStart(6, "0")}`;  // 012,014,016,018
+    const overallId = `AIRLOCK${String(18 + bcaNum).padStart(6, "0")}`;      // 019,020,021,022
+    const channels = [1, 2, 3, 4, 5, 6].map((chanNum) => {
+      // BCA 1 → 023-028, BCA 2 → 029-034, BCA 3 → 035-040, BCA 4 → 041-046
+      const id = `AIRLOCK${String(22 + (bcaNum - 1) * 6 + chanNum).padStart(6, "0")}`;
+      return num(id);
+    });
+    return {
+      voltage: num(voltId),
+      current: num(currId),
+      overallStatus: num(overallId),
+      channels,
+    };
+  });
+  // "Active" if any BCA is reporting non-zero voltage.
+  const active = bcas.some((b) => b.voltage > 0);
+  return { active, bcas };
 }
