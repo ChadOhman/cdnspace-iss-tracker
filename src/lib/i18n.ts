@@ -37,6 +37,7 @@ export const TRANSLATIONS: Record<Locale, Record<string, Record<string, string>>
       attitudeControl: "Attitude Control",
       moduleTemps: "Module Temperatures",
       airlock: "Airlock — Quest",
+      comms: "Communications",
     },
     solarArrays: {
       totalPower: "Total Station Power",
@@ -306,6 +307,7 @@ export const TRANSLATIONS: Record<Locale, Record<string, Record<string, string>>
       attitudeControl: "Contrôle d'attitude",
       moduleTemps: "Températures des modules",
       airlock: "Sas — Quest",
+      comms: "Communications",
     },
     solarArrays: {
       totalPower: "Puissance totale",

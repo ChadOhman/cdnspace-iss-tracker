@@ -110,18 +110,36 @@ function co2Color(mmhg: number): string {
   return "var(--color-accent-red)";
 }
 
-// NASA enumerated status codes
+// NASA enumerated status codes (verified from node-red-iss-data-streamer
+// README — some use sequential values, others use bitfield values)
 const OGS_STATUS: Record<string, string> = {
-  "0": "Process", "1": "Standby", "2": "Shutdown", "3": "Stop",
-  "4": "Vent Dome", "5": "Inert Dome", "6": "Fast Shutdown", "7": "N₂ Purge Shutdown",
+  "1": "Process",
+  "2": "Standby",
+  "3": "Shutdown",
+  "4": "Stop",
+  "5": "Vent Dome",
+  "6": "Inert Dome",
+  "7": "Fast Shutdown",
+  "8": "N₂ Purge Shutdown",
 };
+// UPA uses bitfield values: 2, 4, 8, 16, 32, 64, 128
 const UPA_STATUS: Record<string, string> = {
-  "0": "Stop", "1": "Shutdown", "2": "Maintenance", "3": "Normal",
-  "4": "Standby", "5": "Idle", "6": "System Init",
+  "2": "Stop",
+  "4": "Shutdown",
+  "8": "Maintenance",
+  "16": "Normal",
+  "32": "Standby",
+  "64": "Idle",
+  "128": "System Initialized",
 };
 const WPA_STATUS: Record<string, string> = {
-  "0": "Stop", "1": "Shutdown", "2": "Standby", "3": "Process",
-  "4": "Hot Service", "5": "Flush", "6": "Warm Shutdown",
+  "1": "Stop",
+  "2": "Shutdown",
+  "3": "Standby",
+  "4": "Process",
+  "5": "Hot Service",
+  "6": "Flush",
+  "7": "Warm Shutdown",
 };
 const ECLSS_DECODE: Record<string, Record<string, string>> = {
   "Oxygen Generation System": OGS_STATUS,

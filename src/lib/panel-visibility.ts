@@ -23,6 +23,7 @@ export const PANEL_DEFINITIONS = [
   { group: "right", id: "attitude", label: "Attitude Control" },
   { group: "right", id: "moduleTemps", label: "Module Temperatures" },
   { group: "right", id: "tdrs", label: "TDRS Communications" },
+  { group: "right", id: "comms", label: "Communications (S/Ku-Band)" },
   { group: "right", id: "airlock", label: "Airlock — Quest" },
   { group: "right", id: "russianSegment", label: "Russian Segment" },
 ] as const;

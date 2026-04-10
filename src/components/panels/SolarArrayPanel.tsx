@@ -4,6 +4,23 @@ import PanelFrame from "@/components/shared/PanelFrame";
 import type { ISSTelemetry } from "@/lib/types";
 import { useLocale } from "@/context/LocaleContext";
 
+// SARJ and TRRJ software mode enum (shared — both joint types use the same scheme)
+// From node-red-iss-data-streamer README: 1=STANDBY, 4=DIRECTED_POSITION,
+// 5=AUTOTRACK, 6=BLIND, 7=SHUTDOWN, 8=SWITCHOVER
+const SARJ_MODE_MAP: Record<string, { label: string; color: string }> = {
+  "1": { label: "Standby",   color: "var(--color-text-muted)" },
+  "4": { label: "Directed",  color: "var(--color-accent-orange)" },
+  "5": { label: "Autotrack", color: "var(--color-accent-green)" },
+  "6": { label: "Blind",     color: "var(--color-accent-orange)" },
+  "7": { label: "Shutdown",  color: "var(--color-accent-red)" },
+  "8": { label: "Switchover",color: "var(--color-accent-orange)" },
+};
+
+function decodeSarjMode(raw: string): { label: string; color: string } {
+  const trimmed = raw.trim();
+  return SARJ_MODE_MAP[trimmed] ?? { label: trimmed || "—", color: "var(--color-text-muted)" };
+}
+
 interface SolarArrayPanelProps {
   telemetry: ISSTelemetry | null;
 }
@@ -200,32 +217,52 @@ export default function SolarArrayPanel({ telemetry }: SolarArrayPanelProps) {
               gap: 6,
             }}
           >
-            <div
-              style={{
-                background: "var(--color-bg-secondary)",
-                border: "1px solid var(--color-border-subtle)",
-                borderRadius: 4,
-                padding: "5px 8px",
-              }}
-            >
-              <div style={{ color: "var(--color-text-muted)", fontSize: 8, cursor: "help" }} title="Solar Alpha Rotary Joint — rotates the port-side solar array wings to track the sun">PORT SARJ</div>
-              <div style={{ color: "var(--color-accent-green)", fontSize: 13, fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>
-                {telemetry.solarArrays.portSarj.toFixed(1)}°
-              </div>
-            </div>
-            <div
-              style={{
-                background: "var(--color-bg-secondary)",
-                border: "1px solid var(--color-border-subtle)",
-                borderRadius: 4,
-                padding: "5px 8px",
-              }}
-            >
-              <div style={{ color: "var(--color-text-muted)", fontSize: 8, cursor: "help" }} title="Solar Alpha Rotary Joint — rotates the starboard-side solar array wings to track the sun">STARBOARD SARJ</div>
-              <div style={{ color: "var(--color-accent-green)", fontSize: 13, fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>
-                {telemetry.solarArrays.starboardSarj.toFixed(1)}°
-              </div>
-            </div>
+            {(() => {
+              const portMode = decodeSarjMode(telemetry.solarArrays.portSarjMode);
+              return (
+                <div
+                  style={{
+                    background: "var(--color-bg-secondary)",
+                    border: "1px solid var(--color-border-subtle)",
+                    borderRadius: 4,
+                    padding: "5px 8px",
+                  }}
+                >
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <div style={{ color: "var(--color-text-muted)", fontSize: 8, cursor: "help" }} title="Solar Alpha Rotary Joint — rotates the port-side solar array wings to track the sun">PORT SARJ</div>
+                    <div style={{ color: portMode.color, fontSize: 8, fontWeight: 700 }}>
+                      {portMode.label.toUpperCase()}
+                    </div>
+                  </div>
+                  <div style={{ color: "var(--color-accent-green)", fontSize: 13, fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>
+                    {telemetry.solarArrays.portSarj.toFixed(1)}°
+                  </div>
+                </div>
+              );
+            })()}
+            {(() => {
+              const sbMode = decodeSarjMode(telemetry.solarArrays.starboardSarjMode);
+              return (
+                <div
+                  style={{
+                    background: "var(--color-bg-secondary)",
+                    border: "1px solid var(--color-border-subtle)",
+                    borderRadius: 4,
+                    padding: "5px 8px",
+                  }}
+                >
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <div style={{ color: "var(--color-text-muted)", fontSize: 8, cursor: "help" }} title="Solar Alpha Rotary Joint — rotates the starboard-side solar array wings to track the sun">STARBOARD SARJ</div>
+                    <div style={{ color: sbMode.color, fontSize: 8, fontWeight: 700 }}>
+                      {sbMode.label.toUpperCase()}
+                    </div>
+                  </div>
+                  <div style={{ color: "var(--color-accent-green)", fontSize: 13, fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>
+                    {telemetry.solarArrays.starboardSarj.toFixed(1)}°
+                  </div>
+                </div>
+              );
+            })()}
           </div>
         </div>
       )}

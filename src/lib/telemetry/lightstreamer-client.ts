@@ -44,9 +44,14 @@ const TELEMETRY_IDS = [
   "S6000005",    // S6 4A channel current (A)
   "S6000007",    // S6 BGA rotation (deg)
   "S6000008",    // S6 BGA incidence (deg)
-  // SARJ angles
-  "S0000003",    // Port SARJ angle (deg)
-  "S0000004",    // Starboard SARJ angle (deg)
+  // SARJ angles and modes
+  "S0000003",    // SARJ Starboard angle position (deg)
+  "S0000004",    // SARJ Port angle position (deg)
+  "S0000008",    // SARJ Port mode (enum)
+  "S0000009",    // SARJ Starboard mode (enum)
+  // TRRJ modes (loop A/B software mode)
+  "S0000006",    // TRRJ Loop B software mode (enum)
+  "S0000007",    // TRRJ Loop A software mode (enum)
 
   // ── CMG / Attitude ────────────────────────────────────────────────────────
   "USLAB000001", // CMG 1 on/off status
@@ -56,7 +61,9 @@ const TELEMETRY_IDS = [
   "USLAB000006", // Command torque roll (Nm)
   "USLAB000007", // Command torque pitch (Nm)
   "USLAB000008", // Command torque yaw (Nm)
-  "USLAB000009", // Total momentum saturation (Nms)
+  "USLAB000009", // Active CMG Momentum (Nms)
+  "USLAB000010", // CMG Momentum Percentage (%) — direct from NASA
+  "USLAB000011", // Desaturation Request (0=Enabled, 1=Inhibited)
   "USLAB000012", // GNC attitude control mode (enumerated)
   "USLAB000013", // GNC nav source (enumerated)
   "USLAB000016", // Attitude control type (enumerated)
@@ -83,6 +90,10 @@ const TELEMETRY_IDS = [
   "USLAB000050", // CMG 3 hall resolver temp (°C)
   "USLAB000051", // CMG 4 spin motor temp (°C)
   "USLAB000052", // CMG 4 hall resolver temp (°C)
+  "USLAB000038", // Active CMG Momentum Capacity (Nms)
+  "USLAB000039", // ISS Total Mass (kg)
+  "USLAB000040", // Solar Beta Angle (degrees) — direct from NASA
+  "USLAB000081", // Attitude Maneuver In Progress (0/1)
   "USLAB000086", // ISS station mode (enumerated)
   // Z1 CMG vibration, wheel current, spin rate
   "Z1000001",    // CMG 1 vibration (g)
@@ -105,9 +116,9 @@ const TELEMETRY_IDS = [
   "NODE3000004", // UPA status (enumerated)
   "NODE3000005", // Urine tank fill (%)
   "NODE3000006", // WPA status (enumerated)
-  "NODE3000007", // CO₂ concentration (%) — legacy mapping
-  "NODE3000008", // O₂ concentration (%) — legacy mapping
-  "NODE3000009", // Cabin pressure (psi) — legacy mapping
+  "NODE3000007", // Water Processor Step (enum)
+  "NODE3000008", // Waste Water Tank Qty (%)
+  "NODE3000009", // Clean Water Tank Qty (%)
   "NODE3000010", // OGS H₂ dome status (enumerated)
   "NODE3000011", // O₂ generation rate (mg/sec)
   "NODE3000012", // Tranquility avionics air temp (°C)
@@ -166,6 +177,21 @@ const TELEMETRY_IDS = [
   // ── Destiny Lab Coolant Loops ──────────────────────────────────────────────
   "USLAB000056", // Destiny ITCS Low Temperature Loop coolant fill (%)
   "USLAB000057", // Destiny ITCS Medium Temperature Loop coolant fill (%)
+
+  // ── Communications (CATO) ─────────────────────────────────────────────────
+  // S-Band RFG 1 (on S1 truss) and RFG 2 (on P1 truss) antenna gimbal angles
+  "S1000004", // S-Band RFG 1 Azimuth Gimbal Position (deg)
+  "S1000005", // S-Band RFG 1 Elevation Gimbal Position (deg)
+  "S1000009", // S-Band RFG 1 on/off status (bool)
+  "P1000004", // S-Band RFG 2 Azimuth Gimbal Position (deg)
+  "P1000005", // S-Band RFG 2 Elevation Gimbal Position (deg)
+  "P1000007", // S-Band RFG 2 on/off status (bool)
+  // Ku-Band SGANT (Space-to-Ground Antenna) — high-rate data relay
+  "Z1000013", // Ku-Band Transmit (0=Reset, 1=Normal)
+  "Z1000014", // Ku-Band SGANT Elevation Position (deg)
+  "Z1000015", // Ku-Band SGANT Cross-Elevation Position (deg)
+  // US active S-Band string
+  "USLAB000092", // Active String of S-Band
 
   // ── Russian Segment ────────────────────────────────────────────────────────
   "RUSSEG000001", // RS Station Mode (enum: 1=Crew Rescue … 7=Standard)
@@ -436,8 +462,11 @@ export function deriveTelemetry(
       bgaRotation: num("S6000007"),
       bgaIncidence: num("S6000008"),
     },
-    portSarj:      num("S0000003"),
-    starboardSarj: num("S0000004"),
+    // Note: S0000003 is STARBOARD per README; S0000004 is PORT
+    starboardSarj: num("S0000003"),
+    portSarj:      num("S0000004"),
+    portSarjMode:      str("S0000008"),
+    starboardSarjMode: str("S0000009"),
   };
 
   // ── Thermal ────────────────────────────────────────────────────────────────
@@ -483,6 +512,8 @@ export function deriveTelemetry(
     loopBRadiatorTemp: num("P1000003"),
     trrjStarboard:    num("S0000001"),
     trrjPort:         num("S0000002"),
+    trrjLoopAMode:    str("S0000007"),
+    trrjLoopBMode:    str("S0000006"),
   };
 
   // ── Atmosphere / ECLSS ─────────────────────────────────────────────────────
@@ -508,8 +539,8 @@ export function deriveTelemetry(
     uslabO2Mmhg:       num("USLAB000053"),
     uslabN2Mmhg:       num("USLAB000054"),
     uslabCo2Mmhg:      num("USLAB000055"),
-    cleanWaterPercent:  num("NODE3000008"),
-    wasteWaterPercent:  num("NODE3000009"),
+    cleanWaterPercent:  num("NODE3000009"),
+    wasteWaterPercent:  num("NODE3000008"),
     urinePercent:       num("NODE3000005"),
     upaStatus:          str("NODE3000004"),
     wpaStatus:          str("NODE3000006"),
@@ -574,7 +605,13 @@ export function deriveTelemetry(
     cmdTorqueRoll:  num("USLAB000006"),
     cmdTorquePitch: num("USLAB000007"),
     cmdTorqueYaw:   num("USLAB000008"),
-    momentumSaturation: num("USLAB000009"),
+    momentumSaturation: num("USLAB000009"),     // absolute Nms
+    momentumPercent:    num("USLAB000010"),     // direct from NASA (%)
+    momentumCapacity:   num("USLAB000038"),     // total capacity (Nms)
+    desatInhibited:     num("USLAB000011") === 1, // 1 = inhibited
+    maneuverInProgress: num("USLAB000081") === 1,
+    betaAngle:          num("USLAB000040"),     // degrees (direct from NASA)
+    issMassKg:          num("USLAB000039"),
     stationAlarm:  num("USLAB000041"),
     gyroAlarm:     num("USLAB000042"),
     gps1Status:    str("USLAB000043"),
@@ -625,6 +662,20 @@ export function deriveTelemetry(
     n2Tank:           num("AIRLOCK000057"),
   };
 
+  // ── Communications (CATO) ──────────────────────────────────────────────────
+  const comms = {
+    sband1Azimuth:   num("S1000004"),
+    sband1Elevation: num("S1000005"),
+    sband1On:        num("S1000009") === 1,
+    sband2Azimuth:   num("P1000004"),
+    sband2Elevation: num("P1000005"),
+    sband2On:        num("P1000007") === 1,
+    activeSband:     str("USLAB000092"),
+    kuTransmitOn:    num("Z1000013") === 1,
+    kuElevation:     num("Z1000014"),
+    kuCrossElevation: num("Z1000015"),
+  };
+
   return {
     timestamp: Date.now(),
     powerKw,
@@ -640,6 +691,7 @@ export function deriveTelemetry(
     attitude,
     cmgs,
     airlock,
+    comms,
     channels,
   };
 }

@@ -55,20 +55,37 @@ function ModuleBox({ name, cabinTemp, avionicsTemp, accent = "var(--color-accent
 type FlowRateConverter = (lbPerHr: number) => { value: number; unit: string };
 type PressureConverter = (psi: number) => { value: number; unit: string };
 
+// TRRJ software mode enum (same values as SARJ)
+const TRRJ_MODE_MAP: Record<string, { label: string; color: string }> = {
+  "1": { label: "Standby",    color: "var(--color-text-muted)" },
+  "4": { label: "Directed",   color: "var(--color-accent-orange)" },
+  "5": { label: "Autotrack",  color: "var(--color-accent-green)" },
+  "6": { label: "Blind",      color: "var(--color-accent-orange)" },
+  "7": { label: "Shutdown",   color: "var(--color-accent-red)" },
+  "8": { label: "Switchover", color: "var(--color-accent-orange)" },
+};
+
+function decodeTrrjMode(raw: string): { label: string; color: string } {
+  const trimmed = (raw ?? "").trim();
+  return TRRJ_MODE_MAP[trimmed] ?? { label: trimmed || "—", color: "var(--color-text-muted)" };
+}
+
 interface ThermalLoopRowProps {
   label: string;
   flow: number;
   pressure: number;
   radTemp: number;
+  mode: string;
   flowRate: FlowRateConverter;
   pressureConv: PressureConverter;
   temperature: TemperatureConverter;
 }
 
-function ThermalLoopRow({ label, flow, pressure, radTemp, flowRate, pressureConv, temperature }: ThermalLoopRowProps) {
+function ThermalLoopRow({ label, flow, pressure, radTemp, mode, flowRate, pressureConv, temperature }: ThermalLoopRowProps) {
   const flowConverted = flowRate(flow);
   const pressureConverted = pressureConv(pressure);
   const radConverted = temperature(radTemp);
+  const modeDecoded = decodeTrrjMode(mode);
   return (
     <div
       style={{
@@ -77,9 +94,13 @@ function ThermalLoopRow({ label, flow, pressure, radTemp, flowRate, pressureConv
         alignItems: "center",
         padding: "3px 0",
         borderBottom: "1px solid var(--color-border-subtle)",
+        gap: 6,
       }}
     >
       <span style={{ color: "var(--color-accent-cyan)", fontSize: 9, fontWeight: 700, minWidth: 60 }}>{label}</span>
+      <span style={{ color: modeDecoded.color, fontSize: 8, fontWeight: 700, minWidth: 50, textAlign: "center" }}>
+        {modeDecoded.label.toUpperCase()}
+      </span>
       <span style={{ color: "var(--color-text-secondary)", fontSize: 9, fontVariantNumeric: "tabular-nums" }}>
         {flowConverted.value.toFixed(1)} {flowConverted.unit}
       </span>
@@ -248,8 +269,9 @@ export default function ModuleTempsPanel({ telemetry }: ModuleTempsPanelProps) {
             <div style={{ color: "var(--color-text-muted)", fontSize: 8, marginBottom: 4 }}>
               {t("moduleTemps.externalLoops").toUpperCase()}
             </div>
-            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 2 }}>
-              <span />
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 2, gap: 6 }}>
+              <span style={{ minWidth: 60 }} />
+              <span style={{ color: "var(--color-text-muted)", fontSize: 8, minWidth: 50, textAlign: "center" }}>MODE</span>
               <span style={{ color: "var(--color-text-muted)", fontSize: 8 }}>FLOW</span>
               <span style={{ color: "var(--color-text-muted)", fontSize: 8 }}>PRESS</span>
               <span style={{ color: "var(--color-text-muted)", fontSize: 8 }}>RAD OUT</span>
@@ -259,6 +281,7 @@ export default function ModuleTempsPanel({ telemetry }: ModuleTempsPanelProps) {
               flow={telemetry.externalThermal.loopAFlow}
               pressure={telemetry.externalThermal.loopAPressure}
               radTemp={telemetry.externalThermal.loopARadiatorTemp}
+              mode={telemetry.externalThermal.trrjLoopAMode}
               flowRate={flowRate}
               pressureConv={pressure}
               temperature={temperature}
@@ -268,6 +291,7 @@ export default function ModuleTempsPanel({ telemetry }: ModuleTempsPanelProps) {
               flow={telemetry.externalThermal.loopBFlow}
               pressure={telemetry.externalThermal.loopBPressure}
               radTemp={telemetry.externalThermal.loopBRadiatorTemp}
+              mode={telemetry.externalThermal.trrjLoopBMode}
               flowRate={flowRate}
               pressureConv={pressure}
               temperature={temperature}

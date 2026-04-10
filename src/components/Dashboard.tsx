@@ -123,6 +123,7 @@ import AirlockPanel from "@/components/panels/AirlockPanel";
 import UpcomingEventsPanel from "@/components/panels/UpcomingEventsPanel";
 import DayNightPanel from "@/components/panels/DayNightPanel";
 import TdrsPanel from "@/components/panels/TdrsPanel";
+import CommsPanel from "@/components/panels/CommsPanel";
 import RussianSegmentPanel from "@/components/panels/RussianSegmentPanel";
 
 export function Dashboard() {
@@ -209,6 +210,7 @@ export function Dashboard() {
         {show("attitude", "left") && <AttitudePanel telemetry={stream.telemetry} />}
         {show("moduleTemps", "left") && <ModuleTempsPanel telemetry={stream.telemetry} />}
         {show("tdrs", "left") && <TdrsPanel orbital={stream.orbital} />}
+        {show("comms", "left") && <CommsPanel telemetry={stream.telemetry} />}
         {show("airlock", "left") && <AirlockPanel telemetry={stream.telemetry} />}
         {show("russianSegment", "left") && <RussianSegmentPanel telemetry={stream.telemetry} />}
       </div>
@@ -229,6 +231,7 @@ export function Dashboard() {
         {show("attitude", "center") && <AttitudePanel telemetry={stream.telemetry} />}
         {show("moduleTemps", "center") && <ModuleTempsPanel telemetry={stream.telemetry} />}
         {show("tdrs", "center") && <TdrsPanel orbital={stream.orbital} />}
+        {show("comms", "center") && <CommsPanel telemetry={stream.telemetry} />}
         {show("airlock", "center") && <AirlockPanel telemetry={stream.telemetry} />}
         {show("russianSegment", "center") && <RussianSegmentPanel telemetry={stream.telemetry} />}
       </div>
@@ -241,6 +244,7 @@ export function Dashboard() {
         {show("attitude", "right") && <AttitudePanel telemetry={stream.telemetry} />}
         {show("moduleTemps", "right") && <ModuleTempsPanel telemetry={stream.telemetry} />}
         {show("tdrs", "right") && <TdrsPanel orbital={stream.orbital} />}
+        {show("comms", "right") && <CommsPanel telemetry={stream.telemetry} />}
         {show("airlock", "right") && <AirlockPanel telemetry={stream.telemetry} />}
         {show("russianSegment", "right") && <RussianSegmentPanel telemetry={stream.telemetry} />}
         {show("groundTrack", "right") && <GroundTrackPanel orbital={stream.orbital} />}

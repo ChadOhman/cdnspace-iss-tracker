@@ -309,13 +309,18 @@ export default function AttitudePanel({ telemetry }: AttitudePanelProps) {
                 borderTop: "1px solid var(--color-border-subtle)",
               }}
             >
-              <div style={{ color: "var(--color-text-muted)", fontSize: 8, marginBottom: 3, cursor: "help" }} title="Total CMG momentum as percentage of ~14,000 Nms capacity. High saturation requires thruster desaturation.">
+              <div style={{ color: "var(--color-text-muted)", fontSize: 8, marginBottom: 3, cursor: "help" }} title="CMG momentum as percentage of capacity. High saturation requires thruster desaturation.">
                 {t("attitude.momentum").toUpperCase()}
               </div>
               {(() => {
-                const CMG_MAX_NMS = 14000;
                 const rawNms = telemetry.attitude.momentumSaturation;
-                const pct = (rawNms / CMG_MAX_NMS) * 100;
+                const capacity = telemetry.attitude.momentumCapacity;
+                // Prefer NASA's direct percentage channel; fall back to computed
+                const pct = telemetry.attitude.momentumPercent > 0
+                  ? telemetry.attitude.momentumPercent
+                  : capacity > 0
+                    ? (rawNms / capacity) * 100
+                    : 0;
                 return (
                   <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                     <div
@@ -352,7 +357,7 @@ export default function AttitudePanel({ telemetry }: AttitudePanelProps) {
                       {pct.toFixed(1)}%
                     </span>
                     <span style={{ color: "var(--color-text-muted)", fontSize: 8 }}>
-                      ({rawNms.toFixed(0)} Nms)
+                      ({rawNms.toFixed(0)} / {capacity > 0 ? capacity.toFixed(0) : "—"} Nms)
                     </span>
                   </div>
                 );

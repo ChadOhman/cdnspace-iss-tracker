@@ -69,6 +69,10 @@ export interface ISSTelemetry {
     portSarj: number;
     /** Starboard SARJ angle (degrees) */
     starboardSarj: number;
+    /** Port SARJ software mode (raw enum value) */
+    portSarjMode: string;
+    /** Starboard SARJ software mode (raw enum value) */
+    starboardSarjMode: string;
   };
 
   // ── Thermal ────────────────────────────────────────────────────────────────
@@ -93,6 +97,10 @@ export interface ISSTelemetry {
     trrjStarboard: number;
     /** Port TRRJ angle (degrees) */
     trrjPort: number;
+    /** TRRJ Loop A software mode (raw enum value) */
+    trrjLoopAMode: string;
+    /** TRRJ Loop B software mode (raw enum value) */
+    trrjLoopBMode: string;
   };
 
   // ── Atmosphere / ECLSS ─────────────────────────────────────────────────────
@@ -150,7 +158,20 @@ export interface ISSTelemetry {
     roll: number; pitch: number; yaw: number;
     rollRateErr: number; pitchRateErr: number; yawRateErr: number;
     cmdTorqueRoll: number; cmdTorquePitch: number; cmdTorqueYaw: number;
+    /** Active CMG momentum in Nms (raw value) */
     momentumSaturation: number;
+    /** CMG momentum as percentage of capacity (direct from NASA USLAB000010) */
+    momentumPercent: number;
+    /** Active CMG momentum capacity in Nms (USLAB000038) */
+    momentumCapacity: number;
+    /** True if desaturation is inhibited (USLAB000011 = 1) */
+    desatInhibited: boolean;
+    /** True if an attitude maneuver is in progress (USLAB000081 = 1) */
+    maneuverInProgress: boolean;
+    /** Solar beta angle in degrees (direct from NASA USLAB000040) */
+    betaAngle: number;
+    /** ISS total mass in kg (USLAB000039) */
+    issMassKg: number;
     stationAlarm: number;
     gyroAlarm: number;
     gps1Status: string;
@@ -186,6 +207,30 @@ export interface ISSTelemetry {
     emu2SecO2Pressure: number;
     /** EMU 2 secondary O₂ supply current (A) */
     emu2SecO2Current: number;
+  };
+
+  /** Communications systems (S-Band, Ku-Band SGANT) */
+  comms: {
+    /** S-Band RFG 1 (S1 truss) azimuth gimbal position (deg) */
+    sband1Azimuth: number;
+    /** S-Band RFG 1 elevation gimbal position (deg) */
+    sband1Elevation: number;
+    /** S-Band RFG 1 power state (0=off, 1=on) */
+    sband1On: boolean;
+    /** S-Band RFG 2 (P1 truss) azimuth gimbal position (deg) */
+    sband2Azimuth: number;
+    /** S-Band RFG 2 elevation gimbal position (deg) */
+    sband2Elevation: number;
+    /** S-Band RFG 2 power state */
+    sband2On: boolean;
+    /** Active S-Band string identifier */
+    activeSband: string;
+    /** Ku-Band SGANT Transmit state (0=reset, 1=normal) */
+    kuTransmitOn: boolean;
+    /** Ku-Band SGANT elevation position (deg) */
+    kuElevation: number;
+    /** Ku-Band SGANT cross-elevation position (deg) */
+    kuCrossElevation: number;
   };
 
   /** Raw Lightstreamer channel values keyed by channel name */
