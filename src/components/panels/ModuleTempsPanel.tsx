@@ -306,13 +306,24 @@ export default function ModuleTempsPanel({ telemetry }: ModuleTempsPanelProps) {
               borderTop: "1px solid var(--color-border-subtle)",
             }}
           >
-            <div style={{ color: "var(--color-text-muted)", fontSize: 8, marginBottom: 4 }}>
+            <div
+              style={{ color: "var(--color-text-muted)", fontSize: 8, marginBottom: 4, cursor: "help" }}
+              title="Internal Thermal Control System — water-cooled loops inside the Destiny lab that move heat from equipment to the external ammonia radiators"
+            >
               DESTINY ITCS COOLANT
             </div>
             {[
-              { label: "LTL %", value: telemetry.moduleTemps.destinyLtlPercent },
-              { label: "MTL %", value: telemetry.moduleTemps.destinyMtlPercent },
-            ].map(({ label, value }) => {
+              {
+                label: "LTL %",
+                tip: "Low Temperature Loop (~4°C) — cools sensitive electronics and prevents condensation",
+                value: telemetry.moduleTemps.destinyLtlPercent,
+              },
+              {
+                label: "MTL %",
+                tip: "Moderate Temperature Loop (~17°C) — cools crew equipment, lighting, and habitation systems",
+                value: telemetry.moduleTemps.destinyMtlPercent,
+              },
+            ].map(({ label, tip, value }) => {
               const pct = Math.max(0, Math.min(100, value));
               const barColor =
                 pct < 30
@@ -323,7 +334,12 @@ export default function ModuleTempsPanel({ telemetry }: ModuleTempsPanelProps) {
               return (
                 <div key={label} style={{ marginBottom: 5 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 2 }}>
-                    <span style={{ color: "var(--color-text-muted)", fontSize: 8 }}>{label}</span>
+                    <span
+                      style={{ color: "var(--color-text-muted)", fontSize: 8, cursor: "help" }}
+                      title={tip}
+                    >
+                      {label}
+                    </span>
                     <span style={{ color: barColor, fontSize: 9, fontVariantNumeric: "tabular-nums" }}>
                       {value.toFixed(1)}%
                     </span>

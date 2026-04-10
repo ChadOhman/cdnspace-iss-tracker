@@ -53,17 +53,20 @@ const DYNAMIC_MODES: Record<number, string> = {
 interface SectionHeadingProps {
   label: string;
   color: string;
+  tooltip?: string;
 }
 
-function SectionHeading({ label, color }: SectionHeadingProps) {
+function SectionHeading({ label, color, tooltip }: SectionHeadingProps) {
   return (
     <div
+      title={tooltip}
       style={{
         color,
         fontSize: 9,
         fontWeight: 700,
         marginBottom: 6,
         letterSpacing: "0.06em",
+        cursor: tooltip ? "help" : "default",
       }}
     >
       {label}
@@ -96,9 +99,10 @@ function StatusCell({ label, value, valueColor }: StatusCellProps) {
 interface DockPortRowProps {
   label: string;
   engaged: boolean;
+  tooltip?: string;
 }
 
-function DockPortRow({ label, engaged }: DockPortRowProps) {
+function DockPortRow({ label, engaged, tooltip }: DockPortRowProps) {
   return (
     <div
       style={{
@@ -122,10 +126,12 @@ function DockPortRow({ label, engaged }: DockPortRowProps) {
         }}
       />
       <span
+        title={tooltip}
         style={{
           color: engaged ? "var(--color-text-primary)" : "var(--color-text-muted)",
           fontSize: 9,
           flex: 1,
+          cursor: tooltip ? "help" : "default",
         }}
       >
         {label}
@@ -301,13 +307,41 @@ export default function RussianSegmentPanel({ telemetry }: RussianSegmentPanelPr
                 padding: "4px 8px",
               }}
             >
-              <DockPortRow label="SM Forward (Xfer)" engaged={smForward} />
-              <DockPortRow label="SM Aft (Instr Compartment)" engaged={smAft} />
-              <DockPortRow label="SM Nadir (-Y)" engaged={smNadir} />
-              <DockPortRow label="FGB Nadir (-Y)" engaged={fgbNadir} />
-              <DockPortRow label="SM Nadir UDM" engaged={smNadirUdm} />
-              <DockPortRow label="MRM1 Rassvet" engaged={mrm1Rassvet} />
-              <DockPortRow label="MRM2 Poisk" engaged={mrm2Poisk} />
+              <DockPortRow
+                label="SM Forward (Xfer)"
+                engaged={smForward}
+                tooltip="Service Module (Zvezda) forward docking port, on the transfer-tunnel side facing the rest of the station"
+              />
+              <DockPortRow
+                label="SM Aft (Instr Compartment)"
+                engaged={smAft}
+                tooltip="Service Module (Zvezda) aft docking port on the Instrument Compartment — main port for Progress cargo vehicles"
+              />
+              <DockPortRow
+                label="SM Nadir (-Y)"
+                engaged={smNadir}
+                tooltip="Service Module (Zvezda) nadir (Earth-facing, -Y axis) docking port — used by Soyuz/Progress"
+              />
+              <DockPortRow
+                label="FGB Nadir (-Y)"
+                engaged={fgbNadir}
+                tooltip="Functional Cargo Block (Zarya) nadir docking port. FGB was the first ISS module — Russian-built, funded by NASA"
+              />
+              <DockPortRow
+                label="SM Nadir UDM"
+                engaged={smNadirUdm}
+                tooltip="Service Module nadir port via the Universal Docking Module (Prichal node) — added 2021 as a 6-port hub"
+              />
+              <DockPortRow
+                label="MRM1 Rassvet"
+                engaged={mrm1Rassvet}
+                tooltip="Mini-Research Module 1 (Rassvet / Dawn) — small Russian docking and storage module attached to the FGB nadir"
+              />
+              <DockPortRow
+                label="MRM2 Poisk"
+                engaged={mrm2Poisk}
+                tooltip="Mini-Research Module 2 (Poisk / Search) — small Russian docking and research module attached to the SM zenith"
+              />
 
               {/* Status rows */}
               <div
@@ -354,7 +388,11 @@ export default function RussianSegmentPanel({ telemetry }: RussianSegmentPanelPr
 
           {/* ── Section 3: KURS Rendezvous ────────────────────────────────── */}
           <div>
-            <SectionHeading label="KURS RENDEZVOUS" color="var(--color-accent-red)" />
+            <SectionHeading
+              label="KURS RENDEZVOUS"
+              color="var(--color-accent-red)"
+              tooltip="KURS — Russian automated rendezvous and docking radar system used by Soyuz crew vehicles and Progress cargo vehicles for autonomous approaches to the ISS"
+            />
             {!kursActive ? (
               <div
                 style={{

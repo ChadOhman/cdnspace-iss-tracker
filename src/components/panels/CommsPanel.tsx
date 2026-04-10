@@ -199,7 +199,9 @@ export default function CommsPanel({ telemetry }: CommsPanelProps) {
                 fontWeight: 700,
                 letterSpacing: "0.08em",
                 marginBottom: 5,
+                cursor: "help",
               }}
+              title="Ku-Band Space-to-Ground Antenna — steerable dish on the Z1 truss that relays high-rate data (video, science, telemetry) to ground via the TDRS satellite network"
             >
               KU-BAND (SGANT)
             </div>
