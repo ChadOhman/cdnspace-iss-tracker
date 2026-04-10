@@ -99,6 +99,8 @@ export async function initializeSchema(): Promise<void> {
       beta_angle        DOUBLE,
       iss_mass_kg       DOUBLE,
       momentum_percent  DOUBLE,
+      gnc_delta_r_km    DOUBLE,
+      gnc_delta_v_ms    DOUBLE,
       INDEX idx_orbital_timestamp (timestamp)
     )
   `);
@@ -109,6 +111,8 @@ export async function initializeSchema(): Promise<void> {
   await addColumnIfMissing("orbital_state", "beta_angle", "DOUBLE");
   await addColumnIfMissing("orbital_state", "iss_mass_kg", "DOUBLE");
   await addColumnIfMissing("orbital_state", "momentum_percent", "DOUBLE");
+  await addColumnIfMissing("orbital_state", "gnc_delta_r_km", "DOUBLE");
+  await addColumnIfMissing("orbital_state", "gnc_delta_v_ms", "DOUBLE");
 
   await db.execute(`
     CREATE TABLE IF NOT EXISTS tle_history (
@@ -259,6 +263,10 @@ export interface OrbitalArchiveExtras {
   betaAngle?: number | null;
   issMassKg?: number | null;
   momentumPercent?: number | null;
+  /** Radial offset between our SGP4 position and NASA GNC state vector (km) */
+  gncDeltaRKm?: number | null;
+  /** Velocity-magnitude offset between SGP4 and NASA GNC state vector (m/s) */
+  gncDeltaVMs?: number | null;
 }
 
 export async function archiveOrbitalState(
@@ -278,8 +286,9 @@ export async function archiveOrbitalState(
        (timestamp, latitude, longitude, altitude, velocity, speed_kmh,
         period_s, inclination, eccentricity, apoapsis, periapsis,
         revolution_number, is_in_sunlight,
-        beta_angle, iss_mass_kg, momentum_percent)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        beta_angle, iss_mass_kg, momentum_percent,
+        gnc_delta_r_km, gnc_delta_v_ms)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       ts,
       state.lat ?? 0,
@@ -297,6 +306,8 @@ export async function archiveOrbitalState(
       betaAngle,
       extras.issMassKg ?? null,
       extras.momentumPercent ?? null,
+      extras.gncDeltaRKm ?? null,
+      extras.gncDeltaVMs ?? null,
     ]
   );
 }
@@ -377,6 +388,8 @@ const METRIC_COLUMN_ALLOWLIST = new Set([
   "beta_angle",
   "iss_mass_kg",
   "momentum_percent",
+  "gnc_delta_r_km",
+  "gnc_delta_v_ms",
 ]);
 
 export async function getMetricHistory(

@@ -166,46 +166,79 @@ export default function OrbitalParamsPanel({ orbital, telemetry }: OrbitalParams
 
             {/* NASA GNC state vector vs SGP4 offset — confidence indicator */}
             {gncOffset && (
-              <div
-                style={{
-                  gridColumn: "1 / -1",
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  padding: "4px 0",
-                  borderBottom: "1px solid var(--color-border-subtle)",
-                }}
-                title="Offset between our SGP4 propagation and NASA's onboard GNC J2000 propagated state vector (USLAB000032-037). Small values indicate our orbit prediction is tracking NASA's ground truth."
-              >
-                <span style={{ color: "var(--color-text-muted)", fontSize: 10, cursor: "help" }}>
-                  NASA ΔR / ΔV
-                </span>
-                {(() => {
-                  const absDr = Math.abs(gncOffset.dRkm);
-                  const absDv = Math.abs(gncOffset.dVms);
-                  const color =
-                    absDr > 10 || absDv > 20
-                      ? "var(--color-accent-red)"
-                      : absDr > 2 || absDv > 5
-                        ? "var(--color-accent-orange)"
-                        : "var(--color-accent-green)";
-                  const drStr = absDr < 1
-                    ? `${(gncOffset.dRkm * 1000).toFixed(0)} m`
-                    : `${gncOffset.dRkm >= 0 ? "+" : ""}${gncOffset.dRkm.toFixed(2)} km`;
-                  const dvStr = `${gncOffset.dVms >= 0 ? "+" : ""}${gncOffset.dVms.toFixed(1)} m/s`;
-                  return (
-                    <span
-                      style={{
-                        color,
-                        fontSize: 10,
-                        fontVariantNumeric: "tabular-nums",
-                      }}
-                    >
-                      {drStr} / {dvStr}
-                    </span>
-                  );
-                })()}
-              </div>
+              <>
+                <div
+                  style={{
+                    gridColumn: "1 / -1",
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    padding: "4px 0",
+                  }}
+                  title="Offset between our SGP4 propagation and NASA's onboard GNC J2000 propagated state vector (USLAB000032-037). Small values indicate our orbit prediction is tracking NASA's ground truth."
+                >
+                  <span style={{ color: "var(--color-text-muted)", fontSize: 10, cursor: "help" }}>
+                    NASA ΔR / ΔV
+                  </span>
+                  {(() => {
+                    const absDr = Math.abs(gncOffset.dRkm);
+                    const absDv = Math.abs(gncOffset.dVms);
+                    const color =
+                      absDr > 10 || absDv > 20
+                        ? "var(--color-accent-red)"
+                        : absDr > 2 || absDv > 5
+                          ? "var(--color-accent-orange)"
+                          : "var(--color-accent-green)";
+                    const drStr = absDr < 1
+                      ? `${(gncOffset.dRkm * 1000).toFixed(0)} m`
+                      : `${gncOffset.dRkm >= 0 ? "+" : ""}${gncOffset.dRkm.toFixed(2)} km`;
+                    const dvStr = `${gncOffset.dVms >= 0 ? "+" : ""}${gncOffset.dVms.toFixed(1)} m/s`;
+                    return (
+                      <span
+                        style={{
+                          color,
+                          fontSize: 10,
+                          fontVariantNumeric: "tabular-nums",
+                        }}
+                      >
+                        {drStr} / {dvStr}
+                      </span>
+                    );
+                  })()}
+                </div>
+                {/* 24h drift sparklines */}
+                <div
+                  style={{
+                    gridColumn: "1 / -1",
+                    display: "flex",
+                    gap: 10,
+                    alignItems: "center",
+                    padding: "2px 0 4px",
+                    borderBottom: "1px solid var(--color-border-subtle)",
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                    <span style={{ color: "var(--color-text-muted)", fontSize: 8 }}>ΔR</span>
+                    <Sparkline
+                      metric="gnc_delta_r_km"
+                      hours={24}
+                      color="#ffaa33"
+                      width={80}
+                      height={14}
+                    />
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                    <span style={{ color: "var(--color-text-muted)", fontSize: 8 }}>ΔV</span>
+                    <Sparkline
+                      metric="gnc_delta_v_ms"
+                      hours={24}
+                      color="#ff6688"
+                      width={80}
+                      height={14}
+                    />
+                  </div>
+                </div>
+              </>
             )}
           </div>
 

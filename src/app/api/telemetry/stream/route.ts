@@ -22,6 +22,26 @@ const TELEMETRY_ARCHIVE_INTERVAL_MS = 10_000; // Archive Lightstreamer data ever
 const PRUNE_INTERVAL_MS = 24 * 60 * 60 * 1000; // Run prune daily
 const PRUNE_RETENTION_DAYS = 30;
 
+/**
+ * Convert WGS84 geodetic (lat, lon, alt) to geocentric distance |r| in km.
+ * Duplicate of the client-side helper in OrbitalParamsPanel; |r| is
+ * frame-invariant so the result is directly comparable to NASA's
+ * J2000 state-vector magnitude.
+ */
+function geocentricRadiusKm(latDeg: number, lonDeg: number, altKm: number): number {
+  const a = 6378.137;
+  const e2 = 0.00669437999014;
+  const lat = (latDeg * Math.PI) / 180;
+  const lon = (lonDeg * Math.PI) / 180;
+  const sinLat = Math.sin(lat);
+  const cosLat = Math.cos(lat);
+  const N = a / Math.sqrt(1 - e2 * sinLat * sinLat);
+  const x = (N + altKm) * cosLat * Math.cos(lon);
+  const y = (N + altKm) * cosLat * Math.sin(lon);
+  const z = (N * (1 - e2) + altKm) * sinLat;
+  return Math.sqrt(x * x + y * y + z * z);
+}
+
 const cache = new TelemetryCache();
 const sseManager = new SseManager();
 let pollersStarted = false;
@@ -70,12 +90,26 @@ function ensurePollers() {
 
     if (tickCount % 10 === 0) {
       // Pull live-telemetry-sourced extras from the cache so sparklines
-      // can chart beta angle, ISS mass, and CMG momentum %.
+      // can chart beta angle, ISS mass, CMG momentum %, and the running
+      // GNC state-vector offset between SGP4 and NASA's onboard propagator.
       const attitude = cache.telemetry?.attitude;
+      const sv = cache.telemetry?.lab.gncStateVector;
+      let gncDeltaRKm: number | null = null;
+      let gncDeltaVMs: number | null = null;
+      if (sv && (sv.xKm !== 0 || sv.yKm !== 0 || sv.zKm !== 0)) {
+        const nasaR = Math.sqrt(sv.xKm * sv.xKm + sv.yKm * sv.yKm + sv.zKm * sv.zKm);
+        const nasaV = Math.sqrt(sv.vxMs * sv.vxMs + sv.vyMs * sv.vyMs + sv.vzMs * sv.vzMs);
+        const ourR = geocentricRadiusKm(orbital.lat, orbital.lon, orbital.altitude);
+        const ourV = orbital.velocity * 1000; // km/s → m/s
+        gncDeltaRKm = nasaR - ourR;
+        gncDeltaVMs = nasaV - ourV;
+      }
       archiveOrbitalState(orbital, {
         betaAngle: attitude?.betaAngle,
         issMassKg: attitude?.issMassKg,
         momentumPercent: attitude?.momentumPercent,
+        gncDeltaRKm,
+        gncDeltaVMs,
       }).catch((err) => {
         console.error("[stream] Orbital archive failed:", err);
       });
