@@ -39,9 +39,10 @@ interface AntennaCardProps {
   azimuth: number;
   elevation: number;
   subtitle?: string;
+  tooltip?: string;
 }
 
-function AntennaCard({ title, on, azimuth, elevation, subtitle }: AntennaCardProps) {
+function AntennaCard({ title, on, azimuth, elevation, subtitle, tooltip }: AntennaCardProps) {
   return (
     <div
       style={{
@@ -55,11 +56,13 @@ function AntennaCard({ title, on, azimuth, elevation, subtitle }: AntennaCardPro
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
         <div>
           <div
+            title={tooltip}
             style={{
               color: on ? "var(--color-accent-cyan)" : "var(--color-text-muted)",
               fontSize: 9,
               fontWeight: 700,
               letterSpacing: "0.06em",
+              cursor: tooltip ? "help" : "default",
             }}
           >
             {title}
@@ -159,6 +162,7 @@ export default function CommsPanel({ telemetry }: CommsPanelProps) {
                 on={telemetry.comms.sband1On}
                 azimuth={telemetry.comms.sband1Azimuth}
                 elevation={telemetry.comms.sband1Elevation}
+                tooltip="Radio Frequency Group 1 — the starboard S-band antenna assembly on the S1 truss. Each RFG has a steerable dish, High-Gain Antenna electronics, and a Baseband Signal Processor. S-band carries command uplink and low-rate telemetry via TDRS."
               />
               <AntennaCard
                 title="RFG 2"
@@ -166,6 +170,7 @@ export default function CommsPanel({ telemetry }: CommsPanelProps) {
                 on={telemetry.comms.sband2On}
                 azimuth={telemetry.comms.sband2Azimuth}
                 elevation={telemetry.comms.sband2Elevation}
+                tooltip="Radio Frequency Group 2 — the port S-band antenna assembly on the P1 truss. Serves as the redundant counterpart to RFG 1; the station can fall back to RFG 2 if RFG 1 fails or if geometry favours the port side. The Active String readout below shows which RFG is currently primary."
               />
             </div>
             {telemetry.comms.activeSband && (
