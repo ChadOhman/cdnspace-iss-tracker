@@ -168,8 +168,12 @@ const TELEMETRY_IDS = [
   "AIRLOCK000010", // EMU 2 secondary O₂ supply current (A)
   // NOTE: AIRLOCK000011-046 are NOT documented — excluded from UI, not subscribed
   "AIRLOCK000047", // Crew lock pump status (enumerated)
-  "AIRLOCK000049", // Airlock O₂ supply pressure A (psi)
-  "AIRLOCK000054", // Airlock O₂ supply pressure B (psi)
+  "AIRLOCK000049", // Crewlock pressure (mmHg)
+  "AIRLOCK000050", // Hi P O₂ supply valve position (enum)
+  "AIRLOCK000051", // Lo P O₂ supply valve position (enum)
+  "AIRLOCK000052", // N₂ supply valve position (enum)
+  "AIRLOCK000053", // Airlock Air Conditioner State (enum)
+  "AIRLOCK000054", // Airlock (Equipment lock) pressure (mmHg)
   "AIRLOCK000055", // O₂ high pressure tank (psi)
   "AIRLOCK000056", // O₂ low pressure tank (psi)
   "AIRLOCK000057", // N₂ tank pressure (psi)
@@ -190,8 +194,33 @@ const TELEMETRY_IDS = [
   "Z1000013", // Ku-Band Transmit (0=Reset, 1=Normal)
   "Z1000014", // Ku-Band SGANT Elevation Position (deg)
   "Z1000015", // Ku-Band SGANT Cross-Elevation Position (deg)
+  // Ku-Band video downlink channel activity (1-4)
+  "USLAB000088", // Ku-Band Video Downlink Channel 1 Activity (0=inactive, 1=active)
+  "USLAB000089", // Ku-Band Video Downlink Channel 2 Activity
+  "USLAB000090", // Ku-Band Video Downlink Channel 3 Activity
+  "USLAB000091", // Ku-Band Video Downlink Channel 4 Activity
   // US active S-Band string
   "USLAB000092", // Active String of S-Band
+  // UHF EVA voice radios
+  "USLAB000099", // UHF 1 Power (enum)
+  "USLAB000100", // UHF 2 Power (enum)
+  // Destiny lab Vacuum Resource System / Vacuum Exhaust System valve positions
+  "USLAB000062", // Vacuum Resource System (VRS) valve position
+  "USLAB000063", // Vacuum Exhaust System (VES) valve position
+
+  // ── Canadarm2 / SSRMS (Space Station Remote Manipulator System) ───────────
+  "CSASSRMS002", // SSRMS Base Location (enum)
+  "CSASSRMS003", // SSRMS Operating Base — which LEE is base (0=LEE A, 5=LEE B)
+  "CSASSRMS004", // Shoulder Roll joint angle (deg)
+  "CSASSRMS005", // Shoulder Yaw joint angle (deg)
+  "CSASSRMS006", // Shoulder Pitch joint angle (deg)
+  "CSASSRMS007", // Elbow Pitch joint angle (deg)
+  "CSASSRMS008", // Wrist Pitch joint angle (deg)
+  "CSASSRMS009", // Wrist Yaw joint angle (deg)
+  "CSASSRMS010", // Wrist Roll joint angle (deg)
+  "CSASSRMS011", // Tip LEE payload status (0=Released, 1=Captive, 2=Captured)
+  // Mobile Transporter position
+  "CSAMT000001", // MT Position (cm) or Worksite ID — dual-ID in upstream README
 
   // ── Russian Segment ────────────────────────────────────────────────────────
   "RUSSEG000001", // RS Station Mode (enum: 1=Crew Rescue … 7=Standard)
@@ -654,9 +683,13 @@ export function deriveTelemetry(
     emu1SecO2Current:  num("AIRLOCK000008"),
     emu2SecO2Pressure: num("AIRLOCK000009"),
     emu2SecO2Current:  num("AIRLOCK000010"),
-    crewLockPump:     str("AIRLOCK000047"),
-    o2SupplyPressureA: num("AIRLOCK000049"),
-    o2SupplyPressureB: num("AIRLOCK000054"),
+    crewLockPump:        str("AIRLOCK000047"),
+    crewLockPressureMmhg: num("AIRLOCK000049"),
+    hiO2ValvePosition:   str("AIRLOCK000050"),
+    loO2ValvePosition:   str("AIRLOCK000051"),
+    n2ValvePosition:     str("AIRLOCK000052"),
+    acState:             str("AIRLOCK000053"),
+    equipLockPressureMmhg: num("AIRLOCK000054"),
     o2HighTank:       num("AIRLOCK000055"),
     o2LowTank:        num("AIRLOCK000056"),
     n2Tank:           num("AIRLOCK000057"),
@@ -674,6 +707,35 @@ export function deriveTelemetry(
     kuTransmitOn:    num("Z1000013") === 1,
     kuElevation:     num("Z1000014"),
     kuCrossElevation: num("Z1000015"),
+    uhf1Power:       str("USLAB000099"),
+    uhf2Power:       str("USLAB000100"),
+    videoChannel1:   num("USLAB000088") > 0,
+    videoChannel2:   num("USLAB000089") > 0,
+    videoChannel3:   num("USLAB000090") > 0,
+    videoChannel4:   num("USLAB000091") > 0,
+  };
+
+  // ── Destiny lab vacuum systems (VRS / VES) ────────────────────────────────
+  const lab = {
+    vrsValvePosition: str("USLAB000062"),
+    vesValvePosition: str("USLAB000063"),
+  };
+
+  // ── Canadarm2 (SSRMS) ──────────────────────────────────────────────────────
+  const robotics = {
+    ssrms: {
+      baseLocation:   str("CSASSRMS002"),
+      operatingBase:  str("CSASSRMS003"),
+      shoulderRoll:   num("CSASSRMS004"),
+      shoulderYaw:    num("CSASSRMS005"),
+      shoulderPitch:  num("CSASSRMS006"),
+      elbowPitch:     num("CSASSRMS007"),
+      wristPitch:     num("CSASSRMS008"),
+      wristYaw:       num("CSASSRMS009"),
+      wristRoll:      num("CSASSRMS010"),
+      tipLeeStatus:   str("CSASSRMS011"),
+    },
+    mtPosition: num("CSAMT000001"),
   };
 
   return {
@@ -692,6 +754,8 @@ export function deriveTelemetry(
     cmgs,
     airlock,
     comms,
+    lab,
+    robotics,
     channels,
   };
 }

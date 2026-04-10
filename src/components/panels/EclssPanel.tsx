@@ -377,6 +377,58 @@ export default function EclssPanel({ telemetry }: EclssPanelProps) {
               )}
             </div>
             <StatusRow label="Oxygen Generation System" value={telemetry.eclss.ogsStatus} />
+            {/* Destiny lab vacuum systems */}
+            <div style={{ marginTop: 8, paddingTop: 6, borderTop: "1px solid var(--color-border-subtle)" }}>
+              <div
+                title="Destiny lab science vacuum utilities — VRS provides vacuum for experiments, VES vents to space"
+                style={{
+                  color: "var(--color-accent-cyan)",
+                  fontSize: 8,
+                  fontWeight: 700,
+                  letterSpacing: "0.06em",
+                  marginBottom: 4,
+                  cursor: "help",
+                }}
+              >
+                LAB VACUUM
+              </div>
+              {(() => {
+                const decode = (raw: string) => {
+                  const t = (raw ?? "").trim();
+                  const MAP: Record<string, { label: string; color: string }> = {
+                    "0": { label: "Closed", color: "var(--color-text-muted)" },
+                    "1": { label: "Open", color: "var(--color-accent-green)" },
+                    "2": { label: "In-Transit", color: "var(--color-accent-orange)" },
+                    "3": { label: "Failed", color: "var(--color-accent-red)" },
+                  };
+                  return MAP[t] ?? { label: t || "—", color: "var(--color-text-muted)" };
+                };
+                const vrs = decode(telemetry.lab.vrsValvePosition);
+                const ves = decode(telemetry.lab.vesValvePosition);
+                return (
+                  <>
+                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 9, padding: "2px 0" }}>
+                      <span
+                        title="Vacuum Resource System — provides vacuum for science experiments"
+                        style={{ color: "var(--color-text-muted)", cursor: "help" }}
+                      >
+                        VRS
+                      </span>
+                      <span style={{ color: vrs.color, fontWeight: 600 }}>{vrs.label}</span>
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 9, padding: "2px 0" }}>
+                      <span
+                        title="Vacuum Exhaust System — vents experiment byproducts to space"
+                        style={{ color: "var(--color-text-muted)", cursor: "help" }}
+                      >
+                        VES
+                      </span>
+                      <span style={{ color: ves.color, fontWeight: 600 }}>{ves.label}</span>
+                    </div>
+                  </>
+                );
+              })()}
+            </div>
           </div>
         </div>
       )}

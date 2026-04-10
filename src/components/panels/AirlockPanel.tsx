@@ -155,6 +155,74 @@ function isEmuStandby(o2Pressure: number, o2Current: number): boolean {
   return Math.abs(o2Pressure) < 0.5 && Math.abs(o2Current) < 0.1;
 }
 
+/** Chamber pressure (crewlock / equipment lock) — raw value is mmHg */
+function ChamberPressure({ label, mmhg }: { label: string; mmhg: number }) {
+  const kpa = mmhg * 0.133322;
+  const psi = mmhg * 0.0193368;
+  // Normal is ~760 mmHg / 14.7 psi. Color green when pressurized, cyan-dim when vacuum/depressurized.
+  const pct = Math.max(0, Math.min(100, (mmhg / 800) * 100));
+  const pressurized = mmhg > 700;
+  const color = pressurized ? "var(--color-accent-green)" : mmhg > 300 ? "var(--color-accent-orange)" : "var(--color-accent-cyan)";
+  return (
+    <div
+      style={{
+        background: "var(--color-bg-secondary)",
+        border: "1px solid var(--color-border-subtle)",
+        borderRadius: 4,
+        padding: "5px 8px",
+        marginBottom: 5,
+      }}
+    >
+      <div style={{ color: "var(--color-text-muted)", fontSize: 8, marginBottom: 2 }}>{label}</div>
+      <div style={{ color, fontSize: 12, fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>
+        {mmhg.toFixed(0)}
+        <span style={{ fontSize: 8, color: "var(--color-text-muted)", marginLeft: 2 }}>mmHg</span>
+        <span style={{ fontSize: 8, color: "var(--color-text-muted)", marginLeft: 6 }}>
+          ({kpa.toFixed(1)} kPa / {psi.toFixed(2)} psi)
+        </span>
+      </div>
+      <div
+        style={{
+          height: 3,
+          borderRadius: 2,
+          background: "var(--color-border-subtle)",
+          overflow: "hidden",
+          marginTop: 3,
+        }}
+      >
+        <div
+          style={{
+            height: "100%",
+            width: `${pct}%`,
+            background: color,
+            borderRadius: 2,
+            transition: "width 0.5s ease",
+          }}
+        />
+      </div>
+    </div>
+  );
+}
+
+/** Supply valve position row */
+const VALVE_STATE: Record<string, { label: string; color: string }> = {
+  "0": { label: "Closed",    color: "var(--color-text-muted)" },
+  "1": { label: "Open",      color: "var(--color-accent-green)" },
+  "2": { label: "In-Transit",color: "var(--color-accent-orange)" },
+  "3": { label: "Failed",    color: "var(--color-accent-red)" },
+};
+
+function ValveRow({ label, state }: { label: string; state: string }) {
+  const raw = (state ?? "").trim();
+  const decoded = VALVE_STATE[raw] ?? { label: raw || "—", color: "var(--color-text-muted)" };
+  return (
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "2px 0", fontSize: 9 }}>
+      <span style={{ color: "var(--color-text-muted)" }}>{label}</span>
+      <span style={{ color: decoded.color, fontWeight: 600 }}>{decoded.label}</span>
+    </div>
+  );
+}
+
 export default function AirlockPanel({ telemetry }: AirlockPanelProps) {
   const { t } = useLocale();
   const { pressure } = useUnits();
@@ -191,19 +259,13 @@ export default function AirlockPanel({ telemetry }: AirlockPanelProps) {
             >
               {t("airlock.pressures").toUpperCase()}
             </div>
-            <PressureGauge
-              label="O₂ SUPPLY A"
-              value={telemetry.airlock.o2SupplyPressureA}
-              maxPsi={1000}
-              color="var(--color-accent-orange)"
-              pressureConv={pressure}
+            <ChamberPressure
+              label="CREWLOCK"
+              mmhg={telemetry.airlock.crewLockPressureMmhg}
             />
-            <PressureGauge
-              label="O₂ SUPPLY B"
-              value={telemetry.airlock.o2SupplyPressureB}
-              maxPsi={1000}
-              color="var(--color-accent-orange)"
-              pressureConv={pressure}
+            <ChamberPressure
+              label="EQUIP LOCK"
+              mmhg={telemetry.airlock.equipLockPressureMmhg}
             />
             <div
               style={{
@@ -229,6 +291,15 @@ export default function AirlockPanel({ telemetry }: AirlockPanelProps) {
                   </div>
                 );
               })()}
+            </div>
+            {/* Supply valve positions */}
+            <div style={{ marginTop: 6 }}>
+              <div style={{ color: "var(--color-accent-orange)", fontSize: 8, fontWeight: 700, marginBottom: 4, letterSpacing: "0.06em" }}>
+                SUPPLY VALVES
+              </div>
+              <ValveRow label="Hi-P O₂" state={telemetry.airlock.hiO2ValvePosition} />
+              <ValveRow label="Lo-P O₂" state={telemetry.airlock.loO2ValvePosition} />
+              <ValveRow label="N₂" state={telemetry.airlock.n2ValvePosition} />
             </div>
           </div>
 

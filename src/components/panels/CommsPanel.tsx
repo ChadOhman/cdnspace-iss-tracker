@@ -258,6 +258,92 @@ export default function CommsPanel({ telemetry }: CommsPanelProps) {
             >
               Space-to-Ground Antenna — high-rate data relay via TDRS
             </div>
+
+            {/* Ku-Band video downlink channels */}
+            <div style={{ marginTop: 8 }}>
+              <div
+                title="Four Ku-band video downlink channels used to send live camera feeds and NASA TV to ground via TDRS relay"
+                style={{
+                  color: "var(--color-text-muted)",
+                  fontSize: 8,
+                  letterSpacing: "0.06em",
+                  marginBottom: 4,
+                  cursor: "help",
+                }}
+              >
+                VIDEO DOWNLINK CHANNELS
+              </div>
+              <div style={{ display: "flex", gap: 6 }}>
+                {[
+                  { idx: 1, active: telemetry.comms.videoChannel1 },
+                  { idx: 2, active: telemetry.comms.videoChannel2 },
+                  { idx: 3, active: telemetry.comms.videoChannel3 },
+                  { idx: 4, active: telemetry.comms.videoChannel4 },
+                ].map(({ idx, active }) => (
+                  <div
+                    key={idx}
+                    style={{
+                      flex: 1,
+                      padding: "4px 0",
+                      textAlign: "center",
+                      borderRadius: 3,
+                      background: active ? "rgba(0,255,136,0.15)" : "var(--color-bg-secondary)",
+                      border: `1px solid ${active ? "var(--color-accent-green)" : "var(--color-border-subtle)"}`,
+                    }}
+                  >
+                    <div
+                      style={{
+                        color: active ? "var(--color-accent-green)" : "var(--color-text-muted)",
+                        fontSize: 9,
+                        fontWeight: 700,
+                      }}
+                    >
+                      CH {idx}
+                    </div>
+                    <div
+                      style={{
+                        color: active ? "var(--color-accent-green)" : "var(--color-text-muted)",
+                        fontSize: 8,
+                        marginTop: 1,
+                        opacity: active ? 1 : 0.5,
+                      }}
+                    >
+                      {active ? "● LIVE" : "○ IDLE"}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* UHF section — EVA voice radios */}
+          <div style={{ paddingTop: 6, borderTop: "1px solid var(--color-border-subtle)" }}>
+            <div
+              title="UHF radios used for voice communications during EVAs (spacewalks) and with visiting vehicles during rendezvous"
+              style={{
+                color: "var(--color-accent-cyan)",
+                fontSize: 9,
+                fontWeight: 700,
+                letterSpacing: "0.08em",
+                marginBottom: 5,
+                cursor: "help",
+              }}
+            >
+              UHF RADIOS
+            </div>
+            {(() => {
+              // USLAB000099/100: UHF power enum. Non-zero = on.
+              const uhf1Raw = (telemetry.comms.uhf1Power ?? "").trim();
+              const uhf2Raw = (telemetry.comms.uhf2Power ?? "").trim();
+              const uhf1On = uhf1Raw !== "" && uhf1Raw !== "0";
+              const uhf2On = uhf2Raw !== "" && uhf2Raw !== "0";
+              return (
+                <>
+                  <OnOffRow label="UHF 1" on={uhf1On} />
+                  <OnOffRow label="UHF 2" on={uhf2On} />
+                </>
+              );
+            })()}
           </div>
         </div>
       )}

@@ -38,7 +38,6 @@ function computeStats() {
 const staticFacts = [
   { label: "Total EVAs Conducted", value: "~270", unit: "spacewalks" },
   { label: "Crew Visitors", value: "~280", unit: "people" },
-  { label: "ISS Mass", value: "~420,000", unit: "kg" },
   { label: "Pressurized Volume", value: "~916", unit: "m³" },
   { label: "Solar Array Area", value: "~2,500", unit: "m²" },
   { label: "Resident Countries", value: "19", unit: "nations" },
@@ -516,6 +515,7 @@ function LegendItem({ color, label }: { color: string; label: string }) {
 export default function StatsPage() {
   useBuildCheck([]);
   const { t } = useLocale();
+  const { telemetry } = useTelemetryStream();
   const [stats, setStats] = useState(computeStats);
 
   // Recompute live every second
@@ -604,6 +604,30 @@ export default function StatsPage() {
         <div style={{ marginBottom: 32 }}>
           <SectionLabel>{t("pages.issProgramFacts")}</SectionLabel>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(190px, 1fr))", gap: 12 }}>
+            {/* ISS Mass — live from USLAB000039 when available, else approximate */}
+            {(() => {
+              const liveMass = telemetry?.attitude.issMassKg ?? 0;
+              const label = "ISS Mass";
+              if (liveMass > 0) {
+                return (
+                  <StatCard
+                    key={label}
+                    label={label}
+                    value={liveMass.toLocaleString("en", { maximumFractionDigits: 0 })}
+                    unit="kg (live)"
+                    accent
+                  />
+                );
+              }
+              return (
+                <StatCard
+                  key={label}
+                  label={label}
+                  value="~420,000"
+                  unit="kg"
+                />
+              );
+            })()}
             {staticFacts.map(({ label, value, unit }) => (
               <StatCard key={label} label={label} value={value} unit={unit} />
             ))}

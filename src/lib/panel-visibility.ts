@@ -25,6 +25,7 @@ export const PANEL_DEFINITIONS = [
   { group: "right", id: "tdrs", label: "TDRS Communications" },
   { group: "right", id: "comms", label: "Communications (S/Ku-Band)" },
   { group: "right", id: "airlock", label: "Airlock — Quest" },
+  { group: "right", id: "canadarm", label: "Canadarm2 (SSRMS)" },
   { group: "right", id: "russianSegment", label: "Russian Segment" },
 ] as const;
 

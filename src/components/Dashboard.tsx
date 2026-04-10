@@ -124,6 +124,7 @@ import UpcomingEventsPanel from "@/components/panels/UpcomingEventsPanel";
 import DayNightPanel from "@/components/panels/DayNightPanel";
 import TdrsPanel from "@/components/panels/TdrsPanel";
 import CommsPanel from "@/components/panels/CommsPanel";
+import Canadarm2Panel from "@/components/panels/Canadarm2Panel";
 import RussianSegmentPanel from "@/components/panels/RussianSegmentPanel";
 
 export function Dashboard() {
@@ -211,6 +212,7 @@ export function Dashboard() {
         {show("moduleTemps", "left") && <ModuleTempsPanel telemetry={stream.telemetry} />}
         {show("tdrs", "left") && <TdrsPanel orbital={stream.orbital} />}
         {show("comms", "left") && <CommsPanel telemetry={stream.telemetry} />}
+        {show("canadarm", "left") && <Canadarm2Panel telemetry={stream.telemetry} />}
         {show("airlock", "left") && <AirlockPanel telemetry={stream.telemetry} />}
         {show("russianSegment", "left") && <RussianSegmentPanel telemetry={stream.telemetry} />}
       </div>
@@ -232,6 +234,7 @@ export function Dashboard() {
         {show("moduleTemps", "center") && <ModuleTempsPanel telemetry={stream.telemetry} />}
         {show("tdrs", "center") && <TdrsPanel orbital={stream.orbital} />}
         {show("comms", "center") && <CommsPanel telemetry={stream.telemetry} />}
+        {show("canadarm", "center") && <Canadarm2Panel telemetry={stream.telemetry} />}
         {show("airlock", "center") && <AirlockPanel telemetry={stream.telemetry} />}
         {show("russianSegment", "center") && <RussianSegmentPanel telemetry={stream.telemetry} />}
       </div>
@@ -245,6 +248,7 @@ export function Dashboard() {
         {show("moduleTemps", "right") && <ModuleTempsPanel telemetry={stream.telemetry} />}
         {show("tdrs", "right") && <TdrsPanel orbital={stream.orbital} />}
         {show("comms", "right") && <CommsPanel telemetry={stream.telemetry} />}
+        {show("canadarm", "right") && <Canadarm2Panel telemetry={stream.telemetry} />}
         {show("airlock", "right") && <AirlockPanel telemetry={stream.telemetry} />}
         {show("russianSegment", "right") && <RussianSegmentPanel telemetry={stream.telemetry} />}
         {show("groundTrack", "right") && <GroundTrackPanel orbital={stream.orbital} />}

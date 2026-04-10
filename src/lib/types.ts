@@ -190,12 +190,26 @@ export interface ISSTelemetry {
   // ── Airlock / EVA ──────────────────────────────────────────────────────────
   /** Airlock and EMU data */
   airlock: {
-    o2SupplyPressureA: number;
-    o2SupplyPressureB: number;
+    /** Crewlock (airlock inner chamber) pressure in mmHg */
+    crewLockPressureMmhg: number;
+    /** Equipment lock (airlock outer chamber) pressure in mmHg */
+    equipLockPressureMmhg: number;
+    /** Hi-pressure O₂ tank pressure (psi) */
     o2HighTank: number;
+    /** Lo-pressure O₂ tank pressure (psi) */
     o2LowTank: number;
+    /** N₂ tank pressure (psi) */
     n2Tank: number;
+    /** Depress pump voltage status (raw enum) */
     crewLockPump: string;
+    /** Hi-P O₂ supply valve position: 0=CLOSED, 1=OPEN, 2=IN-TRANSIT, 3=FAILED */
+    hiO2ValvePosition: string;
+    /** Lo-P O₂ supply valve position */
+    loO2ValvePosition: string;
+    /** N₂ supply valve position */
+    n2ValvePosition: string;
+    /** Airlock A/C state (raw enum) */
+    acState: string;
     emu1O2Pressure: number; emu1O2Current: number;
     emu2O2Pressure: number; emu2O2Current: number;
     emu3O2Pressure: number; emu3O2Current: number;
@@ -231,6 +245,54 @@ export interface ISSTelemetry {
     kuElevation: number;
     /** Ku-Band SGANT cross-elevation position (deg) */
     kuCrossElevation: number;
+    /** UHF 1 power state (raw enum from USLAB000099) */
+    uhf1Power: string;
+    /** UHF 2 power state (raw enum from USLAB000100) */
+    uhf2Power: string;
+    /** Ku-Band video downlink channel 1 active */
+    videoChannel1: boolean;
+    /** Ku-Band video downlink channel 2 active */
+    videoChannel2: boolean;
+    /** Ku-Band video downlink channel 3 active */
+    videoChannel3: boolean;
+    /** Ku-Band video downlink channel 4 active */
+    videoChannel4: boolean;
+  };
+
+  /** Destiny lab vacuum systems */
+  lab: {
+    /** Vacuum Resource System valve position (raw enum) */
+    vrsValvePosition: string;
+    /** Vacuum Exhaust System valve position (raw enum) */
+    vesValvePosition: string;
+  };
+
+  /** Canadarm2 (SSRMS) and Mobile Transporter */
+  robotics: {
+    ssrms: {
+      /** SSRMS base location (raw enum: 1=Lab, 2=Node3, 4=Node2, 7=MBS PDGF1, etc.) */
+      baseLocation: string;
+      /** Which LEE is operating base (0=LEE A, 5=LEE B) */
+      operatingBase: string;
+      /** Shoulder Roll joint angle (deg) */
+      shoulderRoll: number;
+      /** Shoulder Yaw joint angle (deg) */
+      shoulderYaw: number;
+      /** Shoulder Pitch joint angle (deg) */
+      shoulderPitch: number;
+      /** Elbow Pitch joint angle (deg) */
+      elbowPitch: number;
+      /** Wrist Pitch joint angle (deg) */
+      wristPitch: number;
+      /** Wrist Yaw joint angle (deg) */
+      wristYaw: number;
+      /** Wrist Roll joint angle (deg) */
+      wristRoll: number;
+      /** Tip LEE payload status (0=Released, 1=Captive, 2=Captured) */
+      tipLeeStatus: string;
+    };
+    /** Mobile Transporter position (cm from rail origin) */
+    mtPosition: number;
   };
 
   /** Raw Lightstreamer channel values keyed by channel name */

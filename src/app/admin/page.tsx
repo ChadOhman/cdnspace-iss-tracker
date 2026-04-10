@@ -42,6 +42,7 @@ export default function AdminPage() {
   const [form, setForm] = useState<EventForm>(emptyForm);
   const [statusMsg, setStatusMsg] = useState<string>("");
   const [loading, setLoading] = useState(false);
+  const [pageViews, setPageViews] = useState<number | null>(null);
 
   const headers = {
     "Content-Type": "application/json",
@@ -61,10 +62,25 @@ export default function AdminPage() {
       const data = await res.json() as ISSEvent[];
       setEvents(Array.isArray(data) ? data : []);
       setAuthed(true);
+      // Load site stats alongside events
+      loadStats();
     } catch (e) {
       showStatus(`Error: ${e instanceof Error ? e.message : "Unknown error"}`);
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function loadStats() {
+    try {
+      const res = await fetch("/api/admin/stats", { headers });
+      if (!res.ok) return;
+      const data = await res.json() as { pageViews?: number };
+      if (typeof data.pageViews === "number") {
+        setPageViews(data.pageViews);
+      }
+    } catch {
+      // non-fatal
     }
   }
 
@@ -195,6 +211,31 @@ export default function AdminPage() {
 
         {authed && (
           <>
+            {/* Site stats */}
+            <div style={{ background: "rgba(0,0,0,0.3)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 6, padding: "16px" }}>
+              <div style={{ fontSize: 10, color: "#00e5ff", letterSpacing: "0.1em", marginBottom: 12, display: "flex", alignItems: "center", gap: 8 }}>
+                SITE STATS
+                <button onClick={loadStats} disabled={loading} style={{ ...btnStyle("secondary"), fontSize: 9, padding: "1px 6px" }}>
+                  {t("pages.refresh")}
+                </button>
+              </div>
+              <div style={{ display: "flex", gap: 24, alignItems: "baseline" }}>
+                <div>
+                  <div style={{ fontSize: 9, color: "#8892a4", letterSpacing: "0.08em", marginBottom: 4 }}>
+                    TOTAL PAGE VIEWS
+                  </div>
+                  <div style={{
+                    fontSize: 24,
+                    color: "#00e5ff",
+                    fontWeight: 600,
+                    fontVariantNumeric: "tabular-nums",
+                  }}>
+                    {pageViews != null ? pageViews.toLocaleString() : "—"}
+                  </div>
+                </div>
+              </div>
+            </div>
+
             {/* Create event form */}
             <div style={{ background: "rgba(0,0,0,0.3)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 6, padding: "16px" }}>
               <div style={{ fontSize: 10, color: "#00e5ff", letterSpacing: "0.1em", marginBottom: 12 }}>{t("pages.createNewEvent")}</div>

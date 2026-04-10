@@ -160,8 +160,8 @@ function EvaSection({
 
       <Panel>
         <SectionHeader label={t("pages.evaAirlock")} />
-        <DataRow label="O₂ Supply A" value={al ? al.o2SupplyPressureA.toFixed(1) : "—"} unit="psi" />
-        <DataRow label="O₂ Supply B" value={al ? al.o2SupplyPressureB.toFixed(1) : "—"} unit="psi" />
+        <DataRow label="Crewlock" value={al ? al.crewLockPressureMmhg.toFixed(0) : "—"} unit="mmHg" />
+        <DataRow label="Equip Lock" value={al ? al.equipLockPressureMmhg.toFixed(0) : "—"} unit="mmHg" />
         <DataRow label={t("pages.o2HighTank")} value={al ? al.o2HighTank.toFixed(1) : "—"} unit="psi" />
         <DataRow label={t("pages.o2LowTank")} value={al ? al.o2LowTank.toFixed(1) : "—"} unit="psi" />
         <DataRow label={t("pages.pumpStatus")} value={al ? al.crewLockPump : "—"} />

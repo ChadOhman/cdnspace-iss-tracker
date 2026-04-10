@@ -509,3 +509,12 @@ export async function incrementPageViews(): Promise<number> {
   );
   return rows[0]?.count as number ?? 0;
 }
+
+/** Read the current page view count without incrementing. */
+export async function getPageViews(): Promise<number> {
+  const db = getPool();
+  const [rows] = await db.execute<RowDataPacket[]>(
+    `SELECT count FROM page_views WHERE id = 1`
+  );
+  return rows[0]?.count as number ?? 0;
+}

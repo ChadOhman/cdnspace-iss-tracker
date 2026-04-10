@@ -38,6 +38,7 @@ export const TRANSLATIONS: Record<Locale, Record<string, Record<string, string>>
       moduleTemps: "Module Temperatures",
       airlock: "Airlock — Quest",
       comms: "Communications",
+      canadarm: "Canadarm2 (SSRMS)",
     },
     solarArrays: {
       totalPower: "Total Station Power",
@@ -308,6 +309,7 @@ export const TRANSLATIONS: Record<Locale, Record<string, Record<string, string>>
       moduleTemps: "Températures des modules",
       airlock: "Sas — Quest",
       comms: "Communications",
+      canadarm: "Canadarm2 (SSRMS)",
     },
     solarArrays: {
       totalPower: "Puissance totale",

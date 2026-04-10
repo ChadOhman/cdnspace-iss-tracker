@@ -48,8 +48,16 @@ function ensurePollers() {
     });
   }, TLE_POLL_INTERVAL_MS);
 
-  // 3. SGP4 tick: propagate position every second, archive every 10th tick
+  // 3. SGP4 tick: propagate position every second, archive every 10th tick.
+  // Also maintain a sliding window of altitudes for reboost detection.
   let tickCount = 0;
+  // Altitude history: 60 min × 60 samples/min = 3600 entries max (1 Hz)
+  const ALTITUDE_WINDOW_MS = 60 * 60 * 1000;
+  const altitudeHistory: { t: number; alt: number }[] = [];
+  let lastReboostDetection = 0;
+  const REBOOST_COOLDOWN_MS = 6 * 60 * 60 * 1000; // don't re-detect for 6h
+  const REBOOST_THRESHOLD_KM = 2; // minimum sustained altitude gain
+
   setInterval(() => {
     const tle = getCurrentTle();
     if (!tle) return;
@@ -64,6 +72,66 @@ function ensurePollers() {
       archiveOrbitalState(orbital).catch((err) => {
         console.error("[stream] Orbital archive failed:", err);
       });
+    }
+
+    // Track altitude history (use apoapsis + periapsis mean to smooth the
+    // once-per-orbit oscillation; this approximates semi-major axis offset)
+    const meanAlt = (orbital.apoapsis + orbital.periapsis) / 2;
+    const now = Date.now();
+    altitudeHistory.push({ t: now, alt: meanAlt });
+    // Trim to window
+    while (altitudeHistory.length > 0 && now - altitudeHistory[0].t > ALTITUDE_WINDOW_MS) {
+      altitudeHistory.shift();
+    }
+
+    // Reboost detection: compare current mean altitude to the minimum mean
+    // altitude observed in the past hour. A sustained rise of more than
+    // REBOOST_THRESHOLD_KM means the orbit got raised — that's a reboost.
+    if (
+      tickCount % 60 === 0 && // check once per minute
+      altitudeHistory.length > 300 && // need ~5 min of data minimum
+      now - lastReboostDetection > REBOOST_COOLDOWN_MS
+    ) {
+      const minEntry = altitudeHistory.reduce(
+        (min, e) => (e.alt < min.alt ? e : min),
+        altitudeHistory[0]
+      );
+      const climb = meanAlt - minEntry.alt;
+      // Only flag if the minimum occurred at least 10 min ago (i.e. we're still
+      // in the rise phase, not just catching a recent dip).
+      const minAge = now - minEntry.t;
+      if (climb >= REBOOST_THRESHOLD_KM && minAge > 10 * 60 * 1000) {
+        lastReboostDetection = now;
+        const eventId = `reboost-${Math.floor(minEntry.t / 1000)}`;
+        const event = {
+          id: eventId,
+          type: "reboost" as const,
+          title: `ISS Reboost (+${climb.toFixed(1)} km)`,
+          description:
+            `Orbital altitude raised by ${climb.toFixed(2)} km over the past ` +
+            `${Math.round(minAge / 60000)} minutes. Detected from SGP4-propagated ` +
+            `mean altitude. Apoapsis: ${orbital.apoapsis.toFixed(1)} km, ` +
+            `periapsis: ${orbital.periapsis.toFixed(1)} km.`,
+          status: "completed" as const,
+          scheduledStart: minEntry.t,
+          scheduledEnd: now,
+          actualStart: minEntry.t,
+          actualEnd: now,
+          metadata: {
+            source: "auto-detected",
+            climbKm: climb.toFixed(2),
+            apoapsisKm: orbital.apoapsis.toFixed(1),
+            periapsisKm: orbital.periapsis.toFixed(1),
+          },
+        };
+        upsertEvent(event)
+          .then(() =>
+            console.log(
+              `[reboost] Detected: +${climb.toFixed(2)} km over ${Math.round(minAge / 60000)} min → ${eventId}`
+            )
+          )
+          .catch((err) => console.error("[reboost] upsert failed:", err));
+      }
     }
   }, SGP4_TICK_INTERVAL_MS);
 
