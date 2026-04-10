@@ -250,6 +250,29 @@ export async function connectLightstreamer(
     );
 
     let updateCount = 0;
+    // Track Russian segment channels: log each one's latest value after 60s
+    const russegSeen: Record<string, { value: string; status: string; count: number }> = {};
+    let russegDumped = false;
+
+    setTimeout(() => {
+      if (russegDumped) return;
+      russegDumped = true;
+      const keys = Object.keys(russegSeen).sort();
+      if (keys.length === 0) {
+        console.log("[russeg] No Russian segment channels received any updates in 60s");
+      } else {
+        console.log(`[russeg] ${keys.length}/25 channels received updates in first 60s:`);
+        for (const k of keys) {
+          const r = russegSeen[k];
+          console.log(`[russeg]   ${k} = ${r.value.padEnd(30)} (status ${r.status}, ${r.count} updates)`);
+        }
+        const missing = Array.from({ length: 25 }, (_, i) => `RUSSEG${String(i + 1).padStart(6, "0")}`)
+          .filter((id) => !(id in russegSeen));
+        if (missing.length > 0) {
+          console.log(`[russeg] Missing (no updates): ${missing.join(", ")}`);
+        }
+      }
+    }, 60_000);
 
     sub.addListener({
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -264,6 +287,16 @@ export async function connectLightstreamer(
           ...latestChannels,
           [item]: { value, status, timestamp },
         };
+
+        // Track Russian segment channels
+        if (item.startsWith("RUSSEG")) {
+          const existing = russegSeen[item];
+          russegSeen[item] = {
+            value,
+            status,
+            count: (existing?.count ?? 0) + 1,
+          };
+        }
 
         onUpdate({ ...latestChannels });
 
