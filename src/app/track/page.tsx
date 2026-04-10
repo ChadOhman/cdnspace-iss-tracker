@@ -291,24 +291,48 @@ export default function TrackPage() {
   const { orbital, telemetry, connected } = useTelemetryStream();
 
   // ── Observer location ──────────────────────────────────────────────────────
-  const [observer, setObserver] = useState<{ lat: number; lon: number } | null>(() => {
+  type ObserverLoc = { lat: number; lon: number; altitudeM?: number };
+  const [observer, setObserver] = useState<ObserverLoc | null>(() => {
     if (typeof window === "undefined") return null;
     try {
       const stored = localStorage.getItem("iss-observer-loc");
-      if (stored) return JSON.parse(stored) as { lat: number; lon: number };
+      if (stored) return JSON.parse(stored) as ObserverLoc;
     } catch { /* ignore */ }
     return null;
   });
   const [obsInputLat, setObsInputLat] = useState(observer ? observer.lat.toString() : "");
   const [obsInputLon, setObsInputLon] = useState(observer ? observer.lon.toString() : "");
+  const [altUnit, setAltUnit] = useState<"m" | "ft">(() => {
+    if (typeof window === "undefined") return "m";
+    return (localStorage.getItem("iss-observer-alt-unit") as "m" | "ft") || "m";
+  });
+  const [obsInputAlt, setObsInputAlt] = useState(() => {
+    if (!observer?.altitudeM) return "";
+    return altUnit === "ft"
+      ? (observer.altitudeM * 3.28084).toFixed(0)
+      : observer.altitudeM.toFixed(0);
+  });
   const [geoError, setGeoError] = useState<string | null>(null);
 
-  const persistObserver = useCallback((loc: { lat: number; lon: number }) => {
+  const persistObserver = useCallback((loc: ObserverLoc) => {
     setObserver(loc);
     setObsInputLat(loc.lat.toString());
     setObsInputLon(loc.lon.toString());
     try { localStorage.setItem("iss-observer-loc", JSON.stringify(loc)); } catch { /* ignore */ }
   }, []);
+
+  const handleAltUnitChange = useCallback((unit: "m" | "ft") => {
+    setAltUnit(unit);
+    try { localStorage.setItem("iss-observer-alt-unit", unit); } catch { /* ignore */ }
+    // Re-display the current altitude in the new unit
+    if (observer?.altitudeM !== undefined) {
+      setObsInputAlt(
+        unit === "ft"
+          ? (observer.altitudeM * 3.28084).toFixed(0)
+          : observer.altitudeM.toFixed(0)
+      );
+    }
+  }, [observer]);
 
   const handleUseMyLocation = useCallback(() => {
     setGeoError(null);
@@ -317,11 +341,27 @@ export default function TrackPage() {
       return;
     }
     navigator.geolocation.getCurrentPosition(
-      (pos) => persistObserver({ lat: pos.coords.latitude, lon: pos.coords.longitude }),
+      (pos) => {
+        const altitudeM = typeof pos.coords.altitude === "number" && pos.coords.altitude !== null
+          ? pos.coords.altitude
+          : undefined;
+        persistObserver({
+          lat: pos.coords.latitude,
+          lon: pos.coords.longitude,
+          altitudeM,
+        });
+        if (altitudeM !== undefined) {
+          setObsInputAlt(
+            altUnit === "ft"
+              ? (altitudeM * 3.28084).toFixed(0)
+              : altitudeM.toFixed(0)
+          );
+        }
+      },
       (err) => setGeoError(err.message),
-      { timeout: 10000 }
+      { timeout: 10000, enableHighAccuracy: true }
     );
-  }, [persistObserver]);
+  }, [persistObserver, altUnit]);
 
   const handleManualSet = useCallback(() => {
     const lat = parseFloat(obsInputLat);
@@ -330,9 +370,19 @@ export default function TrackPage() {
       setGeoError("Invalid coordinates.");
       return;
     }
+    let altitudeM: number | undefined;
+    if (obsInputAlt.trim() !== "") {
+      const parsedAlt = parseFloat(obsInputAlt);
+      if (isNaN(parsedAlt)) {
+        setGeoError("Invalid altitude.");
+        return;
+      }
+      // Convert to meters if user entered feet
+      altitudeM = altUnit === "ft" ? parsedAlt / 3.28084 : parsedAlt;
+    }
     setGeoError(null);
-    persistObserver({ lat, lon });
-  }, [obsInputLat, obsInputLon, persistObserver]);
+    persistObserver({ lat, lon, altitudeM });
+  }, [obsInputLat, obsInputLon, obsInputAlt, altUnit, persistObserver]);
 
   // ── Pass predictions ───────────────────────────────────────────────────────
   const [passes, setPasses] = useState<PassPrediction[] | null>(null);
@@ -372,7 +422,7 @@ export default function TrackPage() {
     if (!observer || !orbital) return null;
     return computeTopocentric(
       { lat: orbital.lat, lon: orbital.lon, altitudeKm: orbital.altitude },
-      { lat: observer.lat, lon: observer.lon },
+      { lat: observer.lat, lon: observer.lon, altitudeM: observer.altitudeM },
       Date.now()
     );
   })();
@@ -987,6 +1037,69 @@ export default function TrackPage() {
                 >
                   SET
                 </button>
+              </div>
+
+              {/* Altitude input with unit selector */}
+              <div style={{ display: "flex", gap: 4, marginBottom: 8, alignItems: "center" }}>
+                <span style={{
+                  fontSize: 9,
+                  color: "var(--color-text-muted)",
+                  letterSpacing: "0.06em",
+                  minWidth: 54,
+                }}>
+                  ALTITUDE
+                </span>
+                <input
+                  type="text"
+                  placeholder={altUnit === "ft" ? "e.g. 2300" : "e.g. 700"}
+                  value={obsInputAlt}
+                  onChange={(e) => setObsInputAlt(e.target.value)}
+                  style={{
+                    flex: 1, padding: "4px 6px",
+                    background: "#0d1117",
+                    border: "1px solid rgba(0,229,255,0.2)",
+                    borderRadius: 3,
+                    color: "var(--color-text-primary)",
+                    fontSize: 10,
+                    fontFamily: "var(--font-jetbrains-mono), monospace",
+                    outline: "none",
+                  }}
+                />
+                <div style={{ display: "flex", gap: 0 }}>
+                  <button
+                    onClick={() => handleAltUnitChange("m")}
+                    style={{
+                      padding: "4px 8px",
+                      background: altUnit === "m" ? "rgba(0,229,255,0.15)" : "transparent",
+                      border: `1px solid ${altUnit === "m" ? "var(--color-accent-cyan)" : "rgba(0,229,255,0.2)"}`,
+                      borderRight: "none",
+                      borderRadius: "3px 0 0 3px",
+                      color: altUnit === "m" ? "var(--color-accent-cyan)" : "var(--color-text-muted)",
+                      fontSize: 9,
+                      cursor: "pointer",
+                      fontFamily: "var(--font-jetbrains-mono), monospace",
+                      fontWeight: altUnit === "m" ? 700 : 400,
+                    }}
+                  >
+                    m
+                  </button>
+                  <button
+                    onClick={() => handleAltUnitChange("ft")}
+                    style={{
+                      padding: "4px 8px",
+                      background: altUnit === "ft" ? "rgba(0,229,255,0.15)" : "transparent",
+                      border: `1px solid ${altUnit === "ft" ? "var(--color-accent-cyan)" : "rgba(0,229,255,0.2)"}`,
+                      borderRadius: "0 3px 3px 0",
+                      color: altUnit === "ft" ? "var(--color-accent-cyan)" : "var(--color-text-muted)",
+                      fontSize: 9,
+                      cursor: "pointer",
+                      fontFamily: "var(--font-jetbrains-mono), monospace",
+                      fontWeight: altUnit === "ft" ? 700 : 400,
+                    }}
+                  >
+                    ft
+                  </button>
+                </div>
               </div>
 
               {geoError && (
