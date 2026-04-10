@@ -7,7 +7,7 @@ import { pollTle, getCurrentTle } from "@/lib/pollers/tle-poller";
 import { propagateFromTle } from "@/lib/pollers/sgp4-propagator";
 import { pollSolarActivity } from "@/lib/pollers/solar";
 import { pollSchedule } from "@/lib/pollers/schedule-poller";
-import { archiveOrbitalState, archiveSolar, archiveTelemetryChannel, pruneOldData, upsertEvent, activateScheduledEvents, getCurrentActiveEvent } from "@/lib/db";
+import { archiveOrbitalState, archiveSolar, archiveTelemetryChannel, pruneOldData, upsertEvent, activateScheduledEvents, getCurrentActiveEvent, incrementPageViews } from "@/lib/db";
 import { connectLightstreamer, deriveTelemetry, getLatestChannels } from "@/lib/telemetry/lightstreamer-client";
 import {
   TLE_POLL_INTERVAL_MS,
@@ -203,6 +203,11 @@ export function GET() {
   const stream = new ReadableStream({
     start(controller) {
       const removeClient = sseManager.addClient(controller);
+
+      // Increment page view counter on each new connection
+      incrementPageViews().catch((err) => {
+        console.error("[stream] Page view increment failed:", err.message ?? err);
+      });
 
       // Send the current cached payload immediately on connect
       const initial = cache.getPayload();

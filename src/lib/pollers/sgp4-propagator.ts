@@ -134,8 +134,8 @@ export function propagateFromTle(tle: TleData, date: Date): OrbitalState | null 
     sunriseIn = null;
     sunsetIn = null;
 
-    const STEP_SEC = 30;
-    const MAX_LOOK_AHEAD_SEC = 50 * 60;
+    const STEP_SEC = 15;
+    const MAX_LOOK_AHEAD_SEC = 95 * 60; // Full orbit to guarantee a transition if one exists
     let stepsChecked = 0;
     let lastFraction = fraction;
 

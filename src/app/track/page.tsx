@@ -121,22 +121,31 @@ function getSubSolarPoint(date: Date): { lat: number; lon: number } {
   return { lat, lon: ((lon + 540) % 360) - 180 };
 }
 
+function terminatorLatAtLon(lonDeg: number, subSolar: { lat: number; lon: number }): number {
+  const sunDec = subSolar.lat * Math.PI / 180;
+  const deltaLon = (lonDeg - subSolar.lon) * Math.PI / 180;
+  if (Math.abs(sunDec) < 1e-6) {
+    return Math.cos(deltaLon) > 0 ? 90 : -90;
+  }
+  return Math.atan(-Math.cos(deltaLon) / Math.tan(sunDec)) * 180 / Math.PI;
+}
+
 function getTerminatorPolygon(subSolar: { lat: number; lon: number }): [number, number][] {
   const points: [number, number][] = [];
-  const latRad = subSolar.lat * Math.PI / 180;
-  const lonRad = subSolar.lon * Math.PI / 180;
-  for (let i = 0; i <= 360; i += 2) {
-    const bearing = i * Math.PI / 180;
-    const angDist = Math.PI / 2;
-    const lat2 = Math.asin(
-      Math.sin(latRad) * Math.cos(angDist) +
-      Math.cos(latRad) * Math.sin(angDist) * Math.cos(bearing)
-    );
-    const lon2 = lonRad + Math.atan2(
-      Math.sin(bearing) * Math.sin(angDist) * Math.cos(latRad),
-      Math.cos(angDist) - Math.sin(latRad) * Math.sin(lat2)
-    );
-    points.push([lat2 * 180 / Math.PI, ((lon2 * 180 / Math.PI) + 540) % 360 - 180]);
+  const STEP = 2;
+  const terminatorPoints: [number, number][] = [];
+  for (let lon = -180; lon <= 180; lon += STEP) {
+    terminatorPoints.push([terminatorLatAtLon(lon, subSolar), lon]);
+  }
+  const southPoleInShadow = subSolar.lat > 0;
+  if (southPoleInShadow) {
+    points.push(...terminatorPoints);
+    points.push([-90, 180]);
+    points.push([-90, -180]);
+  } else {
+    points.push(...terminatorPoints);
+    points.push([90, 180]);
+    points.push([90, -180]);
   }
   return points;
 }
