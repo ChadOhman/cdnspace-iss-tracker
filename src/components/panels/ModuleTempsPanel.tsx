@@ -44,7 +44,10 @@ function ModuleBox({ name, cabinTemp, avionicsTemp, accent = "var(--color-accent
         {cabinConverted.value.toFixed(1)}{cabinConverted.unit}
       </div>
       {avionicsTemp !== undefined && (
-        <div style={{ color: "var(--color-text-muted)", fontSize: 8, marginTop: 2 }}>
+        <div
+          style={{ color: "var(--color-text-muted)", fontSize: 8, marginTop: 2, cursor: "help" }}
+          title="Avionics bay temperature — the equipment rack area inside the module where computers, power conditioning, and data-handling electronics live. Typically warmer than the cabin and independently cooled by the MTL (Moderate Temperature Loop)."
+        >
           AVN: {temperature(avionicsTemp).value.toFixed(1)}{temperature(avionicsTemp).unit}
         </div>
       )}
