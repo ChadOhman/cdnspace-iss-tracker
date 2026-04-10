@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useTelemetryStream } from "@/hooks/useTelemetryStream";
+import { useBuildCheck } from "@/hooks/useBuildCheck";
 import { useLocale } from "@/context/LocaleContext";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -513,6 +514,7 @@ function LegendItem({ color, label }: { color: string; label: string }) {
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function StatsPage() {
+  useBuildCheck([]);
   const { t } = useLocale();
   const [stats, setStats] = useState(computeStats);
 

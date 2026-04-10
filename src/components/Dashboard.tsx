@@ -24,51 +24,7 @@ import {
   setActivePresetId,
 } from "@/lib/dashboard-layout-presets";
 import PanelVisibilityModal from "@/components/modals/PanelVisibilityModal";
-
-const BUILD_ID = process.env.NEXT_PUBLIC_BUILD_ID ?? "";
-const BUILD_CHECK_INTERVAL = 60_000;
-
-function useBuildCheck() {
-  // Restore scroll position after a build-triggered reload
-  useEffect(() => {
-    const saved = sessionStorage.getItem("scrollRestore");
-    if (saved) {
-      sessionStorage.removeItem("scrollRestore");
-      const parsed = JSON.parse(saved) as Record<string, number>;
-      requestAnimationFrame(() => {
-        for (const [selector, top] of Object.entries(parsed)) {
-          const el = document.querySelector(selector) as HTMLElement;
-          if (el) el.scrollTop = top;
-        }
-      });
-    }
-  }, []);
-
-  // Poll /api/build every 60s, reload if buildId changed
-  useEffect(() => {
-    if (!BUILD_ID) return;
-    const id = setInterval(async () => {
-      try {
-        const res = await fetch("/api/build");
-        const data = await res.json();
-        if (data.buildId && data.buildId !== BUILD_ID) {
-          // Save scroll positions for all columns before reload
-          const columns = [".col-left", ".col-center", ".col-right"];
-          const scrollState: Record<string, number> = {};
-          for (const sel of columns) {
-            const el = document.querySelector(sel) as HTMLElement;
-            if (el) scrollState[sel] = el.scrollTop;
-          }
-          sessionStorage.setItem("scrollRestore", JSON.stringify(scrollState));
-          window.location.reload();
-        }
-      } catch {
-        // ignore fetch errors
-      }
-    }, BUILD_CHECK_INTERVAL);
-    return () => clearInterval(id);
-  }, []);
-}
+import { useBuildCheck } from "@/hooks/useBuildCheck";
 
 function useLayoutPresets() {
   const [presetsState, setPresetsState] = useState<StoredPresetsState>(() =>

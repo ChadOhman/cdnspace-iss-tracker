@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useTelemetryStream } from "@/hooks/useTelemetryStream";
+import { useBuildCheck } from "@/hooks/useBuildCheck";
 import { useLocale } from "@/context/LocaleContext";
 import type { ISSEvent, OrbitalState, ISSTelemetry } from "@/lib/types";
 
@@ -327,6 +328,7 @@ function NoEventSection({
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 export default function LivePage() {
+  useBuildCheck([]);
   const { t } = useLocale();
   const { orbital, telemetry, activeEvent, connected } = useTelemetryStream();
 

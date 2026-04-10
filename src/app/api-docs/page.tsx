@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useLocale } from "@/context/LocaleContext";
+import { useBuildCheck } from "@/hooks/useBuildCheck";
 
 interface Endpoint {
   method: "GET" | "POST" | "PUT" | "DELETE";
@@ -126,6 +127,7 @@ const methodColors: Record<string, string> = {
 };
 
 export default function ApiDocsPage() {
+  useBuildCheck([]);
   const { t } = useLocale();
   return (
     <div style={{ width: "100vw", minHeight: "100vh", background: "#0a0e14", fontFamily: "monospace", color: "#e2e8f0" }}>

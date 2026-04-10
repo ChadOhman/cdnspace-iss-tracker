@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import Link from "next/link";
 import { useTelemetryStream } from "@/hooks/useTelemetryStream";
+import { useBuildCheck } from "@/hooks/useBuildCheck";
 import { useLocale } from "@/context/LocaleContext";
 import { useUnits } from "@/context/UnitsContext";
 import type { PassPrediction } from "@/lib/types";
@@ -286,6 +287,7 @@ function Divider() {
 // ── Main component ────────────────────────────────────────────────────────────
 
 export default function TrackPage() {
+  useBuildCheck([]);
   const { t } = useLocale();
   const { distance: distConv, speed: speedConv } = useUnits();
   const { orbital, telemetry, connected } = useTelemetryStream();

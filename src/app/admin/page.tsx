@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useLocale } from "@/context/LocaleContext";
+import { useBuildCheck } from "@/hooks/useBuildCheck";
 
 interface EventForm {
   type: string;
@@ -33,6 +34,7 @@ const emptyForm: EventForm = {
 };
 
 export default function AdminPage() {
+  useBuildCheck([]);
   const { t } = useLocale();
   const [token, setToken] = useState("");
   const [authed, setAuthed] = useState(false);
