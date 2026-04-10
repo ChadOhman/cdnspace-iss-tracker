@@ -443,7 +443,15 @@ export default function TrackPage() {
 
     setPassesLoading(true);
     setPassesError(null);
-    fetch(`/api/passes?lat=${observer.lat}&lon=${observer.lon}`)
+    // Honour the user's global pass-predictor minimum elevation preference
+    // (set on the dashboard's Pass Predictions panel).
+    let minElev = 10;
+    try {
+      const stored = window.localStorage.getItem("passPredictor.minElev");
+      const parsed = stored ? parseInt(stored, 10) : NaN;
+      if ([5, 10, 20].includes(parsed)) minElev = parsed;
+    } catch { /* ignore */ }
+    fetch(`/api/passes?lat=${observer.lat}&lon=${observer.lon}&minElev=${minElev}`)
       .then((r) => {
         if (!r.ok) throw new Error(`HTTP ${r.status}`);
         return r.json() as Promise<PassPrediction[]>;

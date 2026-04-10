@@ -9,6 +9,7 @@ export async function GET(request: NextRequest) {
 
   const latStr = searchParams.get("lat");
   const lonStr = searchParams.get("lon");
+  const minElevStr = searchParams.get("minElev");
 
   if (!latStr || !lonStr) {
     return NextResponse.json(
@@ -19,6 +20,15 @@ export async function GET(request: NextRequest) {
 
   const lat = parseFloat(latStr);
   const lon = parseFloat(lonStr);
+  // Clamp minElev to a sane 0..45° range; default 10° matches the previous
+  // hardcoded behaviour so existing callers get the same results.
+  let minElev = 10;
+  if (minElevStr !== null && minElevStr !== "") {
+    const parsed = parseFloat(minElevStr);
+    if (!Number.isNaN(parsed)) {
+      minElev = Math.max(0, Math.min(45, parsed));
+    }
+  }
 
   if (isNaN(lat) || isNaN(lon)) {
     return NextResponse.json(
@@ -43,7 +53,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const passes = predictPasses(tle, lat, lon);
+    const passes = predictPasses(tle, lat, lon, 48, minElev);
     return NextResponse.json(passes);
   } catch (err) {
     console.error("[passes] predictPasses error:", err);

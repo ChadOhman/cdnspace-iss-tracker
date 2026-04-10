@@ -32,8 +32,8 @@ import type { TleData } from "./tle-poller";
 /** Propagation step size in seconds */
 const STEP_SECONDS = 30;
 
-/** Minimum elevation (degrees) for a pass to be considered visible */
-const MIN_ELEVATION = 10;
+/** Default minimum elevation (degrees) for a pass to be considered visible */
+const DEFAULT_MIN_ELEVATION = 10;
 
 /** Maximum number of passes returned per call */
 const MAX_PASSES = 20;
@@ -59,17 +59,21 @@ export function classifyPassQuality(
 /**
  * Predict upcoming ISS passes visible from the given observer location.
  *
- * @param tle          - Current ISS TLE
- * @param lat          - Observer latitude in decimal degrees
- * @param lon          - Observer longitude in decimal degrees
- * @param hoursAhead   - How many hours into the future to search (default 48)
- * @returns            - Up to MAX_PASSES pass predictions, sorted by rise time
+ * @param tle           - Current ISS TLE
+ * @param lat           - Observer latitude in decimal degrees
+ * @param lon           - Observer longitude in decimal degrees
+ * @param hoursAhead    - How many hours into the future to search (default 48)
+ * @param minElevation  - Minimum elevation in degrees (default 10). Lower
+ *                        values catch passes closer to the horizon, which is
+ *                        useful for urban viewers with a low skyline.
+ * @returns             - Up to MAX_PASSES pass predictions, sorted by rise time
  */
 export function predictPasses(
   tle: TleData,
   lat: number,
   lon: number,
-  hoursAhead = 48
+  hoursAhead = 48,
+  minElevation = DEFAULT_MIN_ELEVATION
 ): PassPrediction[] {
   const satrec = twoline2satrec(tle.line1, tle.line2);
 
@@ -109,7 +113,7 @@ export function predictPasses(
     const azimuthDeg = (lookAngles.azimuth * 180) / Math.PI;
     const rangeSat = lookAngles.rangeSat;
 
-    if (elevationDeg >= MIN_ELEVATION) {
+    if (elevationDeg >= minElevation) {
       if (!inPass) {
         // Pass start
         inPass = true;
