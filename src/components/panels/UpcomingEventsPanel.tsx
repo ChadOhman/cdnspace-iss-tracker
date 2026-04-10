@@ -32,21 +32,40 @@ export default function UpcomingEventsPanel() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    setLoading(true);
-    fetch("/api/events")
-      .then((r) => {
-        if (!r.ok) throw new Error(`HTTP ${r.status}`);
-        return r.json();
-      })
-      .then((data: ISSEvent[]) => {
-        const upcoming = data
-          .filter((e) => e.status === "scheduled" || e.status === "active")
-          .sort((a, b) => a.scheduledStart - b.scheduledStart)
-          .slice(0, 5);
-        setEvents(upcoming);
-      })
-      .catch((e) => setError(e.message))
-      .finally(() => setLoading(false));
+    let cancelled = false;
+
+    function load() {
+      fetch("/api/events")
+        .then((r) => {
+          if (!r.ok) throw new Error(`HTTP ${r.status}`);
+          return r.json();
+        })
+        .then((data: { active: ISSEvent[]; upcoming: ISSEvent[] }) => {
+          if (cancelled) return;
+          // Merge active + upcoming, sort by start time, take next 5
+          const all = [...(data.active ?? []), ...(data.upcoming ?? [])];
+          const sorted = all
+            .filter((e) => e.status === "scheduled" || e.status === "active")
+            .sort((a, b) => a.scheduledStart - b.scheduledStart)
+            .slice(0, 5);
+          setEvents(sorted);
+          setError(null);
+          setLoading(false);
+        })
+        .catch((e) => {
+          if (cancelled) return;
+          setError(e.message);
+          setLoading(false);
+        });
+    }
+
+    load();
+    // Refetch every 5 minutes so the list stays current
+    const id = setInterval(load, 5 * 60 * 1000);
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+    };
   }, []);
 
   return (
