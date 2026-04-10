@@ -15,6 +15,48 @@ const ORBIT_RADIUS_KM = 6371 + 408;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
+/**
+ * Parse the C&C MDM "onboard time" channels into a human-readable UTC string.
+ *
+ * NASA publishes the course value (USLAB000084) as `%sT` and the fine
+ * component (USLAB000085) as `{0:f7}`. In practice the course channel tends
+ * to arrive as one of:
+ *
+ *   - Pure integer GPS seconds since 1980-01-06 (e.g. `1428834567`)
+ *   - DOY-style string `YYYY.DDDTHH:MM:SS` or similar (e.g. `2026.099T12:34:56`)
+ *   - Empty string / zero when the feed hasn't sent a value yet
+ *
+ * We try to decode the first two cases and fall back to the raw string
+ * so users at least see what's on the wire.
+ */
+function formatOnboardTime(course: string, fine: number): string {
+  const trimmed = (course ?? "").trim();
+  if (!trimmed || trimmed === "0") return "—";
+
+  // GPS seconds: integer in the 1e9..2e9 range (~2001..2033)
+  if (/^\d{9,10}$/.test(trimmed)) {
+    const gpsSec = Number(trimmed);
+    const GPS_EPOCH_MS = Date.UTC(1980, 0, 6); // 1980-01-06
+    const LEAP_SECONDS = 18; // GPS is ahead of UTC by 18s (as of 2026)
+    const utcMs = GPS_EPOCH_MS + (gpsSec - LEAP_SECONDS) * 1000 + Math.round(fine * 1000);
+    const d = new Date(utcMs);
+    if (!isNaN(d.getTime()) && d.getUTCFullYear() >= 2000 && d.getUTCFullYear() <= 2099) {
+      const pad = (n: number) => String(n).padStart(2, "0");
+      return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())} ${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}:${pad(d.getUTCSeconds())} UTC`;
+    }
+  }
+
+  // Already-formatted DOY: "YYYY.DDDTHH:MM:SS" or "YYYY/DDDTHH:MM:SS"
+  const doyMatch = trimmed.match(/^(\d{4})[./-](\d{1,3})T(\d{1,2}):(\d{2}):(\d{2})/);
+  if (doyMatch) {
+    const [, yr, doy, hh, mm, ss] = doyMatch;
+    return `${yr} DOY ${doy} ${hh.padStart(2, "0")}:${mm}:${ss} UTC`;
+  }
+
+  // Fall back to raw text so we don't hide what NASA sent
+  return trimmed;
+}
+
 function computeStats() {
   const now = new Date();
   const msInOrbit = now.getTime() - ISS_LAUNCH_DATE.getTime();
@@ -674,7 +716,10 @@ export default function StatsPage() {
               {telemetry.lab.onboardTimeCourse && telemetry.lab.onboardTimeCourse !== "" && (
                 <StatCard
                   label="C&C Onboard Time"
-                  value={telemetry.lab.onboardTimeCourse}
+                  value={formatOnboardTime(
+                    telemetry.lab.onboardTimeCourse,
+                    telemetry.lab.onboardTimeFine
+                  )}
                   unit="station clock"
                   accent
                 />

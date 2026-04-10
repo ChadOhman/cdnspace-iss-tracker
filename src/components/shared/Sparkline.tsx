@@ -18,6 +18,35 @@ interface CacheEntry {
 
 const cache = new Map<string, CacheEntry>();
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+const LS_PREFIX = "sparkline:v1:";
+
+function lsRead(key: string): CacheEntry | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(LS_PREFIX + key);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as CacheEntry;
+    if (
+      parsed &&
+      Array.isArray(parsed.data) &&
+      typeof parsed.ts === "number"
+    ) {
+      return parsed;
+    }
+  } catch {
+    // corrupt entry or JSON error — ignore
+  }
+  return null;
+}
+
+function lsWrite(key: string, entry: CacheEntry): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(LS_PREFIX + key, JSON.stringify(entry));
+  } catch {
+    // quota exceeded or private-browsing denial — ignore
+  }
+}
 
 function hexToRgba(color: string, alpha: number): string {
   // Handle CSS variables by falling back to a default
@@ -46,6 +75,12 @@ export default function Sparkline({
 
     async function fetchAndDraw() {
       const cacheKey = `${metric}:${hours}`;
+      // Promote localStorage entry into the in-memory cache on first access
+      // so reloads feel instant even though the SSR render has no data.
+      if (!cache.has(cacheKey)) {
+        const persisted = lsRead(cacheKey);
+        if (persisted) cache.set(cacheKey, persisted);
+      }
       const cached = cache.get(cacheKey);
       let data: number[];
 
@@ -75,7 +110,9 @@ export default function Sparkline({
                   : NaN
             )
             .filter((v) => Number.isFinite(v));
-          cache.set(cacheKey, { data, ts: Date.now() });
+          const entry: CacheEntry = { data, ts: Date.now() };
+          cache.set(cacheKey, entry);
+          lsWrite(cacheKey, entry);
         } catch {
           return;
         }
