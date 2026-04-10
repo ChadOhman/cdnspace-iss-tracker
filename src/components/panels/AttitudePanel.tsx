@@ -1,6 +1,7 @@
 "use client";
 
 import PanelFrame from "@/components/shared/PanelFrame";
+import Sparkline from "@/components/shared/Sparkline";
 import type { ISSTelemetry } from "@/lib/types";
 import { useLocale } from "@/context/LocaleContext";
 import { useUnits } from "@/context/UnitsContext";
@@ -362,6 +363,16 @@ export default function AttitudePanel({ telemetry }: AttitudePanelProps) {
                   </div>
                 );
               })()}
+              <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 4 }}>
+                <span style={{ color: "var(--color-text-muted)", fontSize: 8 }}>24h</span>
+                <Sparkline
+                  metric="momentum_percent"
+                  hours={24}
+                  color="#ffaa33"
+                  width={120}
+                  height={14}
+                />
+              </div>
             </div>
 
             <div

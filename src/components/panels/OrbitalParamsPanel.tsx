@@ -142,6 +142,7 @@ export default function OrbitalParamsPanel({ orbital }: OrbitalParamsPanelProps)
               marginTop: 8,
               paddingTop: 6,
               borderTop: "1px solid var(--color-border-subtle)",
+              flexWrap: "wrap",
             }}
           >
             <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
@@ -164,6 +165,18 @@ export default function OrbitalParamsPanel({ orbital }: OrbitalParamsPanelProps)
                 metric="speed_kmh"
                 hours={24}
                 color="#00ff88"
+                width={64}
+                height={18}
+              />
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+              <span style={{ color: "var(--color-text-muted)", fontSize: 9 }}>
+                β 24h
+              </span>
+              <Sparkline
+                metric="beta_angle"
+                hours={24}
+                color="#ffaa33"
                 width={64}
                 height={18}
               />

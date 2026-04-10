@@ -58,7 +58,23 @@ export default function Sparkline({
           );
           if (!res.ok) return;
           const json = await res.json();
-          data = Array.isArray(json) ? json : json.data ?? [];
+          // /api/history returns Array<{timestamp: number, value: number}>;
+          // extract the values and drop null/undefined entries so the
+          // chart can render correctly.
+          const raw: unknown[] = Array.isArray(json)
+            ? json
+            : Array.isArray((json as { data?: unknown[] })?.data)
+              ? ((json as { data: unknown[] }).data)
+              : [];
+          data = raw
+            .map((p) =>
+              typeof p === "number"
+                ? p
+                : typeof (p as { value?: unknown })?.value === "number"
+                  ? (p as { value: number }).value
+                  : NaN
+            )
+            .filter((v) => Number.isFinite(v));
           cache.set(cacheKey, { data, ts: Date.now() });
         } catch {
           return;

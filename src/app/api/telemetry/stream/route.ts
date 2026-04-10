@@ -69,7 +69,14 @@ function ensurePollers() {
     tickCount += 1;
 
     if (tickCount % 10 === 0) {
-      archiveOrbitalState(orbital).catch((err) => {
+      // Pull live-telemetry-sourced extras from the cache so sparklines
+      // can chart beta angle, ISS mass, and CMG momentum %.
+      const attitude = cache.telemetry?.attitude;
+      archiveOrbitalState(orbital, {
+        betaAngle: attitude?.betaAngle,
+        issMassKg: attitude?.issMassKg,
+        momentumPercent: attitude?.momentumPercent,
+      }).catch((err) => {
         console.error("[stream] Orbital archive failed:", err);
       });
     }

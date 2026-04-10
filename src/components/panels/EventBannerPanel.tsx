@@ -128,10 +128,24 @@ export default function EventBannerPanel({ event }: EventBannerPanelProps) {
             {t("events.docking")}: {event.metadata.vehicle}
           </span>
         )}
-        {event.type === "reboost" && event.metadata.deltaV && (
-          <span style={{ color: "var(--color-accent-orange)", fontSize: 10 }}>
-            ΔV: {event.metadata.deltaV} m/s
-          </span>
+        {event.type === "reboost" && (event.metadata.climbKm || event.metadata.deltaV) && (
+          <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+            {event.metadata.climbKm && (
+              <span style={{ color: "var(--color-accent-orange)", fontSize: 10 }}>
+                +{event.metadata.climbKm} km
+              </span>
+            )}
+            {event.metadata.deltaV && (
+              <span style={{ color: "var(--color-accent-orange)", fontSize: 10 }}>
+                ΔV: {event.metadata.deltaV} m/s
+              </span>
+            )}
+            {event.metadata.apoapsisKm && event.metadata.periapsisKm && (
+              <span style={{ color: "var(--color-text-muted)", fontSize: 10 }}>
+                Apo/Peri: {event.metadata.apoapsisKm}/{event.metadata.periapsisKm} km
+              </span>
+            )}
+          </div>
         )}
       </div>
     </PanelFrame>

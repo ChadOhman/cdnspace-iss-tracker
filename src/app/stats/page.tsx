@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useTelemetryStream } from "@/hooks/useTelemetryStream";
 import { useBuildCheck } from "@/hooks/useBuildCheck";
 import { useLocale } from "@/context/LocaleContext";
+import Sparkline from "@/components/shared/Sparkline";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -151,11 +152,13 @@ function StatCard({
   value,
   unit,
   accent,
+  sparklineMetric,
 }: {
   label: string;
   value: string | number;
   unit?: string;
   accent?: boolean;
+  sparklineMetric?: string;
 }) {
   return (
     <div style={{
@@ -172,6 +175,18 @@ function StatCard({
       </div>
       {unit && (
         <div style={{ fontSize: 9, color: "#4a5568", marginTop: 4, letterSpacing: "0.06em" }}>{unit}</div>
+      )}
+      {sparklineMetric && (
+        <div style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 6 }}>
+          <span style={{ fontSize: 8, color: "#4a5568", letterSpacing: "0.06em" }}>7d</span>
+          <Sparkline
+            metric={sparklineMetric}
+            hours={24 * 7}
+            color={accent ? "#00e5ff" : "#8892a4"}
+            width={140}
+            height={18}
+          />
+        </div>
       )}
     </div>
   );
@@ -608,18 +623,16 @@ export default function StatsPage() {
             {(() => {
               const liveMass = telemetry?.attitude.issMassKg ?? 0;
               const label = "ISS Mass";
-              if (liveMass > 0) {
-                return (
-                  <StatCard
-                    key={label}
-                    label={label}
-                    value={liveMass.toLocaleString("en", { maximumFractionDigits: 0 })}
-                    unit="kg (live)"
-                    accent
-                  />
-                );
-              }
-              return (
+              const card = liveMass > 0 ? (
+                <StatCard
+                  key={label}
+                  label={label}
+                  value={liveMass.toLocaleString("en", { maximumFractionDigits: 0 })}
+                  unit="kg (live)"
+                  accent
+                  sparklineMetric="iss_mass_kg"
+                />
+              ) : (
                 <StatCard
                   key={label}
                   label={label}
@@ -627,6 +640,7 @@ export default function StatsPage() {
                   unit="kg"
                 />
               );
+              return card;
             })()}
             {staticFacts.map(({ label, value, unit }) => (
               <StatCard key={label} label={label} value={value} unit={unit} />

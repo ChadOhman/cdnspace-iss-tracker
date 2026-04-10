@@ -480,6 +480,12 @@ export default function TrackPage() {
   >("disconnected");
   const [telescopeError, setTelescopeError] = useState<string | null>(null);
   const [isTracking, setIsTracking] = useState(false);
+  // Auto-follow: when enabled, continuously re-slew the telescope to the
+  // ISS's current topocentric RA/Dec while it's above the horizon.
+  const [autoFollow, setAutoFollow] = useState(false);
+  const [autoFollowStatus, setAutoFollowStatus] = useState<
+    "idle" | "waiting" | "following"
+  >("idle");
 
   useEffect(() => {
     const stored = localStorage.getItem("alpaca_host");
@@ -545,6 +551,76 @@ export default function TrackPage() {
       setTelescopeError(err instanceof Error ? err.message : String(err));
     }
   }, [telescopeHost]);
+
+  // ── Auto-follow loop ─────────────────────────────────────────────────────
+  // Keep refs to the latest values so the interval callback doesn't close
+  // over stale state.
+  const orbitalRef = useRef(orbital);
+  const observerRef = useRef(observer);
+  const telescopeHostRef = useRef(telescopeHost);
+  const telescopeStatusRef = useRef(telescopeStatus);
+  useEffect(() => { orbitalRef.current = orbital; }, [orbital]);
+  useEffect(() => { observerRef.current = observer; }, [observer]);
+  useEffect(() => { telescopeHostRef.current = telescopeHost; }, [telescopeHost]);
+  useEffect(() => { telescopeStatusRef.current = telescopeStatus; }, [telescopeStatus]);
+
+  const handleAutoFollowToggle = useCallback(() => {
+    setAutoFollow((prev) => !prev);
+  }, []);
+
+  useEffect(() => {
+    if (!autoFollow) {
+      setAutoFollowStatus("idle");
+      return;
+    }
+    if (telescopeStatus === "disconnected") {
+      // Can't follow if we're not connected. Keep the switch on so the
+      // user sees it stays armed; just don't tick.
+      setAutoFollowStatus("waiting");
+      return;
+    }
+
+    // Re-slew every 2 seconds while the ISS is above 10° elevation.
+    // Below that we stay idle so we don't spam the mount near the horizon.
+    const MIN_ELEV_DEG = 10;
+    const TICK_MS = 2000;
+    let inFlight = false;
+
+    const tick = async () => {
+      if (inFlight) return;
+      const orb = orbitalRef.current;
+      const obs = observerRef.current;
+      const host = telescopeHostRef.current;
+      const status = telescopeStatusRef.current;
+      if (!orb || !obs || status === "disconnected") {
+        setAutoFollowStatus("waiting");
+        return;
+      }
+      const t = computeTopocentric(
+        { lat: orb.lat, lon: orb.lon, altitudeKm: orb.altitude },
+        { lat: obs.lat, lon: obs.lon, altitudeM: obs.altitudeM },
+        Date.now()
+      );
+      if (t.elevation < MIN_ELEV_DEG) {
+        setAutoFollowStatus("waiting");
+        return;
+      }
+      setAutoFollowStatus("following");
+      inFlight = true;
+      try {
+        await slewToCoordinates(host, t.ra, t.dec);
+      } catch (err) {
+        setTelescopeError(err instanceof Error ? err.message : String(err));
+      } finally {
+        inFlight = false;
+      }
+    };
+
+    // Fire once immediately, then on interval.
+    tick();
+    const id = setInterval(tick, TICK_MS);
+    return () => clearInterval(id);
+  }, [autoFollow, telescopeStatus]);
 
   // ── Leaflet refs ───────────────────────────────────────────────────────────
   const mapRef = useRef<HTMLDivElement>(null);
@@ -1341,7 +1417,7 @@ export default function TrackPage() {
               )}
 
               {/* Action buttons */}
-              <div style={{ display: "flex", gap: 6 }}>
+              <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                 <button
                   onClick={handleGoto}
                   disabled={telescopeStatus !== "connected" || !topo}
@@ -1382,6 +1458,31 @@ export default function TrackPage() {
                   {isTracking ? "STOP TRACK" : "TRACK"}
                 </button>
                 <button
+                  onClick={handleAutoFollowToggle}
+                  disabled={telescopeStatus === "disconnected"}
+                  title="Continuously re-slew the telescope to follow the ISS while it's above 10° elevation. Telescope tracking should also be enabled."
+                  style={{
+                    flex: 1,
+                    padding: "5px 8px",
+                    background: autoFollow ? "rgba(0,255,136,0.20)" : "var(--color-bg-secondary)",
+                    border: `1px solid ${autoFollow ? "var(--color-accent-green)" : "var(--color-border-subtle)"}`,
+                    borderRadius: 3,
+                    color: autoFollow ? "var(--color-accent-green)" : "var(--color-text-muted)",
+                    fontSize: 10,
+                    fontWeight: 700,
+                    letterSpacing: "0.05em",
+                    cursor: telescopeStatus !== "disconnected" ? "pointer" : "not-allowed",
+                    opacity: telescopeStatus !== "disconnected" ? 1 : 0.4,
+                    fontFamily: "inherit",
+                  }}
+                >
+                  {autoFollow
+                    ? autoFollowStatus === "following"
+                      ? "FOLLOW ●"
+                      : "FOLLOW …"
+                    : "FOLLOW"}
+                </button>
+                <button
                   onClick={handleAbort}
                   disabled={telescopeStatus === "disconnected"}
                   style={{
@@ -1402,6 +1503,15 @@ export default function TrackPage() {
                   ABORT
                 </button>
               </div>
+              {autoFollow && (
+                <div style={{ fontSize: 9, color: "var(--color-text-muted)", marginTop: 4 }}>
+                  {autoFollowStatus === "following"
+                    ? "Auto-follow active — re-slewing every 2s"
+                    : autoFollowStatus === "waiting"
+                      ? "Auto-follow armed — waiting for ISS above 10° elevation"
+                      : "Auto-follow idle"}
+                </div>
+              )}
             </CardBody>
           </Card>
 

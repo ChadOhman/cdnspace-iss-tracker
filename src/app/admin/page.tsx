@@ -71,6 +71,24 @@ export default function AdminPage() {
     }
   }
 
+  async function insertTestReboost() {
+    setLoading(true);
+    try {
+      const res = await fetch("/api/admin/test-reboost", {
+        method: "POST",
+        headers,
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json() as { eventId?: string };
+      showStatus(`Test reboost inserted: ${data.eventId ?? "ok"}`);
+      await loadEvents();
+    } catch (e) {
+      showStatus(`Error: ${e instanceof Error ? e.message : "Unknown error"}`);
+    } finally {
+      setLoading(false);
+    }
+  }
+
   async function loadStats() {
     try {
       const res = await fetch("/api/admin/stats", { headers });
@@ -233,6 +251,21 @@ export default function AdminPage() {
                     {pageViews != null ? pageViews.toLocaleString() : "—"}
                   </div>
                 </div>
+              </div>
+            </div>
+
+            {/* Testing tools */}
+            <div style={{ background: "rgba(0,0,0,0.3)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 6, padding: "16px" }}>
+              <div style={{ fontSize: 10, color: "#00e5ff", letterSpacing: "0.1em", marginBottom: 12 }}>
+                TESTING TOOLS
+              </div>
+              <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                <button onClick={insertTestReboost} disabled={loading} style={btnStyle("primary")}>
+                  Insert Test Reboost
+                </button>
+                <span style={{ fontSize: 9, color: "#8892a4" }}>
+                  Fabricates a completed reboost event (+2.4 km) to verify timeline and banner rendering.
+                </span>
               </div>
             </div>
 

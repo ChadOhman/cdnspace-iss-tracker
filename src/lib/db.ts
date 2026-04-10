@@ -51,6 +51,32 @@ export function getPool(): Pool {
 
 // ─── Schema Initialization ───────────────────────────────────────────────────
 
+/**
+ * Idempotent column add. Checks information_schema first so it works on
+ * MySQL versions without ADD COLUMN IF NOT EXISTS.
+ */
+async function addColumnIfMissing(
+  table: string,
+  column: string,
+  definition: string
+): Promise<void> {
+  const db = getPool();
+  const [rows] = await db.execute<RowDataPacket[]>(
+    `SELECT COUNT(*) AS c
+     FROM information_schema.COLUMNS
+     WHERE table_schema = DATABASE()
+       AND table_name = ?
+       AND column_name = ?`,
+    [table, column]
+  );
+  const exists = Number(rows[0]?.c ?? 0) > 0;
+  if (!exists) {
+    // Identifiers cannot be parameterized; values here are static constants.
+    await db.execute(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
+    console.log(`[db] Added column ${table}.${column}`);
+  }
+}
+
 export async function initializeSchema(): Promise<void> {
   const db = getPool();
 
@@ -70,9 +96,19 @@ export async function initializeSchema(): Promise<void> {
       periapsis         DOUBLE,
       revolution_number INT          NOT NULL,
       is_in_sunlight    BOOLEAN      NOT NULL,
+      beta_angle        DOUBLE,
+      iss_mass_kg       DOUBLE,
+      momentum_percent  DOUBLE,
       INDEX idx_orbital_timestamp (timestamp)
     )
   `);
+
+  // Migrate existing orbital_state tables that pre-date the new columns.
+  // We cannot rely on ADD COLUMN IF NOT EXISTS (MySQL 8.0.29+ only), so we
+  // check information_schema first.
+  await addColumnIfMissing("orbital_state", "beta_angle", "DOUBLE");
+  await addColumnIfMissing("orbital_state", "iss_mass_kg", "DOUBLE");
+  await addColumnIfMissing("orbital_state", "momentum_percent", "DOUBLE");
 
   await db.execute(`
     CREATE TABLE IF NOT EXISTS tle_history (
@@ -215,17 +251,35 @@ function rowToEvent(row: RowDataPacket): ISSEvent {
 
 // ─── Archive Functions ────────────────────────────────────────────────────────
 
+/**
+ * Optional telemetry-sourced extras that can be archived alongside each
+ * orbital state row. Passing undefined skips the column.
+ */
+export interface OrbitalArchiveExtras {
+  betaAngle?: number | null;
+  issMassKg?: number | null;
+  momentumPercent?: number | null;
+}
+
 export async function archiveOrbitalState(
-  state: Partial<OrbitalState>
+  state: Partial<OrbitalState>,
+  extras: OrbitalArchiveExtras = {}
 ): Promise<void> {
   const db = getPool();
   const ts = state.timestamp != null ? new Date(state.timestamp) : new Date();
+  // Prefer extras.betaAngle (from direct NASA channel) over state.betaAngle
+  // (SGP4-derived), falling back to whichever is defined.
+  const betaAngle =
+    extras.betaAngle != null
+      ? extras.betaAngle
+      : (state.betaAngle != null && state.betaAngle !== 0 ? state.betaAngle : null);
   await db.execute(
     `INSERT INTO orbital_state
        (timestamp, latitude, longitude, altitude, velocity, speed_kmh,
         period_s, inclination, eccentricity, apoapsis, periapsis,
-        revolution_number, is_in_sunlight)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        revolution_number, is_in_sunlight,
+        beta_angle, iss_mass_kg, momentum_percent)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       ts,
       state.lat ?? 0,
@@ -240,6 +294,9 @@ export async function archiveOrbitalState(
       state.periapsis ?? null,
       state.revolutionNumber ?? 0,
       state.isInSunlight ? 1 : 0,
+      betaAngle,
+      extras.issMassKg ?? null,
+      extras.momentumPercent ?? null,
     ]
   );
 }
@@ -317,6 +374,9 @@ const METRIC_COLUMN_ALLOWLIST = new Set([
   "latitude",
   "longitude",
   "inclination",
+  "beta_angle",
+  "iss_mass_kg",
+  "momentum_percent",
 ]);
 
 export async function getMetricHistory(
