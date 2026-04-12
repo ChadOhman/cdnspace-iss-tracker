@@ -46,6 +46,7 @@ export default function CrewRosterPanel({ crew }: CrewRosterPanelProps) {
             <button
               key={member.name}
               onClick={() => openBio(member)}
+              className="crew-row"
               style={{
                 display: "flex",
                 alignItems: "center",
@@ -68,9 +69,23 @@ export default function CrewRosterPanel({ crew }: CrewRosterPanelProps) {
                   "transparent";
               }}
             >
-              <span style={{ fontSize: 14 }}>
-                {FLAG_EMOJI[member.nationality] ?? "🏳️"}
-              </span>
+              {member.photo ? (
+                <img
+                  src={member.photo}
+                  alt=""
+                  style={{
+                    width: 24,
+                    height: 24,
+                    borderRadius: "50%",
+                    objectFit: "cover",
+                    flexShrink: 0,
+                  }}
+                />
+              ) : (
+                <span style={{ fontSize: 14 }}>
+                  {FLAG_EMOJI[member.nationality] ?? "🏳️"}
+                </span>
+              )}
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div
                   style={{
@@ -119,9 +134,24 @@ export default function CrewRosterPanel({ crew }: CrewRosterPanelProps) {
                 gap: 10,
               }}
             >
-              <span style={{ fontSize: 32 }}>
-                {FLAG_EMOJI[selected.nationality] ?? "🏳️"}
-              </span>
+              {selected.photo ? (
+                <img
+                  src={selected.photo}
+                  alt=""
+                  style={{
+                    width: 48,
+                    height: 48,
+                    borderRadius: "50%",
+                    objectFit: "cover",
+                    flexShrink: 0,
+                    border: "2px solid var(--color-border-accent)",
+                  }}
+                />
+              ) : (
+                <span style={{ fontSize: 32 }}>
+                  {FLAG_EMOJI[selected.nationality] ?? "🏳️"}
+                </span>
+              )}
               <div>
                 <div
                   style={{

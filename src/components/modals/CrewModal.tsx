@@ -40,6 +40,7 @@ export default function CrewModal({ isOpen, onClose, crew }: CrewModalProps) {
       maxWidth="720px"
     >
       <div
+        className="crew-modal-grid"
         style={{
           display: "grid",
           gridTemplateColumns: "1fr 1fr",
@@ -60,7 +61,7 @@ export default function CrewModal({ isOpen, onClose, crew }: CrewModalProps) {
                 borderRadius: 4,
               }}
             >
-              {/* Flag + Name */}
+              {/* Photo + Name */}
               <div
                 style={{
                   display: "flex",
@@ -69,9 +70,24 @@ export default function CrewModal({ isOpen, onClose, crew }: CrewModalProps) {
                   marginBottom: 6,
                 }}
               >
-                <span style={{ fontSize: 22 }}>
-                  {FLAG_EMOJI[member.nationality] ?? "🏳️"}
-                </span>
+                {member.photo ? (
+                  <img
+                    src={member.photo}
+                    alt=""
+                    style={{
+                      width: 36,
+                      height: 36,
+                      borderRadius: "50%",
+                      objectFit: "cover",
+                      flexShrink: 0,
+                      border: `2px solid ${color}`,
+                    }}
+                  />
+                ) : (
+                  <span style={{ fontSize: 22 }}>
+                    {FLAG_EMOJI[member.nationality] ?? "🏳️"}
+                  </span>
+                )}
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div
                     style={{

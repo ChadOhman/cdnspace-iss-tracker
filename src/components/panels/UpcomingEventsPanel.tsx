@@ -42,9 +42,15 @@ export default function UpcomingEventsPanel() {
         })
         .then((data: { active: ISSEvent[]; upcoming: ISSEvent[] }) => {
           if (cancelled) return;
-          // Merge active + upcoming, sort by start time, take next 5
+          // Merge active + upcoming, deduplicate by ID, sort by start time, take next 5
           const all = [...(data.active ?? []), ...(data.upcoming ?? [])];
-          const sorted = all
+          const seen = new Set<string>();
+          const unique = all.filter((e) => {
+            if (seen.has(e.id)) return false;
+            seen.add(e.id);
+            return true;
+          });
+          const sorted = unique
             .filter((e) => e.status === "scheduled" || e.status === "active")
             .sort((a, b) => a.scheduledStart - b.scheduledStart)
             .slice(0, 5);

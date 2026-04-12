@@ -198,6 +198,22 @@ export function Dashboard() {
         </div>
       )}
 
+      {/* Mobile column — curated single-column layout, hidden on desktop */}
+      <div className="col-mobile">
+        {panelVisibility.eventBanner && <EventBannerPanel event={stream.activeEvent ?? activeEvent} />}
+        {panelVisibility.groundTrack && <GroundTrackPanel orbital={stream.orbital} />}
+        {panelVisibility.crew && <CrewRosterPanel crew={stream.crew} />}
+        {panelVisibility.liveVideo && <LiveVideoPanel />}
+        {panelVisibility.upcomingEvents && <UpcomingEventsPanel />}
+        {panelVisibility.orbitalParams && <OrbitalParamsPanel orbital={stream.orbital} telemetry={stream.telemetry} />}
+        {panelVisibility.spaceWeather && <SpaceWeatherPanel solar={stream.solar} />}
+        {panelVisibility.dayNight && <DayNightPanel orbital={stream.orbital} />}
+        {panelVisibility.passPrediction && <PassPredictionPanel />}
+        {panelVisibility.solarArrays && <SolarArrayPanel telemetry={stream.telemetry} />}
+        {panelVisibility.eclss && <EclssPanel telemetry={stream.telemetry} />}
+        {panelVisibility.attitude && <AttitudePanel telemetry={stream.telemetry} />}
+      </div>
+
       {/* Left column — Where is the ISS? (navigation & environment) */}
       <div className="col-left">
         {show("eventBanner", "left") && <EventBannerPanel event={stream.activeEvent ?? activeEvent} />}

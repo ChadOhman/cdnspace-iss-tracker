@@ -98,6 +98,15 @@ body {
 .col-center { grid-area: center; }
 .col-right  { grid-area: right; }
 
+/* Mobile column: hidden on desktop, shown on mobile */
+.col-mobile {
+  display: none;
+  overflow-y: visible;
+  padding: 6px;
+  flex-direction: column;
+  gap: 6px;
+}
+
 /* ─────────────────────────────────────────
    Panel
    ───────────────────────────────────────── */
@@ -173,6 +182,18 @@ body {
   animation: pulse-event 2s ease-in-out infinite;
 }
 
+/* ─────────────────────────────────────────
+   Touch-friendly active states
+   ───────────────────────────────────────── */
+.crew-row:active {
+  background: rgba(0, 229, 255, 0.12) !important;
+}
+
+.dashboard-bottombar button:active,
+.dashboard-bottombar a:active {
+  opacity: 0.7;
+}
+
 @keyframes bmac-slide-in {
   from { opacity: 0; transform: translateY(12px); }
   to   { opacity: 1; transform: translateY(0); }
@@ -216,14 +237,11 @@ body {
   .col-left,
   .col-center,
   .col-right {
-    overflow-y: visible;
-    padding: 6px;
-    gap: 6px;
+    display: none;
   }
 
-  .col-center,
-  .col-right {
-    display: none;
+  .col-mobile {
+    display: flex;
   }
 
   /* Hide orbital metrics, TDRS, period, and full title on mobile */
@@ -239,6 +257,26 @@ body {
   /* Simplify bottom bar on mobile */
   .bottombar-branding {
     display: none !important;
+  }
+
+  /* Larger tap targets on mobile */
+  .crew-row {
+    padding: 10px 8px !important;
+    min-height: 44px;
+  }
+
+  .dashboard-bottombar button,
+  .dashboard-bottombar a {
+    min-height: 36px;
+    min-width: 36px;
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* CrewModal: single column on mobile */
+  .crew-modal-grid {
+    grid-template-columns: 1fr !important;
   }
 }
 
