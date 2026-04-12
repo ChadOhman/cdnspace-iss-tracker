@@ -77,8 +77,8 @@ const BERTHING_PATTERN = /cygnus|htv|dream\s*chaser|capture|berth/i;
 function mapEvent(result: SpaceDevsEvent): ISSEvent {
   let type: EventType = TYPE_MAP[result.type.id] ?? "maneuver";
 
-  // Distinguish berthing (robotic arm capture) from autonomous docking
-  if (type === "docking") {
+  // Distinguish berthing (robotic arm capture) from autonomous docking or generic maneuver
+  if (type === "docking" || type === "maneuver") {
     const text = `${result.name} ${result.description ?? ""}`;
     if (BERTHING_PATTERN.test(text)) {
       type = "berthing";
