@@ -21,7 +21,7 @@ const TYPE_MAP: Record<number, EventType> = {
   13: "maneuver",
   15: "maneuver",
   25: "maneuver",
-  29: "maneuver",
+  29: "berthing",
 };
 
 // Only process events whose Space Devs type ID appears in our map
