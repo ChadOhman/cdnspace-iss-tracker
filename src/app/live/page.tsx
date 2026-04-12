@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useTelemetryStream } from "@/hooks/useTelemetryStream";
 import { useBuildCheck } from "@/hooks/useBuildCheck";
 import { useLocale } from "@/context/LocaleContext";
@@ -518,7 +519,22 @@ function NoEventSection({
 export default function LivePage() {
   useBuildCheck([]);
   const { t } = useLocale();
+  const router = useRouter();
   const { orbital, telemetry, activeEvent, connected } = useTelemetryStream();
+  const hadEventRef = useRef(false);
+
+  // Redirect to home when a live event concludes
+  useEffect(() => {
+    if (activeEvent?.status === "active") {
+      hadEventRef.current = true;
+    } else if (hadEventRef.current && !activeEvent) {
+      // Event was active, now it's gone — redirect after a short delay
+      const timer = setTimeout(() => {
+        router.push("/");
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [activeEvent, router]);
 
   function renderSidebar(event: ISSEvent | null) {
     if (!event) {

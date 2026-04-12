@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import dynamic from "next/dynamic";
 import { TopBar } from "@/components/TopBar";
+import { LiveEventBar } from "@/components/LiveEventBar";
 import { BottomBar } from "@/components/BottomBar";
 import { useTelemetryStream } from "@/hooks/useTelemetryStream";
 import { useSimTelemetry } from "@/hooks/useSimTelemetry";
@@ -196,6 +197,9 @@ export function Dashboard() {
         visitorCount={stream.visitorCount}
         crew={stream.crew}
       />
+
+      {/* Live event bar — only shown during active events */}
+      <LiveEventBar event={stream.activeEvent ?? activeEvent} />
 
       {/* Timeline row */}
       {panelVisibility.timeline && (
