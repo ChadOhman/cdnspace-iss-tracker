@@ -3,7 +3,7 @@
 import { useState, useCallback } from "react";
 import PanelFrame from "@/components/shared/PanelFrame";
 import Modal from "@/components/shared/Modal";
-import { CURRENT_CREW, CURRENT_EXPEDITION, FLAG_EMOJI } from "@/data/iss-modules";
+import { FLAG_EMOJI } from "@/data/iss-modules";
 import type { CrewMember } from "@/lib/types";
 import { useLocale } from "@/context/LocaleContext";
 import type { CrewRoster } from "@/hooks/useTelemetryStream";
@@ -23,8 +23,8 @@ interface CrewRosterPanelProps {
 export default function CrewRosterPanel({ crew }: CrewRosterPanelProps) {
   const { t } = useLocale();
   const [selected, setSelected] = useState<CrewMember | null>(null);
-  const crewMembers = crew?.crew ?? CURRENT_CREW;
-  const expedition = crew?.expedition ?? CURRENT_EXPEDITION;
+  const crewMembers = crew?.crew ?? [];
+  const expedition = crew?.expedition;
 
   const openBio = useCallback((member: CrewMember) => {
     setSelected(member);
@@ -37,10 +37,15 @@ export default function CrewRosterPanel({ crew }: CrewRosterPanelProps) {
   return (
     <>
       <PanelFrame
-        title={`${t("crew.expedition")} ${expedition}`}
+        title={expedition ? `${t("crew.expedition")} ${expedition}` : t("panels.crew")}
         icon="👨‍🚀"
         accentColor="var(--color-accent-cyan)"
       >
+        {crewMembers.length === 0 ? (
+          <div style={{ color: "var(--color-text-muted)", fontSize: 10, fontStyle: "italic", padding: "8px 0" }}>
+            Loading crew data...
+          </div>
+        ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
           {crewMembers.map((member) => (
             <button
@@ -117,6 +122,7 @@ export default function CrewRosterPanel({ crew }: CrewRosterPanelProps) {
             </button>
           ))}
         </div>
+        )}
       </PanelFrame>
 
       <Modal

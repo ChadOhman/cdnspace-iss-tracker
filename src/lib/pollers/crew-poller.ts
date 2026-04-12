@@ -4,11 +4,10 @@
  * Fetches the current ISS crew from the Corquaid People-in-Space API
  * (a community-maintained, regularly updated static JSON on GitHub Pages).
  * Then enriches each crew member with a short bio from the Wikipedia API.
- * Falls back to hardcoded data in src/data/iss-modules.ts if the fetch fails.
+ * Returns null on failure — the caller keeps using previously cached data.
  */
 
 import type { CrewMember } from "@/lib/types";
-import { CURRENT_CREW, CURRENT_EXPEDITION } from "@/data/iss-modules";
 
 const CREW_API_URL =
   "https://corquaid.github.io/international-space-station-APIs/JSON/people-in-space.json";
@@ -132,7 +131,7 @@ export async function pollCrew(): Promise<CrewRoster | null> {
       return null;
     }
 
-    const expedition = parseInt(data.iss_expedition, 10) || CURRENT_EXPEDITION;
+    const expedition = parseInt(data.iss_expedition, 10) || 0;
 
     // Fetch Wikipedia bios in parallel for all crew members
     const bioResults = await Promise.allSettled(
@@ -176,7 +175,3 @@ export async function pollCrew(): Promise<CrewRoster | null> {
   }
 }
 
-/** Return the hardcoded fallback roster */
-export function getFallbackRoster(): CrewRoster {
-  return { expedition: CURRENT_EXPEDITION, crew: CURRENT_CREW };
-}

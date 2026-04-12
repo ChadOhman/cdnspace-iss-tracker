@@ -5,7 +5,7 @@ import type { OrbitalState, CrewMember } from "@/lib/types";
 import { useLocale } from "@/context/LocaleContext";
 import { useUnits } from "@/context/UnitsContext";
 import { useTime } from "@/context/TimeContext";
-import { CURRENT_CREW, FLAG_EMOJI } from "@/data/iss-modules";
+import { FLAG_EMOJI } from "@/data/iss-modules";
 import CrewModal from "@/components/modals/CrewModal";
 import type { CrewRoster } from "@/hooks/useTelemetryStream";
 
@@ -32,7 +32,7 @@ function TopBarInner({
   const [timeStr, setTimeStr] = useState("");
   const [crewOpen, setCrewOpen] = useState(false);
 
-  const crewMembers = crew?.crew ?? CURRENT_CREW;
+  const crewMembers = crew?.crew ?? [];
   const expedition = crew?.expedition;
 
   // Build the flag string from the current crew roster

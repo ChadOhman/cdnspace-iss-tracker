@@ -1,7 +1,7 @@
 "use client";
 
 import Modal from "@/components/shared/Modal";
-import { CURRENT_CREW, CURRENT_EXPEDITION, FLAG_EMOJI } from "@/data/iss-modules";
+import { FLAG_EMOJI } from "@/data/iss-modules";
 import { useLocale } from "@/context/LocaleContext";
 import type { CrewRoster } from "@/hooks/useTelemetryStream";
 
@@ -29,12 +29,12 @@ interface CrewModalProps {
 
 export default function CrewModal({ isOpen, onClose, crew }: CrewModalProps) {
   const { t } = useLocale();
-  const crewMembers = crew?.crew ?? CURRENT_CREW;
-  const expedition = crew?.expedition ?? CURRENT_EXPEDITION;
+  const crewMembers = crew?.crew ?? [];
+  const expedition = crew?.expedition;
 
   return (
     <Modal
-      title={`${t("panels.crew")} — ${t("crew.expedition")} ${expedition}`}
+      title={expedition ? `${t("panels.crew")} — ${t("crew.expedition")} ${expedition}` : t("panels.crew")}
       isOpen={isOpen}
       onClose={onClose}
       maxWidth="720px"

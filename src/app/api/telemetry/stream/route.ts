@@ -7,7 +7,7 @@ import { pollTle, getCurrentTle } from "@/lib/pollers/tle-poller";
 import { propagateFromTle } from "@/lib/pollers/sgp4-propagator";
 import { pollSolarActivity } from "@/lib/pollers/solar";
 import { pollSchedule } from "@/lib/pollers/schedule-poller";
-import { pollCrew, getFallbackRoster } from "@/lib/pollers/crew-poller";
+import { pollCrew } from "@/lib/pollers/crew-poller";
 import { archiveOrbitalState, archiveSolar, archiveTelemetryChannel, pruneOldData, upsertEvent, activateScheduledEvents, getCurrentActiveEvent, incrementPageViews } from "@/lib/db";
 import { connectLightstreamer, deriveTelemetry, getLatestChannels } from "@/lib/telemetry/lightstreamer-client";
 import {
@@ -294,9 +294,6 @@ function ensurePollers() {
   setInterval(runSchedulePoll, SCHEDULE_POLL_INTERVAL_MS);
 
   // 9. Crew roster poller: fetch immediately, then every 6 hours
-  // Start with hardcoded fallback so the panel is never empty
-  cache.crew = getFallbackRoster();
-
   const runCrewPoll = () => {
     pollCrew()
       .then((roster) => {
