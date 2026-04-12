@@ -3,6 +3,7 @@
  *
  * Fetches the current ISS crew from the Corquaid People-in-Space API
  * (a community-maintained, regularly updated static JSON on GitHub Pages).
+ * Then enriches each crew member with a short bio from the Wikipedia API.
  * Falls back to hardcoded data in src/data/iss-modules.ts if the fetch fails.
  */
 
@@ -11,6 +12,9 @@ import { CURRENT_CREW, CURRENT_EXPEDITION } from "@/data/iss-modules";
 
 const CREW_API_URL =
   "https://corquaid.github.io/international-space-station-APIs/JSON/people-in-space.json";
+
+const WIKIPEDIA_API_URL =
+  "https://en.wikipedia.org/api/rest_v1/page/summary/";
 
 /** Shape of each person in the Corquaid API response */
 interface CorquaidPerson {
@@ -59,6 +63,44 @@ function normalizeRole(position: string): string {
 }
 
 /**
+ * Extract the Wikipedia article title from a full Wikipedia URL.
+ * e.g. "https://en.wikipedia.org/wiki/Jessica_Meir" → "Jessica_Meir"
+ */
+function wikiTitleFromUrl(url: string): string | null {
+  const match = url.match(/wikipedia\.org\/wiki\/(.+)/);
+  return match ? decodeURIComponent(match[1]) : null;
+}
+
+/**
+ * Fetch a short bio extract from the Wikipedia REST API.
+ * Uses the page summary endpoint which returns a plain-text extract.
+ */
+async function fetchWikiBio(titleOrName: string): Promise<string | null> {
+  const title = titleOrName.replace(/ /g, "_");
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 5_000);
+
+  try {
+    const res = await fetch(`${WIKIPEDIA_API_URL}${encodeURIComponent(title)}`, {
+      signal: controller.signal,
+      headers: {
+        "User-Agent":
+          "ISS-Tracker/1.0 (https://iss.cdnspace.ca; contact@cdnspace.ca)",
+      },
+    });
+
+    if (!res.ok) return null;
+
+    const data = (await res.json()) as { extract?: string };
+    return data.extract ?? null;
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+/**
  * Fetch the current ISS crew roster from the Corquaid API.
  * Returns null on failure (caller should keep using previously cached data).
  */
@@ -92,18 +134,34 @@ export async function pollCrew(): Promise<CrewRoster | null> {
 
     const expedition = parseInt(data.iss_expedition, 10) || CURRENT_EXPEDITION;
 
-    const crew: CrewMember[] = issCrew.map((p) => ({
-      name: p.name,
-      role: normalizeRole(p.position),
-      agency: normalizeAgency(p.agency),
-      nationality: (p.flag_code ?? p.country ?? "").toLowerCase(),
-      expedition,
-      spacecraft: p.spacecraft,
-      photo: p.image,
-    }));
+    // Fetch Wikipedia bios in parallel for all crew members
+    const bioResults = await Promise.allSettled(
+      issCrew.map((p) => {
+        const title = p.url ? wikiTitleFromUrl(p.url) : null;
+        return fetchWikiBio(title ?? p.name);
+      })
+    );
 
+    const crew: CrewMember[] = issCrew.map((p, i) => {
+      const bioResult = bioResults[i];
+      const bio =
+        bioResult.status === "fulfilled" ? bioResult.value : null;
+
+      return {
+        name: p.name,
+        role: normalizeRole(p.position),
+        agency: normalizeAgency(p.agency),
+        nationality: (p.flag_code ?? p.country ?? "").toLowerCase(),
+        expedition,
+        spacecraft: p.spacecraft,
+        photo: p.image,
+        bio: bio ?? undefined,
+      };
+    });
+
+    const biosFound = crew.filter((c) => c.bio).length;
     console.log(
-      `[crew] Fetched ${crew.length} ISS crew members (Expedition ${expedition})`
+      `[crew] Fetched ${crew.length} ISS crew members (Expedition ${expedition}), ${biosFound} bios from Wikipedia`
     );
     return { expedition, crew };
   } catch (err) {
