@@ -8,6 +8,7 @@ import { propagateFromTle } from "@/lib/pollers/sgp4-propagator";
 import { pollSolarActivity } from "@/lib/pollers/solar";
 import { pollSchedule } from "@/lib/pollers/schedule-poller";
 import { pollCrew } from "@/lib/pollers/crew-poller";
+import { pollDocking } from "@/lib/pollers/docking-poller";
 import { archiveOrbitalState, archiveSolar, archiveTelemetryChannel, pruneOldData, upsertEvent, activateScheduledEvents, getCurrentActiveEvent, incrementPageViews } from "@/lib/db";
 import { connectLightstreamer, deriveTelemetry, getLatestChannels } from "@/lib/telemetry/lightstreamer-client";
 import {
@@ -309,6 +310,23 @@ function ensurePollers() {
 
   runCrewPoll();
   setInterval(runCrewPoll, CREW_POLL_INTERVAL_MS);
+
+  // 10. Docking status poller: fetch alongside crew (same interval)
+  const runDockingPoll = () => {
+    pollDocking()
+      .then((vehicles) => {
+        if (vehicles) {
+          cache.docking = vehicles;
+          sseManager.broadcast("docking", vehicles);
+        }
+      })
+      .catch((err) => {
+        console.error("[stream] Docking poll failed:", err);
+      });
+  };
+
+  runDockingPoll();
+  setInterval(runDockingPoll, CREW_POLL_INTERVAL_MS);
 
   // 11. Broadcast lightweight telemetry payload on interval (no crew/solar/channels)
   setInterval(() => {

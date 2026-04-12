@@ -128,6 +128,7 @@ import TdrsPanel from "@/components/panels/TdrsPanel";
 import CommsPanel from "@/components/panels/CommsPanel";
 import Canadarm2Panel from "@/components/panels/Canadarm2Panel";
 import RussianSegmentPanel from "@/components/panels/RussianSegmentPanel";
+import DockingPortsPanel from "@/components/panels/DockingPortsPanel";
 
 export function Dashboard() {
   useBuildCheck();
@@ -205,6 +206,7 @@ export function Dashboard() {
         {panelVisibility.crew && <CrewRosterPanel crew={stream.crew} />}
         {panelVisibility.liveVideo && <LiveVideoPanel />}
         {panelVisibility.upcomingEvents && <UpcomingEventsPanel />}
+        {panelVisibility.dockingPorts && <DockingPortsPanel docking={stream.docking} />}
         {panelVisibility.orbitalParams && <OrbitalParamsPanel orbital={stream.orbital} telemetry={stream.telemetry} />}
         {panelVisibility.spaceWeather && <SpaceWeatherPanel solar={stream.solar} />}
         {panelVisibility.dayNight && <DayNightPanel orbital={stream.orbital} />}
@@ -224,6 +226,7 @@ export function Dashboard() {
         {show("liveVideo", "left") && <LiveVideoPanel />}
         {show("crew", "left") && <CrewRosterPanel crew={stream.crew} />}
         {show("upcomingEvents", "left") && <UpcomingEventsPanel />}
+        {show("dockingPorts", "left") && <DockingPortsPanel docking={stream.docking} />}
         {show("spaceWeather", "left") && <SpaceWeatherPanel solar={stream.solar} />}
         {show("solarArrays", "left") && <SolarArrayPanel telemetry={stream.telemetry} />}
         {show("eclss", "left") && <EclssPanel telemetry={stream.telemetry} />}
@@ -244,6 +247,7 @@ export function Dashboard() {
         {show("liveVideo", "center") && <LiveVideoPanel />}
         {show("crew", "center") && <CrewRosterPanel crew={stream.crew} />}
         {show("upcomingEvents", "center") && <UpcomingEventsPanel />}
+        {show("dockingPorts", "center") && <DockingPortsPanel docking={stream.docking} />}
         {show("spaceWeather", "center") && <SpaceWeatherPanel solar={stream.solar} />}
         {show("groundTrack", "center") && <GroundTrackPanel orbital={stream.orbital} />}
         {show("orbitalParams", "center") && <OrbitalParamsPanel orbital={stream.orbital} telemetry={stream.telemetry} />}
@@ -283,6 +287,7 @@ export function Dashboard() {
         {show("liveVideo", "right") && <LiveVideoPanel />}
         {show("crew", "right") && <CrewRosterPanel crew={stream.crew} />}
         {show("upcomingEvents", "right") && <UpcomingEventsPanel />}
+        {show("dockingPorts", "right") && <DockingPortsPanel docking={stream.docking} />}
         {show("spaceWeather", "right") && <SpaceWeatherPanel solar={stream.solar} />}
       </div>
 

@@ -475,6 +475,20 @@ export interface CrewMember {
   spacecraft?: string;
 }
 
+// ─── Docking Ports ──────────────────────────────────────────────────────────
+
+export interface DockedSpacecraft {
+  name: string;
+  port: string;
+  type: "Crew" | "Cargo";
+  operator: string;
+  dockedAt: number;
+  crew: string[] | null;
+  image?: string;
+  patch?: string;
+  flagCode: string;
+}
+
 // ─── Pass Predictions ────────────────────────────────────────────────────────
 
 export type PassQuality = "bright" | "good" | "fair" | "poor";

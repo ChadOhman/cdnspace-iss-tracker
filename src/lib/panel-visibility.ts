@@ -16,6 +16,9 @@ export const PANEL_DEFINITIONS = [
   { group: "center", id: "upcomingEvents", label: "Upcoming Events" },
   { group: "center", id: "spaceWeather", label: "Space Weather" },
 
+  // Center column — continued
+  { group: "center", id: "dockingPorts", label: "Docking Ports" },
+
   // Right column — How are the systems? (engineering telemetry)
   { group: "right", id: "eventBanner", label: "Active Event" },
   { group: "right", id: "solarArrays", label: "Solar Arrays" },

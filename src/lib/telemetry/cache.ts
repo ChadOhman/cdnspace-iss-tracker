@@ -1,4 +1,4 @@
-import type { OrbitalState, ISSTelemetry, SolarActivity, ISSEvent } from "../types";
+import type { OrbitalState, ISSTelemetry, SolarActivity, ISSEvent, DockedSpacecraft } from "../types";
 import type { CrewRoster } from "../pollers/crew-poller";
 
 export class TelemetryCache {
@@ -7,6 +7,7 @@ export class TelemetryCache {
   solar: SolarActivity | null = null;
   activeEvent: ISSEvent | null = null;
   crew: CrewRoster | null = null;
+  docking: DockedSpacecraft[] | null = null;
   visitorCount = 0;
 
   /** Full payload sent on initial connect */
@@ -17,11 +18,12 @@ export class TelemetryCache {
       solar: this.solar,
       activeEvent: this.activeEvent,
       crew: this.crew,
+      docking: this.docking,
       visitorCount: this.visitorCount,
     };
   }
 
-  /** Lightweight payload sent every second (no crew/solar/event) */
+  /** Lightweight payload sent every second (no crew/solar/event/docking) */
   getTickPayload() {
     return {
       orbital: this.orbital,
