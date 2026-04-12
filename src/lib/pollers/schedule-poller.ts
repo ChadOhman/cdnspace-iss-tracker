@@ -7,15 +7,20 @@
 
 import type { ISSEvent, EventType } from "@/lib/types";
 
-const SPACE_DEVS_URL =
-  "https://ll.thespacedevs.com/2.2.0/event/upcoming/?format=json&limit=20";
+// Only fetch events within the next 90 days to avoid placeholder-date events
+const MAX_LOOKAHEAD_DAYS = 90;
+
+function getSpaceDevsUrl(): string {
+  const end = new Date(Date.now() + MAX_LOOKAHEAD_DAYS * 24 * 60 * 60 * 1000);
+  return `https://ll.thespacedevs.com/2.2.0/event/upcoming/?format=json&limit=20&date__lte=${end.toISOString().split("T")[0]}`;
+}
 
 // Space Devs event type IDs and their mapping to our EventType
 const TYPE_MAP: Record<number, EventType> = {
   2: "docking",
   3: "eva",
   8: "undocking",
-  4: "maneuver",
+  4: "berthing",
   6: "maneuver",
   12: "maneuver",
   13: "maneuver",
@@ -132,7 +137,7 @@ export async function pollSchedule(): Promise<ISSEvent[]> {
   const timeout = setTimeout(() => controller.abort(), 10_000);
 
   try {
-    const res = await fetch(SPACE_DEVS_URL, {
+    const res = await fetch(getSpaceDevsUrl(), {
       signal: controller.signal,
       headers: {
         "User-Agent": "cdnspace-iss-tracker/1.0 (https://github.com/cdnspace/iss-tracker)",
