@@ -1,11 +1,16 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import PanelFrame from "@/components/shared/PanelFrame";
 import type { PassPrediction } from "@/lib/types";
 import { useLocale } from "@/context/LocaleContext";
 
 type GeoState = "idle" | "requesting" | "granted" | "denied";
+type NotifyState = "off" | "requesting" | "on" | "denied";
+
+const NOTIFY_STORAGE_KEY = "passPredictor.notify";
+const NOTIFY_LEAD_TIME_MS = 10 * 60 * 1000; // 10 minutes before pass
+const NOTIFY_CHECK_INTERVAL_MS = 60 * 1000; // check every minute
 
 interface Coords {
   lat: number;
@@ -66,10 +71,18 @@ export default function PassPredictionPanel() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [minElev, setMinElev] = useState<MinElev>(DEFAULT_MIN_ELEV);
+  const [notifyState, setNotifyState] = useState<NotifyState>("off");
+  const notifiedRef = useRef<Set<number>>(new Set());
 
-  // Load saved minElev once on mount
+  // Load saved minElev and notification preference on mount
   useEffect(() => {
     setMinElev(readStoredMinElev());
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem(NOTIFY_STORAGE_KEY);
+      if (saved === "on" && Notification.permission === "granted") {
+        setNotifyState("on");
+      }
+    }
   }, []);
 
   const fetchPasses = useCallback(
@@ -132,6 +145,64 @@ export default function PassPredictionPanel() {
     }
   }, [coords, fetchPasses, minElev]);
 
+  // Notification check interval
+  useEffect(() => {
+    if (notifyState !== "on" || passes.length === 0) return;
+
+    const check = () => {
+      const now = Date.now();
+      for (const pass of passes) {
+        const timeUntil = pass.riseTime - now;
+        if (
+          timeUntil > 0 &&
+          timeUntil <= NOTIFY_LEAD_TIME_MS &&
+          !notifiedRef.current.has(pass.riseTime)
+        ) {
+          notifiedRef.current.add(pass.riseTime);
+          const mins = Math.round(timeUntil / 60000);
+          new Notification("ISS Pass Alert", {
+            body: `ISS passes over your location in ${mins} min — max ${pass.maxElevation.toFixed(0)}° elevation (${pass.quality})`,
+            icon: "/ISS_emblem.png",
+            tag: `iss-pass-${pass.riseTime}`,
+          });
+        }
+      }
+    };
+
+    check();
+    const id = setInterval(check, NOTIFY_CHECK_INTERVAL_MS);
+    return () => clearInterval(id);
+  }, [notifyState, passes]);
+
+  const toggleNotify = useCallback(() => {
+    if (notifyState === "on") {
+      setNotifyState("off");
+      localStorage.setItem(NOTIFY_STORAGE_KEY, "off");
+      return;
+    }
+
+    if (!("Notification" in window)) {
+      setNotifyState("denied");
+      return;
+    }
+
+    if (Notification.permission === "granted") {
+      setNotifyState("on");
+      localStorage.setItem(NOTIFY_STORAGE_KEY, "on");
+      return;
+    }
+
+    setNotifyState("requesting");
+    Notification.requestPermission().then((perm) => {
+      if (perm === "granted") {
+        setNotifyState("on");
+        localStorage.setItem(NOTIFY_STORAGE_KEY, "on");
+      } else {
+        setNotifyState("denied");
+      }
+    });
+  }, [notifyState]);
+
   const footer = (
     <div
       style={{
@@ -162,6 +233,33 @@ export default function PassPredictionPanel() {
           }}
         >
           {coords ? t("passes.change") : t("passes.enable")}
+        </button>
+      </div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <span>Pass alerts</span>
+        <button
+          onClick={toggleNotify}
+          style={{
+            padding: "1px 6px",
+            borderRadius: 2,
+            border: `1px solid ${notifyState === "on" ? "var(--color-accent-green)" : "var(--color-border-subtle)"}`,
+            background: notifyState === "on" ? "rgba(0,255,136,0.12)" : "transparent",
+            color: notifyState === "on" ? "var(--color-accent-green)" : notifyState === "denied" ? "var(--color-accent-red)" : "var(--color-text-muted)",
+            cursor: notifyState === "denied" ? "not-allowed" : "pointer",
+            fontSize: 9,
+            fontFamily: "inherit",
+            fontWeight: notifyState === "on" ? 700 : 400,
+          }}
+          title={
+            notifyState === "denied"
+              ? "Notifications blocked by browser"
+              : notifyState === "on"
+                ? "Alerts enabled — you'll be notified 10 min before each pass"
+                : "Enable browser notifications for upcoming passes"
+          }
+          disabled={notifyState === "denied"}
+        >
+          {notifyState === "on" ? "ON" : notifyState === "denied" ? "BLOCKED" : notifyState === "requesting" ? "..." : "OFF"}
         </button>
       </div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -277,19 +375,50 @@ export default function PassPredictionPanel() {
                   {pass.maxElevation.toFixed(0)}°
                 </div>
               </div>
-              <div style={{ textAlign: "right" }}>
-                <div
+              <div style={{ textAlign: "right", display: "flex", alignItems: "center", gap: 6 }}>
+                <div>
+                  <div
+                    style={{
+                      color: QUALITY_COLOR[pass.quality] ?? "var(--color-text-muted)",
+                      fontSize: 9,
+                      textTransform: "uppercase",
+                    }}
+                  >
+                    {t(`passes.${pass.quality}`) ?? pass.quality}
+                  </div>
+                  <div style={{ color: "var(--color-text-muted)", fontSize: 9 }}>
+                    {t("passes.magnitude").toLowerCase()} {pass.magnitude.toFixed(1)}
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    const dur = Math.round(
+                      (pass.setTime - pass.riseTime) / 60000
+                    );
+                    const url = `${window.location.origin}/?pass=${pass.riseTime}`;
+                    if (navigator.share) {
+                      navigator.share({
+                        title: "ISS Pass Alert",
+                        text: `ISS passes over at ${formatTime(pass.riseTime)} — ${pass.maxElevation.toFixed(0)}° max elevation (${pass.quality})`,
+                        url,
+                      }).catch(() => {});
+                    } else {
+                      navigator.clipboard.writeText(url).catch(() => {});
+                    }
+                  }}
+                  title="Share this pass"
                   style={{
-                    color: QUALITY_COLOR[pass.quality] ?? "var(--color-text-muted)",
-                    fontSize: 9,
-                    textTransform: "uppercase",
+                    background: "none",
+                    border: "none",
+                    color: "var(--color-text-muted)",
+                    cursor: "pointer",
+                    fontSize: 12,
+                    padding: 2,
+                    lineHeight: 1,
                   }}
                 >
-                  {t(`passes.${pass.quality}`) ?? pass.quality}
-                </div>
-                <div style={{ color: "var(--color-text-muted)", fontSize: 9 }}>
-                  {t("passes.magnitude").toLowerCase()} {pass.magnitude.toFixed(1)}
-                </div>
+                  ↗
+                </button>
               </div>
             </div>
           ))}
