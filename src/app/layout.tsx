@@ -30,21 +30,12 @@ export const metadata: Metadata = {
     siteName: "ISS Tracker",
     locale: "en_CA",
     type: "website",
-    images: [
-      {
-        url: "/ISS_emblem.png",
-        width: 512,
-        height: 512,
-        alt: "ISS Tracker",
-      },
-    ],
   },
   twitter: {
     card: "summary_large_image",
     title: "ISS Tracker — Live Dashboard",
     description:
       "Real-time International Space Station tracking dashboard. Live telemetry, crew schedules, and orbital data.",
-    images: ["/ISS_emblem.png"],
   },
 };
 
