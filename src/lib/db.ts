@@ -592,14 +592,15 @@ export async function removeStaleEvents(
 ): Promise<number> {
   if (currentIds.length === 0) return 0;
   const db = getPool();
-  const placeholders = currentIds.map(() => "?").join(",");
-  const [result] = await db.execute(
+  // Use query() instead of execute() — execute() doesn't support
+  // dynamic placeholder counts reliably in all mysql2 versions
+  const [result] = await db.query(
     `DELETE FROM events
      WHERE status = 'scheduled'
        AND scheduled_start >= NOW()
        AND id LIKE 'spacedevs-%'
-       AND id NOT IN (${placeholders})`,
-    currentIds
+       AND id NOT IN (?)`,
+    [currentIds]
   );
   return (result as { affectedRows?: number }).affectedRows ?? 0;
 }
