@@ -17,8 +17,10 @@ const NAV_LINKS = [
   { href: "/api-docs", label: "API" },
 ] as const;
 
+const MAX_HISTORY_DAYS = 14;
+
 function BottomBarInner() {
-  const { mode, setMode, playbackSpeed, setPlaybackSpeed } = useTime();
+  const { mode, setMode, playbackSpeed, setPlaybackSpeed, jumpTo } = useTime();
   const { locale, setLocale } = useLocale();
   const { units, setUnits } = useUnits();
   const { isEventMode } = useEvent();
@@ -133,6 +135,38 @@ function BottomBarInner() {
               </button>
             ))}
           </div>
+        )}
+
+        {/* Historical time picker — visible in SIM mode */}
+        {isSim && (
+          <input
+            type="datetime-local"
+            onChange={(e) => {
+              const val = e.target.value;
+              if (!val) return;
+              const target = new Date(val + "Z");
+              const now = Date.now();
+              const minTime = now - MAX_HISTORY_DAYS * 24 * 60 * 60 * 1000;
+              if (target.getTime() < minTime || target.getTime() > now) return;
+              jumpTo(target);
+            }}
+            min={new Date(Date.now() - MAX_HISTORY_DAYS * 24 * 60 * 60 * 1000)
+              .toISOString()
+              .slice(0, 16)}
+            max={new Date().toISOString().slice(0, 16)}
+            style={{
+              padding: "2px 6px",
+              borderRadius: 3,
+              border: "1px solid var(--color-border-accent)",
+              background: "var(--color-bg-secondary)",
+              color: "var(--color-accent-cyan)",
+              fontSize: 10,
+              fontFamily: "inherit",
+              cursor: "pointer",
+              marginLeft: 4,
+            }}
+            title={`Jump to a time in the past ${MAX_HISTORY_DAYS} days`}
+          />
         )}
       </div>
 

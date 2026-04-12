@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 import { TopBar } from "@/components/TopBar";
 import { BottomBar } from "@/components/BottomBar";
 import { useTelemetryStream } from "@/hooks/useTelemetryStream";
+import { useSimTelemetry } from "@/hooks/useSimTelemetry";
 import { useTime } from "@/context/TimeContext";
 import { useEvent } from "@/context/EventContext";
 import {
@@ -134,7 +135,19 @@ export function Dashboard() {
   useBuildCheck();
   const { mode } = useTime();
   const { activeEvent } = useEvent();
-  const stream = useTelemetryStream(mode === "LIVE");
+  const liveStream = useTelemetryStream(mode === "LIVE");
+  const simSnapshot = useSimTelemetry();
+
+  // In SIM mode, overlay historical snapshot data onto the stream object
+  const stream = mode === "SIM" && simSnapshot
+    ? {
+        ...liveStream,
+        orbital: simSnapshot.orbital,
+        telemetry: simSnapshot.telemetry ?? liveStream.telemetry,
+        solar: simSnapshot.solar ?? liveStream.solar,
+        activeEvent: simSnapshot.activeEvent,
+      }
+    : liveStream;
 
   const {
     presetsState,

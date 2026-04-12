@@ -9,6 +9,7 @@ import type {
   SolarActivity,
   ISSEvent,
   Snapshot,
+  LightstreamerChannel,
 } from "@/lib/types";
 
 // ─── Connection Pool ─────────────────────────────────────────────────────────
@@ -357,10 +358,15 @@ export async function upsertEvent(event: ISSEvent): Promise<void> {
         actual_start, actual_end, metadata)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
      ON DUPLICATE KEY UPDATE
-       status       = VALUES(status),
-       actual_start = VALUES(actual_start),
-       actual_end   = VALUES(actual_end),
-       metadata     = VALUES(metadata)`,
+       type            = VALUES(type),
+       title           = VALUES(title),
+       description     = VALUES(description),
+       status          = VALUES(status),
+       scheduled_start = VALUES(scheduled_start),
+       scheduled_end   = VALUES(scheduled_end),
+       actual_start    = VALUES(actual_start),
+       actual_end      = VALUES(actual_end),
+       metadata        = VALUES(metadata)`,
     [
       event.id,
       event.type,
@@ -462,34 +468,70 @@ export async function getUpcomingEvents(limit = 5): Promise<ISSEvent[]> {
   return rows.map(rowToEvent);
 }
 
+/**
+ * Get the most recent value for each telemetry channel at or before a timestamp.
+ * Uses a window of 30 seconds before the target to find the latest archived values.
+ */
+async function getTelemetryChannelsAt(
+  timestamp: number
+): Promise<Record<string, LightstreamerChannel> | null> {
+  const db = getPool();
+  const ts = new Date(timestamp);
+  const windowStart = new Date(timestamp - 30_000);
+
+  const [rows] = await db.execute<RowDataPacket[]>(
+    `SELECT channel_id, value, status, timestamp
+     FROM iss_telemetry
+     WHERE timestamp BETWEEN ? AND ?
+     ORDER BY timestamp DESC`,
+    [windowStart, ts]
+  );
+
+  if (rows.length === 0) return null;
+
+  const channels: Record<string, LightstreamerChannel> = {};
+  for (const row of rows) {
+    const id = row.channel_id as string;
+    if (channels[id]) continue; // already have a newer value
+    channels[id] = {
+      value: row.value as string,
+      status: row.status as string,
+      timestamp: new Date(row.timestamp as string).getTime(),
+    };
+  }
+
+  return Object.keys(channels).length > 0 ? channels : null;
+}
+
 export async function getSnapshotAt(timestamp: number): Promise<Snapshot> {
   const db = getPool();
   const ts = new Date(timestamp);
 
-  const [orbitalRows] = await db.execute<RowDataPacket[]>(
-    `SELECT * FROM orbital_state
-     WHERE timestamp <= ?
-     ORDER BY timestamp DESC
-     LIMIT 1`,
-    [ts]
-  );
-
-  const [solarRows] = await db.execute<RowDataPacket[]>(
-    `SELECT * FROM space_weather
-     WHERE timestamp <= ?
-     ORDER BY timestamp DESC
-     LIMIT 1`,
-    [ts]
-  );
-
-  const [eventRows] = await db.execute<RowDataPacket[]>(
-    `SELECT * FROM events
-     WHERE scheduled_start <= ?
-       AND status IN ('scheduled', 'active', 'completed')
-     ORDER BY scheduled_start DESC
-     LIMIT 1`,
-    [ts]
-  );
+  const [orbitalRows, solarRows, eventRows, channels] = await Promise.all([
+    db.execute<RowDataPacket[]>(
+      `SELECT * FROM orbital_state
+       WHERE timestamp <= ?
+       ORDER BY timestamp DESC
+       LIMIT 1`,
+      [ts]
+    ).then(([rows]) => rows),
+    db.execute<RowDataPacket[]>(
+      `SELECT * FROM space_weather
+       WHERE timestamp <= ?
+       ORDER BY timestamp DESC
+       LIMIT 1`,
+      [ts]
+    ).then(([rows]) => rows),
+    db.execute<RowDataPacket[]>(
+      `SELECT * FROM events
+       WHERE scheduled_start <= ?
+         AND status IN ('scheduled', 'active', 'completed')
+       ORDER BY scheduled_start DESC
+       LIMIT 1`,
+      [ts]
+    ).then(([rows]) => rows),
+    getTelemetryChannelsAt(timestamp),
+  ]);
 
   const orbital =
     orbitalRows.length > 0 ? rowToOrbitalState(orbitalRows[0]) : null;
@@ -498,10 +540,17 @@ export async function getSnapshotAt(timestamp: number): Promise<Snapshot> {
     throw new Error(`No orbital state found at or before ${ts.toISOString()}`);
   }
 
+  // Reconstruct telemetry from archived channels if available
+  let telemetry = null;
+  if (channels) {
+    const { deriveTelemetry } = await import("@/lib/telemetry/lightstreamer-client");
+    telemetry = deriveTelemetry(channels);
+  }
+
   return {
     timestamp,
     orbital,
-    telemetry: null,
+    telemetry,
     solar: solarRows.length > 0 ? rowToSolar(solarRows[0]) : null,
     activeEvent: eventRows.length > 0 ? rowToEvent(eventRows[0]) : null,
   };
@@ -530,6 +579,29 @@ export async function activateScheduledEvents(): Promise<number> {
   total += (completeResult as { affectedRows?: number }).affectedRows ?? 0;
 
   return total;
+}
+
+/**
+ * Delete scheduled events that are no longer returned by the upstream API.
+ * `currentIds` is the set of event IDs from the latest poll.  Only affects
+ * future events sourced from Space Devs so we don't touch historical records
+ * that aged out of the API naturally.  Returns the number of rows deleted.
+ */
+export async function removeStaleEvents(
+  currentIds: string[]
+): Promise<number> {
+  if (currentIds.length === 0) return 0;
+  const db = getPool();
+  const placeholders = currentIds.map(() => "?").join(",");
+  const [result] = await db.execute(
+    `DELETE FROM events
+     WHERE status = 'scheduled'
+       AND scheduled_start >= NOW()
+       AND id LIKE 'spacedevs-%'
+       AND id NOT IN (${placeholders})`,
+    currentIds
+  );
+  return (result as { affectedRows?: number }).affectedRows ?? 0;
 }
 
 /**
