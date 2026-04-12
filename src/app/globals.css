@@ -177,3 +177,85 @@ body {
   from { opacity: 0; transform: translateY(12px); }
   to   { opacity: 1; transform: translateY(0); }
 }
+
+/* ─────────────────────────────────────────
+   Mobile responsive — single column layout
+   ───────────────────────────────────────── */
+@media (max-width: 768px) {
+  html,
+  body {
+    overflow: auto;
+    overflow-x: hidden;
+  }
+
+  .dashboard-grid {
+    display: flex;
+    flex-direction: column;
+    height: auto;
+    min-height: 100vh;
+    min-height: 100dvh;
+  }
+
+  .dashboard-topbar {
+    flex-shrink: 0;
+    min-height: 40px;
+    flex-wrap: wrap;
+    gap: 6px !important;
+    padding: 6px 10px !important;
+  }
+
+  .dashboard-bottombar {
+    flex-shrink: 0;
+    min-height: 36px;
+    flex-wrap: wrap;
+    gap: 6px !important;
+    padding: 4px 10px !important;
+    justify-content: center !important;
+  }
+
+  .col-left,
+  .col-center,
+  .col-right {
+    overflow-y: visible;
+    padding: 6px;
+    gap: 6px;
+  }
+
+  .col-center,
+  .col-right {
+    display: none;
+  }
+
+  /* Hide orbital metrics, TDRS, period, and full title on mobile */
+  .topbar-metrics {
+    display: none !important;
+  }
+
+  /* Show abbreviated title on mobile */
+  .topbar-mobile-title {
+    display: inline !important;
+  }
+
+  /* Simplify bottom bar on mobile */
+  .bottombar-branding {
+    display: none !important;
+  }
+}
+
+/* ─────────────────────────────────────────
+   Tablet — two-column layout
+   ───────────────────────────────────────── */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .dashboard-grid {
+    grid-template-columns: 1fr 1fr;
+    grid-template-areas:
+      "topbar    topbar"
+      "timeline  timeline"
+      "left      center"
+      "bottombar bottombar";
+  }
+
+  .col-right {
+    display: none;
+  }
+}

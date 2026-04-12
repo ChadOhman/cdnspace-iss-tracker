@@ -107,7 +107,8 @@ function TopBarInner({
       <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
         {connectionEl}
         <span style={{ color: "var(--color-text-primary)", fontWeight: 600 }}>
-          🛰️ International Space Station
+          <span className="topbar-metrics">🛰️ International Space Station</span>
+          <span className="topbar-mobile-title" style={{ display: "none" }}>🛰️ ISS</span>
         </span>
         <span style={{
           padding: "1px 5px",
@@ -162,9 +163,9 @@ function TopBarInner({
         </button>
       </div>
 
-      {/* Orbital metrics */}
+      {/* Orbital metrics — hidden on mobile */}
       {orbital && (
-        <div style={{ display: "flex", alignItems: "center", gap: 14, overflow: "hidden" }}>
+        <div className="topbar-metrics" style={{ display: "flex", alignItems: "center", gap: 14, overflow: "hidden" }}>
           <span>
             <span style={{ color: "var(--color-text-muted)" }}>{t("topbar.altitude")} </span>
             <span style={{ color: "var(--color-accent-cyan)" }}>
@@ -202,7 +203,7 @@ function TopBarInner({
         </div>
       )}
 
-      {/* TDRS signal status */}
+      {/* TDRS signal status — hidden on mobile */}
       {orbital && (() => {
         const TDRS = [
           { name: "W", lon: -171 },
@@ -216,6 +217,7 @@ function TopBarInner({
         const hasSignal = inView > 0;
         return (
           <span
+            className="topbar-metrics"
             style={{ display: "flex", alignItems: "center", gap: 4, cursor: "help" }}
             title={`TDRS Relay: ${inView} of 3 satellites in view. ${hasSignal ? "Signal active." : "Loss of signal."}`}
           >
@@ -233,7 +235,7 @@ function TopBarInner({
       {/* Right side */}
       <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
         {orbital && (
-          <span>
+          <span className="topbar-metrics">
             <span style={{ color: "var(--color-text-muted)" }}>{t("topbar.period")} </span>
             <span style={{ color: "var(--color-text-primary)" }}>
               {formatPeriod(orbital.period)}
