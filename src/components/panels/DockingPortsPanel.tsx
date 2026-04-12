@@ -18,6 +18,17 @@ const TYPE_BG: Record<string, string> = {
   Cargo: "rgba(255,140,0,0.1)",
 };
 
+// All ISS docking ports — port names must match what the Corquaid API returns
+const ALL_PORTS = [
+  { name: "Harmony forward", segment: "US" },
+  { name: "Harmony zenith", segment: "US" },
+  { name: "Harmony nadir", segment: "US" },
+  { name: "Zvezda aft", segment: "RU" },
+  { name: "Rassvet nadir", segment: "RU" },
+  { name: "Poisk zenith", segment: "RU" },
+  { name: "Prichal nadir", segment: "RU" },
+];
+
 function daysSince(timestampMs: number): string {
   const days = Math.floor((Date.now() - timestampMs) / (1000 * 60 * 60 * 24));
   if (days === 0) return "today";
@@ -43,6 +54,11 @@ export default function DockingPortsPanel({ docking }: DockingPortsPanelProps) {
       </PanelFrame>
     );
   }
+
+  const occupiedPorts = new Set(docking.map((v) => v.port.toLowerCase()));
+  const emptyPorts = ALL_PORTS.filter(
+    (p) => !occupiedPorts.has(p.name.toLowerCase())
+  );
 
   return (
     <PanelFrame
@@ -142,6 +158,34 @@ export default function DockingPortsPanel({ docking }: DockingPortsPanelProps) {
             </div>
           );
         })}
+
+        {/* Empty ports */}
+        {emptyPorts.length > 0 && (
+          <div
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              gap: 4,
+              marginTop: 2,
+            }}
+          >
+            {emptyPorts.map((port) => (
+              <div
+                key={port.name}
+                style={{
+                  padding: "4px 8px",
+                  background: "var(--color-bg-secondary, #0d1117)",
+                  border: "1px solid var(--color-border-subtle)",
+                  borderRadius: 3,
+                  fontSize: 9,
+                  color: "var(--color-text-muted)",
+                }}
+              >
+                <span style={{ opacity: 0.5 }}>○</span> {port.name}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </PanelFrame>
   );
