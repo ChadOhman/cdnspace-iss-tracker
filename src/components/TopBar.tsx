@@ -1,12 +1,13 @@
 "use client";
 
 import { useEffect, useState, memo } from "react";
-import type { OrbitalState } from "@/lib/types";
+import type { OrbitalState, CrewMember } from "@/lib/types";
 import { useLocale } from "@/context/LocaleContext";
 import { useUnits } from "@/context/UnitsContext";
 import { useTime } from "@/context/TimeContext";
 import { CURRENT_CREW, FLAG_EMOJI } from "@/data/iss-modules";
 import CrewModal from "@/components/modals/CrewModal";
+import type { CrewRoster } from "@/hooks/useTelemetryStream";
 
 interface TopBarProps {
   orbital: OrbitalState | null;
@@ -14,6 +15,7 @@ interface TopBarProps {
   reconnecting: boolean;
   lastUpdate: number | null;
   visitorCount: number;
+  crew: CrewRoster | null;
 }
 
 function TopBarInner({
@@ -22,6 +24,7 @@ function TopBarInner({
   reconnecting,
   lastUpdate,
   visitorCount,
+  crew,
 }: TopBarProps) {
   const { t } = useLocale();
   const { distance, speed } = useUnits();
@@ -29,8 +32,11 @@ function TopBarInner({
   const [timeStr, setTimeStr] = useState("");
   const [crewOpen, setCrewOpen] = useState(false);
 
+  const crewMembers = crew?.crew ?? CURRENT_CREW;
+  const expedition = crew?.expedition;
+
   // Build the flag string from the current crew roster
-  const crewFlags = CURRENT_CREW
+  const crewFlags = crewMembers
     .map((m) => FLAG_EMOJI[m.nationality] ?? "🏳️")
     .join("");
 
@@ -122,7 +128,7 @@ function TopBarInner({
         )}
         <button
           onClick={() => setCrewOpen(true)}
-          title={`${CURRENT_CREW.length} crew members — click for bios`}
+          title={`${crewMembers.length} crew members — click for bios`}
           style={{
             display: "flex",
             alignItems: "center",
@@ -253,7 +259,7 @@ function TopBarInner({
         </span>
       </div>
 
-      <CrewModal isOpen={crewOpen} onClose={() => setCrewOpen(false)} />
+      <CrewModal isOpen={crewOpen} onClose={() => setCrewOpen(false)} crew={crew} />
     </div>
   );
 }

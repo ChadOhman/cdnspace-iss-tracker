@@ -471,6 +471,8 @@ export interface CrewMember {
   bio?: string;
   /** Optional URL to a portrait photo */
   photo?: string;
+  /** Spacecraft used to reach the ISS (e.g. "Crew Dragon", "Soyuz MS-28") */
+  spacecraft?: string;
 }
 
 // ─── Pass Predictions ────────────────────────────────────────────────────────

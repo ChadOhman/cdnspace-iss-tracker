@@ -180,6 +180,7 @@ export function Dashboard() {
         reconnecting={stream.reconnecting}
         lastUpdate={stream.lastUpdate}
         visitorCount={stream.visitorCount}
+        crew={stream.crew}
       />
 
       {/* Timeline row */}
@@ -205,7 +206,7 @@ export function Dashboard() {
         {show("dayNight", "left") && <DayNightPanel orbital={stream.orbital} />}
         {show("passPrediction", "left") && <PassPredictionPanel />}
         {show("liveVideo", "left") && <LiveVideoPanel />}
-        {show("crew", "left") && <CrewRosterPanel />}
+        {show("crew", "left") && <CrewRosterPanel crew={stream.crew} />}
         {show("upcomingEvents", "left") && <UpcomingEventsPanel />}
         {show("spaceWeather", "left") && <SpaceWeatherPanel solar={stream.solar} />}
         {show("solarArrays", "left") && <SolarArrayPanel telemetry={stream.telemetry} />}
@@ -225,7 +226,7 @@ export function Dashboard() {
       <div className="col-center">
         {show("eventBanner", "center") && <EventBannerPanel event={stream.activeEvent ?? activeEvent} />}
         {show("liveVideo", "center") && <LiveVideoPanel />}
-        {show("crew", "center") && <CrewRosterPanel />}
+        {show("crew", "center") && <CrewRosterPanel crew={stream.crew} />}
         {show("upcomingEvents", "center") && <UpcomingEventsPanel />}
         {show("spaceWeather", "center") && <SpaceWeatherPanel solar={stream.solar} />}
         {show("groundTrack", "center") && <GroundTrackPanel orbital={stream.orbital} />}
@@ -264,7 +265,7 @@ export function Dashboard() {
         {show("dayNight", "right") && <DayNightPanel orbital={stream.orbital} />}
         {show("passPrediction", "right") && <PassPredictionPanel />}
         {show("liveVideo", "right") && <LiveVideoPanel />}
-        {show("crew", "right") && <CrewRosterPanel />}
+        {show("crew", "right") && <CrewRosterPanel crew={stream.crew} />}
         {show("upcomingEvents", "right") && <UpcomingEventsPanel />}
         {show("spaceWeather", "right") && <SpaceWeatherPanel solar={stream.solar} />}
       </div>

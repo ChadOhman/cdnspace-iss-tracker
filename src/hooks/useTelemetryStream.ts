@@ -1,13 +1,19 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import type { OrbitalState, ISSTelemetry, SolarActivity, ISSEvent } from "@/lib/types";
+import type { OrbitalState, ISSTelemetry, SolarActivity, ISSEvent, CrewMember } from "@/lib/types";
+
+export interface CrewRoster {
+  expedition: number;
+  crew: CrewMember[];
+}
 
 interface TelemetryStreamState {
   orbital: OrbitalState | null;
   telemetry: ISSTelemetry | null;
   solar: SolarActivity | null;
   activeEvent: ISSEvent | null;
+  crew: CrewRoster | null;
   connected: boolean;
   reconnecting: boolean;
   lastUpdate: number | null;
@@ -23,6 +29,7 @@ export function useTelemetryStream(enabled: boolean = true): TelemetryStreamStat
     telemetry: null,
     solar: null,
     activeEvent: null,
+    crew: null,
     connected: false,
     reconnecting: false,
     lastUpdate: null,
@@ -61,6 +68,7 @@ export function useTelemetryStream(enabled: boolean = true): TelemetryStreamStat
             telemetry: data.telemetry ?? prev.telemetry,
             solar: data.solar ?? prev.solar,
             activeEvent: data.activeEvent !== undefined ? data.activeEvent : prev.activeEvent,
+            crew: data.crew ?? prev.crew,
             visitorCount: data.visitorCount ?? prev.visitorCount,
             lastUpdate: Date.now(),
           }));
@@ -94,6 +102,16 @@ export function useTelemetryStream(enabled: boolean = true): TelemetryStreamStat
         try {
           const visitorCount = JSON.parse(e.data as string) as number;
           setState((prev) => ({ ...prev, visitorCount }));
+        } catch {
+          // ignore malformed events
+        }
+      });
+
+      es.addEventListener("crew", (e: MessageEvent) => {
+        if (unmountedRef.current) return;
+        try {
+          const crew = JSON.parse(e.data as string) as CrewRoster;
+          setState((prev) => ({ ...prev, crew }));
         } catch {
           // ignore malformed events
         }

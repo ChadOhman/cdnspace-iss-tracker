@@ -19,6 +19,7 @@ export const SCHEDULE_POLL_INTERVAL_MS = 15 * 60 * 1000;       // 15 minutes
 export const SSE_BROADCAST_INTERVAL_MS = 1000;                  // 1 second
 export const SSE_KEEPALIVE_INTERVAL_MS = 30 * 1000;             // 30 seconds
 export const VISITOR_COUNT_INTERVAL_MS = 5000;                  // 5 seconds
+export const CREW_POLL_INTERVAL_MS = 6 * 60 * 60 * 1000;       // 6 hours
 
 // Orbital constants
 export const EARTH_RADIUS_KM = 6371;

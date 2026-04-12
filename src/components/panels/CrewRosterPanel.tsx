@@ -6,6 +6,7 @@ import Modal from "@/components/shared/Modal";
 import { CURRENT_CREW, CURRENT_EXPEDITION, FLAG_EMOJI } from "@/data/iss-modules";
 import type { CrewMember } from "@/lib/types";
 import { useLocale } from "@/context/LocaleContext";
+import type { CrewRoster } from "@/hooks/useTelemetryStream";
 
 const AGENCY_COLOR: Record<string, string> = {
   NASA: "var(--color-accent-cyan)",
@@ -15,9 +16,15 @@ const AGENCY_COLOR: Record<string, string> = {
   CSA: "var(--color-accent-orange)",
 };
 
-export default function CrewRosterPanel() {
+interface CrewRosterPanelProps {
+  crew: CrewRoster | null;
+}
+
+export default function CrewRosterPanel({ crew }: CrewRosterPanelProps) {
   const { t } = useLocale();
   const [selected, setSelected] = useState<CrewMember | null>(null);
+  const crewMembers = crew?.crew ?? CURRENT_CREW;
+  const expedition = crew?.expedition ?? CURRENT_EXPEDITION;
 
   const openBio = useCallback((member: CrewMember) => {
     setSelected(member);
@@ -30,12 +37,12 @@ export default function CrewRosterPanel() {
   return (
     <>
       <PanelFrame
-        title={`${t("crew.expedition")} ${CURRENT_EXPEDITION}`}
+        title={`${t("crew.expedition")} ${expedition}`}
         icon="👨‍🚀"
         accentColor="var(--color-accent-cyan)"
       >
         <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-          {CURRENT_CREW.map((member) => (
+          {crewMembers.map((member) => (
             <button
               key={member.name}
               onClick={() => openBio(member)}
@@ -126,7 +133,8 @@ export default function CrewRosterPanel() {
                   {selected.name}
                 </div>
                 <div style={{ color: "var(--color-text-muted)", fontSize: 10 }}>
-                  {selected.role} · {selected.agency} · {t("panels.crew")}{" "}
+                  {selected.role} · {selected.agency}
+                  {selected.spacecraft ? ` · ${selected.spacecraft}` : ""} · {t("panels.crew")}{" "}
                   {selected.expedition}
                 </div>
               </div>

@@ -7,6 +7,7 @@ import { pollTle, getCurrentTle } from "@/lib/pollers/tle-poller";
 import { propagateFromTle } from "@/lib/pollers/sgp4-propagator";
 import { pollSolarActivity } from "@/lib/pollers/solar";
 import { pollSchedule } from "@/lib/pollers/schedule-poller";
+import { pollCrew, getFallbackRoster } from "@/lib/pollers/crew-poller";
 import { archiveOrbitalState, archiveSolar, archiveTelemetryChannel, pruneOldData, upsertEvent, activateScheduledEvents, getCurrentActiveEvent, incrementPageViews } from "@/lib/db";
 import { connectLightstreamer, deriveTelemetry, getLatestChannels } from "@/lib/telemetry/lightstreamer-client";
 import {
@@ -16,6 +17,7 @@ import {
   SCHEDULE_POLL_INTERVAL_MS,
   SSE_BROADCAST_INTERVAL_MS,
   VISITOR_COUNT_INTERVAL_MS,
+  CREW_POLL_INTERVAL_MS,
 } from "@/lib/constants";
 
 const TELEMETRY_ARCHIVE_INTERVAL_MS = 10_000; // Archive Lightstreamer data every 10s
@@ -291,12 +293,32 @@ function ensurePollers() {
   runSchedulePoll();
   setInterval(runSchedulePoll, SCHEDULE_POLL_INTERVAL_MS);
 
-  // 9. Broadcast full telemetry payload on interval
+  // 9. Crew roster poller: fetch immediately, then every 6 hours
+  // Start with hardcoded fallback so the panel is never empty
+  cache.crew = getFallbackRoster();
+
+  const runCrewPoll = () => {
+    pollCrew()
+      .then((roster) => {
+        if (roster) {
+          cache.crew = roster;
+          sseManager.broadcast("crew", roster);
+        }
+      })
+      .catch((err) => {
+        console.error("[stream] Crew poll failed:", err);
+      });
+  };
+
+  runCrewPoll();
+  setInterval(runCrewPoll, CREW_POLL_INTERVAL_MS);
+
+  // 11. Broadcast full telemetry payload on interval
   setInterval(() => {
     sseManager.broadcast("telemetry", cache.getPayload());
   }, SSE_BROADCAST_INTERVAL_MS);
 
-  // 10. Visitor count broadcast
+  // 12. Visitor count broadcast
   setInterval(() => {
     const count = sseManager.getClientCount();
     cache.visitorCount = count;

@@ -3,6 +3,7 @@
 import Modal from "@/components/shared/Modal";
 import { CURRENT_CREW, CURRENT_EXPEDITION, FLAG_EMOJI } from "@/data/iss-modules";
 import { useLocale } from "@/context/LocaleContext";
+import type { CrewRoster } from "@/hooks/useTelemetryStream";
 
 const AGENCY_COLOR: Record<string, string> = {
   NASA: "var(--color-accent-cyan)",
@@ -23,14 +24,17 @@ const AGENCY_BG: Record<string, string> = {
 interface CrewModalProps {
   isOpen: boolean;
   onClose: () => void;
+  crew: CrewRoster | null;
 }
 
-export default function CrewModal({ isOpen, onClose }: CrewModalProps) {
+export default function CrewModal({ isOpen, onClose, crew }: CrewModalProps) {
   const { t } = useLocale();
+  const crewMembers = crew?.crew ?? CURRENT_CREW;
+  const expedition = crew?.expedition ?? CURRENT_EXPEDITION;
 
   return (
     <Modal
-      title={`${t("panels.crew")} — ${t("crew.expedition")} ${CURRENT_EXPEDITION}`}
+      title={`${t("panels.crew")} — ${t("crew.expedition")} ${expedition}`}
       isOpen={isOpen}
       onClose={onClose}
       maxWidth="720px"
@@ -42,7 +46,7 @@ export default function CrewModal({ isOpen, onClose }: CrewModalProps) {
           gap: 12,
         }}
       >
-        {CURRENT_CREW.map((member) => {
+        {crewMembers.map((member) => {
           const color = AGENCY_COLOR[member.agency] ?? "var(--color-text-muted)";
           const bg = AGENCY_BG[member.agency] ?? "rgba(255,255,255,0.05)";
           return (
@@ -91,6 +95,11 @@ export default function CrewModal({ isOpen, onClose }: CrewModalProps) {
                     }}
                   >
                     {member.role}
+                    {member.spacecraft && (
+                      <span style={{ textTransform: "none", letterSpacing: "normal" }}>
+                        {" "}· {member.spacecraft}
+                      </span>
+                    )}
                   </div>
                 </div>
                 <span
