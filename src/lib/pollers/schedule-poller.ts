@@ -71,8 +71,19 @@ function isIssRelated(event: SpaceDevsEvent): boolean {
   return false;
 }
 
+/** Berthing keywords — spacecraft captured by Canadarm2, not autonomous docking */
+const BERTHING_PATTERN = /cygnus|htv|dream\s*chaser|capture|berth/i;
+
 function mapEvent(result: SpaceDevsEvent): ISSEvent {
-  const type: EventType = TYPE_MAP[result.type.id] ?? "maneuver";
+  let type: EventType = TYPE_MAP[result.type.id] ?? "maneuver";
+
+  // Distinguish berthing (robotic arm capture) from autonomous docking
+  if (type === "docking") {
+    const text = `${result.name} ${result.description ?? ""}`;
+    if (BERTHING_PATTERN.test(text)) {
+      type = "berthing";
+    }
+  }
 
   const startMs = new Date(result.date).getTime();
   const endMs = startMs + 2 * 60 * 60 * 1000; // +2 hours estimated duration
@@ -80,11 +91,20 @@ function mapEvent(result: SpaceDevsEvent): ISSEvent {
   const rawDesc = result.description ?? "";
   const description = rawDesc.length > 500 ? rawDesc.slice(0, 497) + "..." : rawDesc;
 
+  // Extract vehicle name from event title (e.g. "Cygnus CRS-24 Berthing")
   const metadata: Record<string, string> = {
     spaceDevsType: result.type.name,
   };
   if (result.news_url) metadata.sourceUrl = result.news_url;
   if (result.video_url) metadata.videoUrl = result.video_url;
+
+  // Try to extract vehicle name for berthing/docking events
+  if (type === "berthing" || type === "docking") {
+    const vehicleMatch = result.name.match(
+      /(Cygnus[\w\s-]*|Dragon[\w\s-]*|Soyuz[\w\s-]*|Progress[\w\s-]*|Starliner[\w\s-]*|Dream Chaser[\w\s-]*|HTV[\w\s-]*)/i
+    );
+    if (vehicleMatch) metadata.vehicle = vehicleMatch[1].trim();
+  }
 
   return {
     id: `spacedevs-${result.id}`,
