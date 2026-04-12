@@ -8,6 +8,7 @@ import { useLocale } from "@/context/LocaleContext";
 const EVENT_TYPE_ICONS: Record<string, string> = {
   eva: "🚶",
   docking: "🔗",
+  berthing: "🦾",
   undocking: "↗️",
   reboost: "🚀",
   maneuver: "🔄",

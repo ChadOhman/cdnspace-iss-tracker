@@ -402,6 +402,7 @@ export type EventType =
   | "eva"
   | "docking"
   | "undocking"
+  | "berthing"
   | "reboost"
   | "maneuver";
 

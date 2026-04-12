@@ -38,11 +38,13 @@ function DataRow({
   value,
   unit,
   highlight,
+  valueColor,
 }: {
   label: string;
   value: string | number;
   unit?: string;
   highlight?: boolean;
+  valueColor?: string;
 }) {
   return (
     <div style={{
@@ -56,7 +58,7 @@ function DataRow({
         {label}
       </span>
       <span style={{
-        color: highlight ? "var(--color-accent-cyan)" : "var(--color-text-primary)",
+        color: valueColor ?? (highlight ? "var(--color-accent-cyan)" : "var(--color-text-primary)"),
         fontVariantNumeric: "tabular-nums",
       }}>
         {value}{unit ? <span style={{ color: "var(--color-text-muted)", fontSize: 9, marginLeft: 2 }}>{unit}</span> : null}
@@ -224,6 +226,192 @@ function DockingSection({
   );
 }
 
+function Canadarm2Diagram({ ssrms }: { ssrms: ISSTelemetry["robotics"]["ssrms"] }) {
+  // Simplified 2D side-view of Canadarm2
+  // The arm has 3 main segments: shoulder→elbow, elbow→wrist, wrist→tip
+  // We use pitch angles to rotate each segment
+  const w = 320;
+  const h = 180;
+  const baseX = 40;
+  const baseY = h / 2;
+  const seg1 = 90; // shoulder to elbow
+  const seg2 = 90; // elbow to wrist
+  const seg3 = 40; // wrist to tip
+
+  const shoulderRad = (ssrms.shoulderPitch * Math.PI) / 180;
+  const elbowRad = (ssrms.elbowPitch * Math.PI) / 180;
+  const wristRad = (ssrms.wristPitch * Math.PI) / 180;
+
+  // Forward kinematics
+  let angle = shoulderRad;
+  const elbowX = baseX + seg1 * Math.cos(angle);
+  const elbowY = baseY - seg1 * Math.sin(angle);
+
+  angle += elbowRad;
+  const wristX = elbowX + seg2 * Math.cos(angle);
+  const wristY = elbowY - seg2 * Math.sin(angle);
+
+  angle += wristRad;
+  const tipX = wristX + seg3 * Math.cos(angle);
+  const tipY = wristY - seg3 * Math.sin(angle);
+
+  const tipStatus = ssrms.tipLeeStatus;
+  const tipColor =
+    tipStatus === "2"
+      ? "#00ff88"
+      : tipStatus === "1"
+        ? "#ff8c00"
+        : "#94adc4";
+  const tipLabel =
+    tipStatus === "2"
+      ? "CAPTURED"
+      : tipStatus === "1"
+        ? "CAPTIVE"
+        : "RELEASED";
+
+  return (
+    <div style={{ padding: "8px 0" }}>
+      <svg
+        viewBox={`0 0 ${w} ${h}`}
+        width="100%"
+        height={h}
+        style={{ display: "block" }}
+      >
+        {/* ISS body */}
+        <rect
+          x={0}
+          y={baseY - 12}
+          width={baseX - 4}
+          height={24}
+          rx={3}
+          fill="rgba(0,229,255,0.1)"
+          stroke="rgba(0,229,255,0.3)"
+          strokeWidth={1}
+        />
+        <text
+          x={(baseX - 4) / 2}
+          y={baseY + 3}
+          textAnchor="middle"
+          fill="#94adc4"
+          fontSize={7}
+          fontFamily="monospace"
+        >
+          ISS
+        </text>
+
+        {/* Shoulder joint */}
+        <circle cx={baseX} cy={baseY} r={4} fill="rgba(0,229,255,0.3)" stroke="#00e5ff" strokeWidth={1} />
+
+        {/* Segment 1: shoulder → elbow */}
+        <line x1={baseX} y1={baseY} x2={elbowX} y2={elbowY} stroke="#00e5ff" strokeWidth={3} strokeLinecap="round" />
+
+        {/* Elbow joint */}
+        <circle cx={elbowX} cy={elbowY} r={4} fill="rgba(0,229,255,0.3)" stroke="#00e5ff" strokeWidth={1} />
+
+        {/* Segment 2: elbow → wrist */}
+        <line x1={elbowX} y1={elbowY} x2={wristX} y2={wristY} stroke="#00e5ff" strokeWidth={3} strokeLinecap="round" />
+
+        {/* Wrist joint */}
+        <circle cx={wristX} cy={wristY} r={3} fill="rgba(0,229,255,0.3)" stroke="#00e5ff" strokeWidth={1} />
+
+        {/* Segment 3: wrist → tip (LEE) */}
+        <line x1={wristX} y1={wristY} x2={tipX} y2={tipY} stroke={tipColor} strokeWidth={2} strokeLinecap="round" />
+
+        {/* Tip LEE */}
+        <circle cx={tipX} cy={tipY} r={5} fill={tipColor} fillOpacity={0.3} stroke={tipColor} strokeWidth={1.5} />
+
+        {/* Tip status label */}
+        <text
+          x={tipX}
+          y={tipY - 10}
+          textAnchor="middle"
+          fill={tipColor}
+          fontSize={8}
+          fontFamily="monospace"
+          fontWeight={700}
+        >
+          {tipLabel}
+        </text>
+      </svg>
+    </div>
+  );
+}
+
+function BerthingSection({
+  event,
+  telemetry,
+  t,
+}: {
+  event: ISSEvent;
+  telemetry: ISSTelemetry | null;
+  t: (k: string) => string;
+}) {
+  const att = telemetry?.attitude;
+  const ssrms = telemetry?.robotics?.ssrms;
+
+  const BASE_LOCATION_MAP: Record<string, string> = {
+    "1": "Lab (Destiny)",
+    "2": "Node 3 (Tranquility)",
+    "4": "Node 2 (Harmony)",
+    "7": "MBS PDGF 1",
+    "8": "MBS PDGF 2",
+  };
+
+  const TIP_STATUS: Record<string, { label: string; color: string }> = {
+    "0": { label: "Released", color: "var(--color-text-muted)" },
+    "1": { label: "Captive", color: "var(--color-accent-orange)" },
+    "2": { label: "Captured", color: "var(--color-accent-green)" },
+  };
+
+  const tipInfo = TIP_STATUS[ssrms?.tipLeeStatus ?? ""] ?? TIP_STATUS["0"];
+
+  return (
+    <>
+      <EventBanner event={event} timerLabel={t("pages.eventTimer")} accentColor="var(--color-accent-orange)" />
+
+      {event.metadata?.vehicle && (
+        <Panel>
+          <SectionHeader label="VEHICLE" />
+          <DataRow label="Vehicle" value={event.metadata.vehicle} highlight />
+          {event.metadata.operator && (
+            <DataRow label="Operator" value={event.metadata.operator} />
+          )}
+        </Panel>
+      )}
+
+      {/* Canadarm2 visualization */}
+      {ssrms && (
+        <Panel>
+          <SectionHeader label="CANADARM2 (SSRMS)" />
+          <Canadarm2Diagram ssrms={ssrms} />
+          <DataRow
+            label="Tip LEE"
+            value={tipInfo.label}
+            highlight
+            valueColor={tipInfo.color}
+          />
+          <DataRow
+            label="Base"
+            value={BASE_LOCATION_MAP[ssrms.baseLocation] ?? ssrms.baseLocation}
+          />
+          <DataRow label="Shoulder Pitch" value={ssrms.shoulderPitch.toFixed(1)} unit="°" />
+          <DataRow label="Elbow Pitch" value={ssrms.elbowPitch.toFixed(1)} unit="°" />
+          <DataRow label="Wrist Pitch" value={ssrms.wristPitch.toFixed(1)} unit="°" />
+        </Panel>
+      )}
+
+      <Panel>
+        <SectionHeader label="ATTITUDE — PROXIMITY OPS" />
+        <DataRow label="GNC Mode" value={att ? att.gncMode : "—"} highlight />
+        <DataRow label="Station Mode" value={att ? att.stationMode : "—"} highlight />
+        <DataRow label="Roll" value={att ? att.roll.toFixed(2) : "—"} unit="°" />
+        <DataRow label="Pitch" value={att ? att.pitch.toFixed(2) : "—"} unit="°" />
+        <DataRow label="Yaw" value={att ? att.yaw.toFixed(2) : "—"} unit="°" />
+      </Panel>
+    </>
+  );
+}
+
 function ReboostSection({
   event,
   orbital,
@@ -342,6 +530,8 @@ export default function LivePage() {
       case "docking":
       case "undocking":
         return <DockingSection event={event} telemetry={telemetry} t={t} />;
+      case "berthing":
+        return <BerthingSection event={event} telemetry={telemetry} t={t} />;
       case "reboost":
       case "maneuver":
         return <ReboostSection event={event} orbital={orbital} telemetry={telemetry} t={t} />;

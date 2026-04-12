@@ -100,6 +100,7 @@ export const TRANSLATIONS: Record<Locale, Record<string, Record<string, string>>
     events: {
       eva: "EVA",
       docking: "Docking",
+      berthing: "Berthing",
       undocking: "Undocking",
       reboost: "Reboost",
       maneuver: "Maneuver",
@@ -373,6 +374,7 @@ export const TRANSLATIONS: Record<Locale, Record<string, Record<string, string>>
     events: {
       eva: "EVA",
       docking: "Amarrage",
+      berthing: "Accostage",
       undocking: "Désarrimage",
       reboost: "Rehaussement",
       maneuver: "Manœuvre",

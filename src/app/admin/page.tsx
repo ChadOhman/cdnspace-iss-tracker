@@ -23,7 +23,7 @@ interface ISSEvent {
   isActive: boolean;
 }
 
-const EVENT_TYPES = ["EVA", "docking", "undocking", "launch", "landing", "crew", "experiment", "maintenance", "other"];
+const EVENT_TYPES = ["EVA", "docking", "berthing", "undocking", "launch", "landing", "crew", "experiment", "maintenance", "other"];
 
 const emptyForm: EventForm = {
   type: "EVA",

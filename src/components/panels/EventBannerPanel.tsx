@@ -12,6 +12,7 @@ interface EventBannerPanelProps {
 const EVENT_ICONS: Record<EventType, string> = {
   eva: "🚶",
   docking: "🔗",
+  berthing: "🦾",
   undocking: "↗️",
   reboost: "🚀",
   maneuver: "🔄",
