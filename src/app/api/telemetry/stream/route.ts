@@ -310,9 +310,9 @@ function ensurePollers() {
   runCrewPoll();
   setInterval(runCrewPoll, CREW_POLL_INTERVAL_MS);
 
-  // 11. Broadcast full telemetry payload on interval
+  // 11. Broadcast lightweight telemetry payload on interval (no crew/solar/channels)
   setInterval(() => {
-    sseManager.broadcast("telemetry", cache.getPayload());
+    sseManager.broadcast("telemetry", cache.getTickPayload());
   }, SSE_BROADCAST_INTERVAL_MS);
 
   // 12. Visitor count broadcast
