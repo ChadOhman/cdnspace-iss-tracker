@@ -298,6 +298,13 @@ body {
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
   }
+
+  /* Timeline: hide 04:00, 12:00, 20:00 labels on mobile (keep 00/08/16/24) */
+  .timeline-hour-labels > :nth-child(2),
+  .timeline-hour-labels > :nth-child(4),
+  .timeline-hour-labels > :nth-child(6) {
+    display: none;
+  }
 }
 
 /* ─────────────────────────────────────────

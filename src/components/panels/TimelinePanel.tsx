@@ -71,6 +71,7 @@ export default function TimelinePanel() {
     >
       {/* Hour labels */}
       <div
+        className="timeline-hour-labels"
         style={{
           position: "relative",
           display: "flex",
