@@ -131,6 +131,11 @@ body {
   padding: 8px 10px;
 }
 
+/* Utility: extra-small label text. Bumped on mobile for readability. */
+.panel-label-xs {
+  font-size: 8px;
+}
+
 /* ─────────────────────────────────────────
    Custom scrollbar
    ───────────────────────────────────────── */
@@ -305,6 +310,10 @@ body {
   .timeline-hour-labels > :nth-child(4),
   .timeline-hour-labels > :nth-child(6) {
     display: none;
+  }
+
+  .panel-label-xs {
+    font-size: 10px;
   }
 }
 

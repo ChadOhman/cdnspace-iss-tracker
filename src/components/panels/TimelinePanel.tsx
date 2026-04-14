@@ -84,7 +84,8 @@ export default function TimelinePanel() {
         {hourLabels.map((h) => (
           <span
             key={h}
-            style={{ color: "var(--color-text-muted)", fontSize: 8 }}
+            className="panel-label-xs"
+            style={{ color: "var(--color-text-muted)" }}
           >
             {String(h).padStart(2, "0")}:00
           </span>
@@ -171,7 +172,7 @@ export default function TimelinePanel() {
                 background: ACTIVITY_COLORS[type],
               }}
             />
-            <span style={{ color: "var(--color-text-muted)", fontSize: 8 }}>
+            <span className="panel-label-xs" style={{ color: "var(--color-text-muted)" }}>
               {label}
             </span>
           </div>
