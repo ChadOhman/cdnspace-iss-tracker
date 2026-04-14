@@ -262,12 +262,13 @@ export default function ModuleTempsPanel({ telemetry }: ModuleTempsPanelProps) {
             {/* Mobile list — hidden on desktop via CSS */}
             <div className="module-temps-list" style={{ display: "none", flexDirection: "column", gap: 4 }}>
               {[
-                { name: "NODE 1", cabin: telemetry.moduleTemps.node1Cabin, avn: undefined as number | undefined },
+                { name: "NODE 1", cabin: telemetry.moduleTemps.node1Cabin, avn: undefined },
                 { name: "DESTINY", cabin: telemetry.moduleTemps.uslabCabin, avn: telemetry.moduleTemps.uslabAvionics },
                 { name: "HARMONY", cabin: telemetry.moduleTemps.node2Cabin, avn: telemetry.moduleTemps.node2Avionics },
                 { name: "NODE 3", cabin: telemetry.moduleTemps.node3Cabin, avn: telemetry.moduleTemps.node3Avionics },
               ].map((m) => {
                 const c = temperature(m.cabin);
+                const a = m.avn !== undefined ? temperature(m.avn) : null;
                 return (
                   <div
                     key={m.name}
@@ -288,9 +289,9 @@ export default function ModuleTempsPanel({ telemetry }: ModuleTempsPanelProps) {
                       <span style={{ color: "var(--color-accent-cyan)", fontSize: 12, fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>
                         {c.value.toFixed(1)}{c.unit}
                       </span>
-                      {m.avn !== undefined && (
+                      {a && (
                         <span style={{ color: "var(--color-text-muted)", fontSize: 9 }}>
-                          AVN {temperature(m.avn).value.toFixed(1)}{temperature(m.avn).unit}
+                          AVN {a.value.toFixed(1)}{a.unit}
                         </span>
                       )}
                     </span>
