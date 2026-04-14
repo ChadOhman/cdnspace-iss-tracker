@@ -357,6 +357,14 @@ body {
   .crew-flags-compact {
     display: inline !important;
   }
+
+  /* ModuleTempsPanel: swap schematic for stacked list on mobile */
+  .module-temps-schematic {
+    display: none !important;
+  }
+  .module-temps-list {
+    display: flex !important;
+  }
 }
 
 /* ─────────────────────────────────────────
