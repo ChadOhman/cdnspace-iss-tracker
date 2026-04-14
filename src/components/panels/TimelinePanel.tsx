@@ -60,7 +60,9 @@ export default function TimelinePanel() {
     return () => clearInterval(id);
   }, []);
 
-  // hour labels
+  // hour labels — 7 elements. Mobile CSS in globals.css (.timeline-hour-labels)
+  // hides :nth-child(2,4,6) to keep 00/08/16/24. Changing this array requires
+  // updating that CSS rule.
   const hourLabels = [0, 4, 8, 12, 16, 20, 24];
 
   return (
