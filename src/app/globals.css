@@ -278,6 +278,11 @@ body {
   .crew-modal-grid {
     grid-template-columns: 1fr !important;
   }
+
+  /* Modal: let content breathe on narrow screens — override per-modal maxWidth */
+  .modal-content {
+    max-width: 95vw !important;
+  }
 }
 
 /* ─────────────────────────────────────────
