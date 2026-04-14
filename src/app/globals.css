@@ -242,6 +242,7 @@ body {
 
   .col-mobile {
     display: flex;
+    padding-left: 44px;
   }
 
   /* Hide orbital metrics, TDRS, period, and full title on mobile */
