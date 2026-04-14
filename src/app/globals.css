@@ -265,6 +265,18 @@ body {
     display: none !important;
   }
 
+  /* BottomBar: shorten unit labels and hide secondary actions on mobile */
+  .unit-label-full {
+    display: none !important;
+  }
+  .unit-label-short {
+    display: inline !important;
+  }
+  .bottombar-credits,
+  .bottombar-feedback {
+    display: none !important;
+  }
+
   /* Larger tap targets on mobile */
   .crew-row {
     padding: 10px 8px !important;
