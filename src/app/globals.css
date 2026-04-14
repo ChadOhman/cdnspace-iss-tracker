@@ -289,6 +289,15 @@ body {
   .orbital-params-grid {
     grid-template-columns: 1fr !important;
   }
+
+  /* Live event bar: let long titles wrap to 2 lines instead of truncating */
+  .live-event-title {
+    white-space: normal !important;
+    line-height: 1.25;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+  }
 }
 
 /* ─────────────────────────────────────────
