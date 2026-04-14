@@ -315,6 +315,14 @@ body {
   .panel-label-xs {
     font-size: 10px;
   }
+
+  /* TopBar crew button: show compact count instead of flag list on mobile */
+  .crew-flags-full {
+    display: none !important;
+  }
+  .crew-flags-compact {
+    display: inline !important;
+  }
 }
 
 /* ─────────────────────────────────────────

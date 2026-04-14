@@ -156,7 +156,12 @@ function TopBarInner({
               "var(--color-text-muted)";
           }}
         >
-          <span style={{ fontSize: 11, letterSpacing: 1 }}>{crewFlags}</span>
+          <span className="crew-flags-full" style={{ fontSize: 11, letterSpacing: 1 }}>
+            {crewFlags}
+          </span>
+          <span className="crew-flags-compact" style={{ fontSize: 11, letterSpacing: 1, display: "none" }}>
+            👥 {crewMembers.length}
+          </span>
           <span style={{ fontSize: 9, letterSpacing: "0.05em" }}>
             {t("panels.crew")}
           </span>
