@@ -94,6 +94,7 @@ export default function OrbitalParamsPanel({ orbital, telemetry }: OrbitalParams
       ) : (
         <>
           <div
+            className="orbital-params-grid"
             style={{
               display: "grid",
               gridTemplateColumns: "1fr 1fr",

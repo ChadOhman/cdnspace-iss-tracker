@@ -283,6 +283,11 @@ body {
   .modal-content {
     max-width: 95vw !important;
   }
+
+  /* Orbital params: collapse to single column on mobile */
+  .orbital-params-grid {
+    grid-template-columns: 1fr !important;
+  }
 }
 
 /* ─────────────────────────────────────────
