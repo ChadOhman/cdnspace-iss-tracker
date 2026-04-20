@@ -7,6 +7,7 @@ import { useBuildCheck } from "@/hooks/useBuildCheck";
 import { useLocale } from "@/context/LocaleContext";
 import { useUnits } from "@/context/UnitsContext";
 import type { PassPrediction } from "@/lib/types";
+import { TDRS_REGIONS } from "@/lib/tdrs";
 import {
   connectTelescope,
   disconnectTelescope,
@@ -26,12 +27,6 @@ const ORBITAL_PERIOD_SEC = 92 * 60 + 34; // ~5554 seconds
 const EARTH_ROTATION_DEG_PER_SEC = 360 / 86400;
 const FUTURE_STEP_SEC = 30;
 const FUTURE_STEPS = (90 * 60) / FUTURE_STEP_SEC;
-
-const TDRS_STATIONS = [
-  { lon: -171, label: "TDRS-West" },
-  { lon: -41,  label: "TDRS-East" },
-  { lon: -150, label: "TDRS-Pacific" },
-];
 
 const EARTH_RADIUS_KM = 6371;
 
@@ -754,15 +749,15 @@ export default function TrackPage() {
         color: "#ffd600", weight: 2, opacity: 0.5, dashArray: "8 6",
       }).addTo(map);
 
-      // TDRS footprints
+      // TDRS region footprints
       const tdrsGroup = L.layerGroup().addTo(map);
-      TDRS_STATIONS.forEach(({ lon: tdrsLon, label }) => {
-        const circle = L.circle([0, tdrsLon], {
+      TDRS_REGIONS.forEach((region) => {
+        const circle = L.circle([0, region.lon], {
           radius: 2_500_000,
           color: "#00e5ff", weight: 1, opacity: 0.2,
           fillColor: "#00e5ff", fillOpacity: 0.05,
         }).addTo(tdrsGroup);
-        circle.bindTooltip(label, {
+        circle.bindTooltip(region.label, {
           permanent: true, direction: "center", className: "tdrs-label",
         });
       });
