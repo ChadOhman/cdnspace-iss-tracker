@@ -59,10 +59,14 @@ describe("computeElevation", () => {
   });
 
   it("stays positive at the edge of the in-view cone (~70°)", () => {
-    // At 70° delta the planar atan2 formula returns ~77.5° (the 35 366 km
-    // height difference dominates the 7 785 km ground distance). This is
-    // a simplification — real geometric elevation would be much lower —
-    // but we preserve it for continuity with the panel's historical output.
+    // At 70° delta the planar atan2 formula returns ~77.5°. The formula
+    // measures elevation from ISS upward to GEO altitude, not from
+    // horizon — the 35 366 km height difference dominates the 7 785 km
+    // ground distance, so at any delta under ~84° the relay is still
+    // geometrically above the ISS and elevation stays high. This is a
+    // simplification; real geometric elevation from the ISS antenna
+    // reference frame would be much lower. We preserve it for continuity
+    // with the panel's historical output.
     const elev = computeElevation(0, 420, -70);
     expect(elev).toBeGreaterThan(70);
     expect(elev).toBeLessThan(85);
@@ -116,7 +120,7 @@ describe("formatLon", () => {
     expect(formatLon(47.5)).toBe("47.5°E");
   });
 
-  it("omits the hemisphere suffix at exactly zero", () => {
-    expect(formatLon(0)).toBe("0°");
+  it("treats exactly zero as west (matches original TdrsPanel behaviour)", () => {
+    expect(formatLon(0)).toBe("0°W");
   });
 });

@@ -62,7 +62,7 @@ export interface TdrsRegionVisibility {
   delta: number;
   /** True when the region is within `IN_VIEW_THRESHOLD_DEG` of ISS. */
   inView: boolean;
-  /** Approximate elevation angle from ISS to a relay in this region. */
+  /** Approximate elevation angle from ISS to a relay in this region. Qualitative; see `computeElevation`. */
   elevation: number;
 }
 
@@ -79,9 +79,9 @@ export function regionVisibility(issLon: number, issAltKm: number): TdrsRegionVi
   });
 }
 
-/** Format a longitude for display: -171 → "171°W", 85 → "85°E", 0 → "0°". */
+/** Format a longitude for display: -171 → "171°W", 85 → "85°E", 0 → "0°W". */
 export function formatLon(lon: number): string {
   const abs = Math.abs(lon);
-  const dir = lon < 0 ? "W" : lon > 0 ? "E" : "";
+  const dir = lon <= 0 ? "W" : "E";
   return `${abs}°${dir}`;
 }
