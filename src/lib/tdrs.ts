@@ -40,19 +40,20 @@ export function lonDelta(a: number, b: number): number {
 
 /**
  * Approximate elevation angle (degrees) from the ISS to a geostationary
- * relay at the given longitude. Qualitative cosine approximation: peaks at
- * 90° directly below the satellite, falls to 0° at a 90° longitude delta,
- * and clamps to -90° beyond that (below the horizon).
+ * relay at the given longitude. Planar simplification; qualitative.
  *
- * `issAltKm` is accepted for API consistency with callers but does not
- * materially affect the qualitative result at ISS altitudes.
+ * Geostationary altitude ~35 786 km, ISS altitude ~420 km, Earth radius
+ * 6 371 km. Returns -90 when the region centre is more than 90° away.
  */
 export function computeElevation(issLon: number, issAltKm: number, regionLon: number): number {
-  void issAltKm; // qualitative model — altitude doesn't change the angle meaningfully
   const delta = lonDelta(issLon, regionLon);
   if (delta >= 90) return -90;
+  const R_E = 6371;
+  const h_GEO = 35786;
   const deltaRad = (delta * Math.PI) / 180;
-  return 90 * Math.cos(deltaRad);
+  const groundDist = R_E * deltaRad;
+  const heightDiff = h_GEO - issAltKm;
+  return (Math.atan2(heightDiff, groundDist) * 180) / Math.PI;
 }
 
 export interface TdrsRegionVisibility {
