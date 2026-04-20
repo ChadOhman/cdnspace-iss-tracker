@@ -2,6 +2,7 @@
 
 import { useEffect, useState, memo } from "react";
 import type { OrbitalState, CrewMember } from "@/lib/types";
+import { regionVisibility } from "@/lib/tdrs";
 import { useLocale } from "@/context/LocaleContext";
 import { useUnits } from "@/context/UnitsContext";
 import { useTime } from "@/context/TimeContext";
@@ -205,21 +206,14 @@ function TopBarInner({
 
       {/* TDRS signal status — hidden on mobile */}
       {orbital && (() => {
-        const TDRS = [
-          { name: "W", lon: -171 },
-          { name: "E", lon: -41 },
-          { name: "P", lon: -150 },
-        ];
-        const inView = TDRS.filter(({ lon }) => {
-          const delta = Math.abs(orbital.lon - lon);
-          return (delta > 180 ? 360 - delta : delta) < 70;
-        }).length;
+        const regions = regionVisibility(orbital.lon, orbital.altitude);
+        const inView = regions.filter((r) => r.inView).length;
         const hasSignal = inView > 0;
         return (
           <span
             className="topbar-metrics"
             style={{ display: "flex", alignItems: "center", gap: 4, cursor: "help" }}
-            title={`TDRS Relay: ${inView} of 3 satellites in view. ${hasSignal ? "Signal active." : "Loss of signal."}`}
+            title={`TDRS coverage: ${inView} of 3 regions in view. ${hasSignal ? "Signal active." : "Loss of signal."}`}
           >
             <span style={{ color: "var(--color-text-muted)" }}>📡</span>
             <span style={{
