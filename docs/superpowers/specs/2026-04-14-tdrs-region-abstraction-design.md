@@ -110,10 +110,14 @@ export function regionVisibility(issLon: number, issAltKm: number): TdrsRegionVi
   });
 }
 
-/** Format a longitude for display: -171 → "171°W", 85 → "85°E". */
+/** Format a longitude for display: -171 → "171°W", 85 → "85°E", 0 → "0°W". */
 export function formatLon(lon: number): string {
   const abs = Math.abs(lon);
-  const dir = lon < 0 ? "W" : lon > 0 ? "E" : "";
+  // lon === 0 treated as west for continuity with the original TdrsPanel's
+  // local formatLon. None of the TDRS region centres is at 0°, so this edge
+  // case has no visible impact; keeping the behaviour verbatim preserves the
+  // spec's "refactor, not algorithm change" promise.
+  const dir = lon <= 0 ? "W" : "E";
   return `${abs}°${dir}`;
 }
 ```
