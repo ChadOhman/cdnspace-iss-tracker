@@ -119,7 +119,7 @@ export default function PanelVisibilityModal({
         <div style={labelStyle}>Layout Presets</div>
 
         {/* Preset selector */}
-        <div style={{ display: "flex", gap: "8px", alignItems: "center", marginBottom: "8px" }}>
+        <div className="preset-controls-row" style={{ display: "flex", gap: "8px", alignItems: "center", marginBottom: "8px" }}>
           <select
             value={activePresetId}
             onChange={(e) => onPresetChange(e.target.value)}
@@ -159,7 +159,7 @@ export default function PanelVisibilityModal({
         </div>
 
         {/* Save new preset */}
-        <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+        <div className="preset-controls-row" style={{ display: "flex", gap: "8px", alignItems: "center" }}>
           <input
             type="text"
             value={newPresetName}
@@ -239,7 +239,7 @@ export default function PanelVisibilityModal({
               const id = panel.id as PanelId;
               const assignable = isColumnAssignable(id);
               return (
-                <div key={id} style={rowStyle}>
+                <div key={id} className="panel-row" style={rowStyle}>
                   <input
                     type="checkbox"
                     id={`panel-vis-${id}`}

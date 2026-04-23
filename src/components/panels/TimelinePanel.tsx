@@ -60,7 +60,9 @@ export default function TimelinePanel() {
     return () => clearInterval(id);
   }, []);
 
-  // hour labels
+  // hour labels — 7 elements. Mobile CSS in globals.css (.timeline-hour-labels)
+  // hides :nth-child(2,4,6) to keep 00/08/16/24. Changing this array requires
+  // updating that CSS rule.
   const hourLabels = [0, 4, 8, 12, 16, 20, 24];
 
   return (
@@ -71,6 +73,7 @@ export default function TimelinePanel() {
     >
       {/* Hour labels */}
       <div
+        className="timeline-hour-labels"
         style={{
           position: "relative",
           display: "flex",
@@ -81,7 +84,8 @@ export default function TimelinePanel() {
         {hourLabels.map((h) => (
           <span
             key={h}
-            style={{ color: "var(--color-text-muted)", fontSize: 8 }}
+            className="panel-label-xs"
+            style={{ color: "var(--color-text-muted)" }}
           >
             {String(h).padStart(2, "0")}:00
           </span>
@@ -168,7 +172,7 @@ export default function TimelinePanel() {
                 background: ACTIVITY_COLORS[type],
               }}
             />
-            <span style={{ color: "var(--color-text-muted)", fontSize: 8 }}>
+            <span className="panel-label-xs" style={{ color: "var(--color-text-muted)" }}>
               {label}
             </span>
           </div>

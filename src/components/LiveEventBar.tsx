@@ -69,6 +69,7 @@ function LiveEventBarInner({ event }: LiveEventBarProps) {
       {/* Icon + title */}
       <span style={{ fontSize: 14 }}>{icon}</span>
       <span
+        className="live-event-title"
         style={{
           color: "var(--color-text-primary)",
           fontWeight: 700,

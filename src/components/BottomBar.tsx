@@ -266,7 +266,8 @@ function BottomBarInner() {
               fontWeight: units === "metric" ? 700 : 400,
             }}
           >
-            METRIC
+            <span className="unit-label-full">METRIC</span>
+            <span className="unit-label-short" style={{ display: "none" }}>M</span>
           </button>
           <button
             onClick={() => setUnits("imperial")}
@@ -285,7 +286,8 @@ function BottomBarInner() {
               fontWeight: units === "imperial" ? 700 : 400,
             }}
           >
-            IMPERIAL
+            <span className="unit-label-full">IMPERIAL</span>
+            <span className="unit-label-short" style={{ display: "none" }}>I</span>
           </button>
         </div>
         {/* Language toggle */}
@@ -306,6 +308,7 @@ function BottomBarInner() {
           {locale === "en" ? "FR" : "EN"}
         </button>
         <button
+          className="bottombar-credits"
           onClick={() => setCreditsOpen(true)}
           style={{
             background: "none",
@@ -321,6 +324,7 @@ function BottomBarInner() {
           Credits
         </button>
         <a
+          className="bottombar-feedback"
           href="mailto:cdnspace@chadohman.ca?subject=ISS%20Tracker%20Feedback"
           style={{
             color: "var(--color-text-muted)",

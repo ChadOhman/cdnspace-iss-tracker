@@ -174,90 +174,130 @@ export default function ModuleTempsPanel({ telemetry }: ModuleTempsPanelProps) {
         </div>
       ) : (
         <div>
-          {/* Module schematic */}
+          {/* Module schematic (desktop) + stacked list (mobile) */}
           <div style={{ marginBottom: 10 }}>
             <div style={{ color: "var(--color-text-muted)", fontSize: 8, marginBottom: 5 }}>
               {t("moduleTemps.schematic").toUpperCase()}
             </div>
 
-            {/* Main chain: Russian → Node 1 → US Lab → Node 2 */}
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 3,
-                overflowX: "auto",
-                paddingBottom: 4,
-              }}
-            >
-              {/* Russian segment (proxy: use Node 1 cabin as stand-in since no Russian field) */}
+            {/* Desktop schematic — hidden on mobile via CSS */}
+            <div className="module-temps-schematic">
+              {/* Main chain: Russian → Node 1 → US Lab → Node 2 */}
               <div
                 style={{
-                  background: "var(--color-bg-secondary)",
-                  border: "1px solid var(--color-border-subtle)",
-                  borderRadius: 4,
-                  padding: "5px 6px",
-                  minWidth: 58,
-                  textAlign: "center",
-                  opacity: 0.7,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 3,
+                  overflowX: "auto",
+                  paddingBottom: 4,
                 }}
               >
-                <div style={{ color: "var(--color-text-muted)", fontSize: 8, marginBottom: 3 }}>RUS SEG</div>
-                <div style={{ color: "var(--color-text-muted)", fontSize: 11 }}>—</div>
+                <div
+                  style={{
+                    background: "var(--color-bg-secondary)",
+                    border: "1px solid var(--color-border-subtle)",
+                    borderRadius: 4,
+                    padding: "5px 6px",
+                    minWidth: 58,
+                    textAlign: "center",
+                    opacity: 0.7,
+                  }}
+                >
+                  <div style={{ color: "var(--color-text-muted)", fontSize: 8, marginBottom: 3 }}>RUS SEG</div>
+                  <div style={{ color: "var(--color-text-muted)", fontSize: 11 }}>—</div>
+                </div>
+
+                <div style={{ color: "var(--color-border-subtle)", fontSize: 10 }}>—</div>
+
+                <ModuleBox
+                  name="NODE 1"
+                  cabinTemp={telemetry.moduleTemps.node1Cabin}
+                  temperature={temperature}
+                />
+
+                <div style={{ color: "var(--color-border-subtle)", fontSize: 10 }}>—</div>
+
+                <ModuleBox
+                  name="DESTINY"
+                  cabinTemp={telemetry.moduleTemps.uslabCabin}
+                  avionicsTemp={telemetry.moduleTemps.uslabAvionics}
+                  accent="var(--color-accent-cyan)"
+                  temperature={temperature}
+                />
+
+                <div style={{ color: "var(--color-border-subtle)", fontSize: 10 }}>—</div>
+
+                <ModuleBox
+                  name="HARMONY"
+                  cabinTemp={telemetry.moduleTemps.node2Cabin}
+                  avionicsTemp={telemetry.moduleTemps.node2Avionics}
+                  accent="var(--color-accent-cyan)"
+                  temperature={temperature}
+                />
               </div>
 
-              <div style={{ color: "var(--color-border-subtle)", fontSize: 10 }}>—</div>
-
-              {/* Node 1 (FGB/Unity) */}
-              <ModuleBox
-                name="NODE 1"
-                cabinTemp={telemetry.moduleTemps.node1Cabin}
-                temperature={temperature}
-              />
-
-              <div style={{ color: "var(--color-border-subtle)", fontSize: 10 }}>—</div>
-
-              {/* US Lab (Destiny) */}
-              <ModuleBox
-                name="DESTINY"
-                cabinTemp={telemetry.moduleTemps.uslabCabin}
-                avionicsTemp={telemetry.moduleTemps.uslabAvionics}
-                accent="var(--color-accent-cyan)"
-                temperature={temperature}
-              />
-
-              <div style={{ color: "var(--color-border-subtle)", fontSize: 10 }}>—</div>
-
-              {/* Node 2 (Harmony) */}
-              <ModuleBox
-                name="HARMONY"
-                cabinTemp={telemetry.moduleTemps.node2Cabin}
-                avionicsTemp={telemetry.moduleTemps.node2Avionics}
-                accent="var(--color-accent-cyan)"
-                temperature={temperature}
-              />
+              {/* Node 3 (Tranquility) hangs below Node 1 */}
+              <div style={{ display: "flex", alignItems: "flex-start", marginTop: 4, paddingLeft: 70 }}>
+                <div
+                  style={{
+                    width: 1,
+                    height: 12,
+                    background: "var(--color-border-subtle)",
+                    marginLeft: 30,
+                    marginRight: 0,
+                  }}
+                />
+              </div>
+              <div style={{ display: "flex", paddingLeft: 58 }}>
+                <ModuleBox
+                  name="NODE 3"
+                  cabinTemp={telemetry.moduleTemps.node3Cabin}
+                  avionicsTemp={telemetry.moduleTemps.node3Avionics}
+                  accent="var(--color-accent-cyan)"
+                  temperature={temperature}
+                />
+              </div>
             </div>
 
-            {/* Node 3 (Tranquility) hangs below Node 1 */}
-            <div style={{ display: "flex", alignItems: "flex-start", marginTop: 4, paddingLeft: 70 }}>
-              <div
-                style={{
-                  width: 1,
-                  height: 12,
-                  background: "var(--color-border-subtle)",
-                  marginLeft: 30,
-                  marginRight: 0,
-                }}
-              />
-            </div>
-            <div style={{ display: "flex", paddingLeft: 58 }}>
-              <ModuleBox
-                name="NODE 3"
-                cabinTemp={telemetry.moduleTemps.node3Cabin}
-                avionicsTemp={telemetry.moduleTemps.node3Avionics}
-                accent="var(--color-accent-cyan)"
-                temperature={temperature}
-              />
+            {/* Mobile list — hidden on desktop via CSS */}
+            <div className="module-temps-list" style={{ display: "none", flexDirection: "column", gap: 4 }}>
+              {[
+                { name: "NODE 1", cabin: telemetry.moduleTemps.node1Cabin, avn: undefined },
+                { name: "DESTINY", cabin: telemetry.moduleTemps.uslabCabin, avn: telemetry.moduleTemps.uslabAvionics },
+                { name: "HARMONY", cabin: telemetry.moduleTemps.node2Cabin, avn: telemetry.moduleTemps.node2Avionics },
+                { name: "NODE 3", cabin: telemetry.moduleTemps.node3Cabin, avn: telemetry.moduleTemps.node3Avionics },
+              ].map((m) => {
+                const c = temperature(m.cabin);
+                const a = m.avn !== undefined ? temperature(m.avn) : null;
+                return (
+                  <div
+                    key={m.name}
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      padding: "4px 8px",
+                      background: "var(--color-bg-secondary)",
+                      border: "1px solid var(--color-accent-cyan)",
+                      borderRadius: 4,
+                    }}
+                  >
+                    <span style={{ color: "var(--color-text-muted)", fontSize: 10, fontWeight: 600 }}>
+                      {m.name}
+                    </span>
+                    <span style={{ display: "flex", gap: 8, alignItems: "baseline" }}>
+                      <span style={{ color: "var(--color-accent-cyan)", fontSize: 12, fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>
+                        {c.value.toFixed(1)}{c.unit}
+                      </span>
+                      {a && (
+                        <span style={{ color: "var(--color-text-muted)", fontSize: 9 }}>
+                          AVN {a.value.toFixed(1)}{a.unit}
+                        </span>
+                      )}
+                    </span>
+                  </div>
+                );
+              })}
             </div>
           </div>
 

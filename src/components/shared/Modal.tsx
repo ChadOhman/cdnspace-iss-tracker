@@ -54,6 +54,7 @@ export default function Modal({
         role="dialog"
         aria-modal="true"
         aria-labelledby="modal-title"
+        className="modal-content"
         onClick={(e) => e.stopPropagation()}
         style={{
           background: "var(--color-bg-panel, #1a1a2e)",

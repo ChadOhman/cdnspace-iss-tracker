@@ -125,10 +125,10 @@ export default function DayNightPanel({ orbital }: DayNightPanelProps) {
               marginTop: 2,
             }}
           >
-            <span style={{ color: "var(--color-text-muted)", fontSize: 8 }}>
+            <span className="panel-label-xs" style={{ color: "var(--color-text-muted)" }}>
               {isInSunlight ? t("dayNight.sunrise") : t("dayNight.sunset")}
             </span>
-            <span style={{ color: "var(--color-text-muted)", fontSize: 8 }}>
+            <span className="panel-label-xs" style={{ color: "var(--color-text-muted)" }}>
               {isInSunlight ? t("dayNight.sunset") : t("dayNight.sunrise")}
             </span>
           </div>
